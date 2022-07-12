@@ -26,6 +26,8 @@ If a beacon misses a request, the first beacon that *did* submit a request can c
 
 If the request is renewed, the non-submitting beacon addresses are replaced with new beacon addresses and the request gets a new timeline (blocks/seconds) to be completed. ETH from the first non-submitting beacon's stake is transferred to the client contract deposit (for the full amount that they already paid for the request), and to the address that called `renewRequest()`. Non-submitting beacons are striked. At 3 strikes in 100 requests, they are automatically removed from the list of beacons.
 
+Review the tests for a technical overview.
+
 # Basic Harhdat commands
 
 Try running some of the following tasks:
