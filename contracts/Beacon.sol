@@ -218,8 +218,7 @@ contract Beacon is Utils {
                 reqValues
             );
         } else {
-            // Process final submission
-            // require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+            // Process final submission with ReentrancyGuard
             if (_status == _ENTERED) revert ReentrancyGuard();
             _status = _ENTERED;
 
@@ -244,12 +243,11 @@ contract Beacon is Utils {
             );
 
             // Callback to requesting contract
-            accounts.client.call{gas: packed.data.callbackGasLimit}(
-                abi.encodeWithSelector(
-                    IRandomReceiver.soRandomCallback.selector,
-                    packed.id,
-                    reqResult
-                )
+            _callback(
+                accounts.client,
+                packed.data.callbackGasLimit,
+                packed.id,
+                reqResult
             );
 
             ethReserved[accounts.client] -= packed.data.ethReserved;
@@ -260,12 +258,12 @@ contract Beacon is Utils {
 
             // Dev fee
             // uint256 devFee = (request.beaconFee * request.beacons.length) / 2;
-            _charge(accounts.client, developer, packed.data.beaconFee);
+            _chargeClient(accounts.client, developer, packed.data.beaconFee);
 
             // Beacon fee
             uint256 fee = ((gasAtStart - gasleft() + FINAL_SUBMIT_GAS_OFFSET) *
                 _getGasPrice()) + packed.data.beaconFee;
-            _charge(accounts.client, msg.sender, fee);
+            _chargeClient(accounts.client, msg.sender, fee);
 
             requestToFeePaid[packed.id] += fee + packed.data.beaconFee; // total fee + dev beaconFee
             // delete requests[packed.id];
@@ -273,6 +271,23 @@ contract Beacon is Utils {
             delete requestToSignatures[packed.id];
             _status = _NOT_ENTERED;
         }
+    }
+
+    function _callback(
+        address _to,
+        uint256 _gasLimit,
+        uint256 _id,
+        bytes32 _result
+    ) private {
+        (bool success, bytes memory callbackTxData) = _to.call{gas: _gasLimit}(
+            abi.encodeWithSelector(
+                IRandomReceiver.soRandomCallback.selector,
+                _id,
+                _result
+            )
+        );
+
+        if (!success) emit CallbackFailed(_to, _id, _result, callbackTxData);
     }
 
     function _updateBeaconSubmissionCount() private {
@@ -366,6 +381,6 @@ contract Beacon is Utils {
         uint256 fee = ((gasAtStart - gasleft() + SUBMIT_GAS_OFFSET) *
             _getGasPrice()) + beaconFee;
         requestToFeePaid[packed.id] += fee;
-        _charge(accounts.client, msg.sender, fee);
+        _chargeClient(accounts.client, msg.sender, fee);
     }
 }

@@ -60,7 +60,6 @@ describe("Renew", function () {
     let request = await makeRequest(testCallback);
     let oldBeaconIds = request.beacons;
 
-    // console.log("Made request");
     // Skip blocks and renew
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
     const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
@@ -69,9 +68,8 @@ describe("Renew", function () {
     const res = await (await soRandom.renewRequest(addressData, uintData, request.seed)).wait();
     // console.log("Renewed request");
     // New request data
-    request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
-
-    // console.log(request);
+    const retryEvent = soRandom.interface.parseLog(res.logs.filter((log) => soRandom.interface.parseLog(log).name === "Retry")[0]);
+    request = { ...retryEvent.args.request, id: retryEvent.args.id };
 
     // Expect no beacons to be duplicates
     for (let i = 0; i < oldBeaconIds.length - 1; i++) {
@@ -79,7 +77,6 @@ describe("Renew", function () {
         expect(oldBeaconIds[i]).to.not.equal(newBeacon);
       }
     }
-
 
     // Skip & Renew again
     oldBeaconIds = request.beacons;
@@ -89,7 +86,9 @@ describe("Renew", function () {
     const newAddressData = [request.client].concat(request.beacons);
     const res2 = await (await soRandom.renewRequest(newAddressData, newUintData, request.seed)).wait();
     // console.log("Renewed again");
-    request = { ...soRandom.interface.parseLog(res2.logs[0]).args.request, id: soRandom.interface.parseLog(res2.logs[0]).args.id };
+    const retryEvent2 = soRandom.interface.parseLog(res2.logs.filter((log) => soRandom.interface.parseLog(log).name === "Retry")[0]);
+
+    request = { ...retryEvent2.args.request, id: retryEvent2.args.id };
 
     // Expect no beacons to be duplicates
     for (let i = 0; i < oldBeaconIds.length - 1; i++) {
@@ -144,7 +143,7 @@ describe("Renew", function () {
     const res = await (await soRandom.renewRequest(addressData, renewUintData, request.seed)).wait();
 
     // Get new request data
-    const newReq = soRandom.interface.parseLog(res.logs[0]).args.request;
+    const newReq = soRandom.interface.parseLog(res.logs[res.logs.length - 1]).args.request;
 
     const newBeacons = newReq.beacons;
 
@@ -229,7 +228,7 @@ describe("Renew", function () {
     const renew = await soRandom.renewRequest(addressData, uintData, request.seed);
     const renewRes = await renew.wait();
 
-    const newReq = await soRandom.interface.parseLog(renewRes.logs[0]).args.request;
+    const newReq = await soRandom.interface.parseLog(renewRes.logs[renewRes.logs.length - 1]).args.request;
     const newBeacons = newReq.beacons;
 
     const newSigs = await soRandom.getRequestSignatures(1);
@@ -354,8 +353,8 @@ describe("Renew", function () {
     const renewTx = await soRandom.connect(selectedSigners[0]).renewRequest(addressData, renewUintData, request.seed);
     const renew = await renewTx.wait();
     // Expect event "Retry" to be emitted by renew
-    expect(renew.events).to.have.lengthOf(1);
-    expect(renew.events[0].event).to.equal("Retry");
+    expect(renew.events).to.have.lengthOf(3);
+    expect(renew.events[renew.events.length - 1].event).to.equal("Retry");
   });
 
   it("should allow any signer to renew a request after the first 5 minutes/20 blocks of expiration", async function () {
@@ -390,8 +389,8 @@ describe("Renew", function () {
     const renewTx = await soRandom.connect(selectedSigners[1]).renewRequest(addressData, renewUintData, request.seed);
     const renew = await renewTx.wait();
     // Expect event "Retry" to be emitted by renew
-    expect(renew.events).to.have.lengthOf(1);
-    expect(renew.events[0].event).to.equal("Retry");
+    expect(renew.events).to.have.lengthOf(3);
+    expect(renew.events[renew.events.length - 1].event).to.equal("Retry");
   });
 
 
@@ -484,8 +483,8 @@ describe("Renew", function () {
     const addressData = [request.client].concat(request.beacons);
     const renewTx = await soRandom.connect(selectedSigners[1]).renewRequest(addressData, renewUintData, request.seed);
     const renew = await renewTx.wait();
-    expect(renew.events).to.have.lengthOf(1);
-    expect(renew.events[0].event).to.equal("Retry");
+    expect(renew.events).to.have.lengthOf(3);
+    expect(renew.events[renew.events.length - 1].event).to.equal("Retry");
 
     // Make new requests until request2.beacons includes selectedSigners[0].address
     let request2 = await makeRequest(testCallback);
@@ -510,7 +509,7 @@ describe("Renew", function () {
     const renewTx2 = await soRandom.connect(selectedSigner2).renewRequest(addressData2, renewUintData2, request2.seed);
     const renew2 = await renewTx2.wait();
     // Expect event "RemoveBeacon" to be emitted by renew
-    expect(renew2.events).to.have.lengthOf(2);
+    expect(renew2.events).to.have.lengthOf(4);
     expect(renew2.events[0].event).to.equal("RemoveBeacon");
     // Expect event "BeaconRemoved" to have correct data
     expect(renew2.events[0].args.beacon).to.equal(selectedSigners[0].address);

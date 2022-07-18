@@ -55,10 +55,7 @@ describe("Request & Submit", function () {
     const addressData = [request.client].concat(request.beacons);
     const bytesData = [sig.r, sig.s, request.seed];
     const tx = await soRandom.connect(finalSigner).submitRandom(addressData, uintData, bytesData);
-    await tx.wait();
-
-    const callbackResult = await testCallback.result();
-    return callbackResult;
+    return await tx.wait();
   }
 
   let signers;
@@ -413,7 +410,10 @@ describe("Request & Submit", function () {
     const req = await testCallbackWithRevert.makeRequest();
     const res = await req.wait();
     const request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
-    await signAndCallback(request, testCallbackWithRevert);
+    const lastTx = await signAndCallback(request, testCallbackWithRevert);
+    const callbackFailedEvent = soRandom.interface.parseLog(lastTx.logs[0]);
+    expect(callbackFailedEvent.name).to.equal("CallbackFailed");
+    expect(callbackFailedEvent.args.id).to.equal(request.id);
     // Except getResult(request.id) to return not be bytes32(0)
     const result = await soRandom.getResult(request.id);
     expect(result).to.not.equal(ethers.constants.HashZero);
@@ -429,7 +429,11 @@ describe("Request & Submit", function () {
     const req = await testCallbackWithTooMuchGas.makeRequest();
     const res = await req.wait();
     const request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
-    await signAndCallback(request, testCallbackWithTooMuchGas);
+    const lastTx = await signAndCallback(request, testCallbackWithTooMuchGas);
+    // Check if lastTx emitted "CallbackFailed" event
+    const callbackFailedEvent = soRandom.interface.parseLog(lastTx.logs[0]);
+    expect(callbackFailedEvent.name).to.equal("CallbackFailed");
+    expect(callbackFailedEvent.args.id).to.equal(request.id);
     // Except getResult(request.id) to return not be bytes32(0)
     const result = await soRandom.getResult(request.id);
     expect(result).to.not.equal(ethers.constants.HashZero);

@@ -119,14 +119,14 @@ contract Utils is Admin, GasHandler {
         return address(0);
     }
 
-    function _charge(
+    function _chargeClient(
         address _from,
         address _to,
         uint256 _value
     ) internal {
         ethDeposit[_from] -= _value;
         ethCollateral[_to] += _value;
-        emit Charge(_from, _to, _value);
+        emit ChargeEth(_from, _to, _value, false, true);
     }
 
     /// @dev Gets BEACONS_PER_REQUEST number of random beacons for a request

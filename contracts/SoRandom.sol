@@ -141,8 +141,6 @@ contract SoRandom is Client, Beacon {
             requestToSignatures[packed.id]
         );
 
-        // TODO: Add a small premium to incentivize calling renewRequest()
-
         // Refund fees paid by client paid by non-submitting beacon
         // Add gas fee for refund function
         address firstStrikeBeacon;
@@ -182,43 +180,27 @@ contract SoRandom is Client, Beacon {
             _seed
         );
 
-        //         struct SRequestEventData {
-        //     uint256 id;
-        //     uint256 ethReserved;
-        //     uint256 beaconFee;
-        //     uint256 height;
-        //     uint256 timestamp;
-        //     uint256 expirationSeconds;
-        //     uint256 expirationBlocks;
-        //     uint256 callbackGasLimit;
-        //     address client;
-        //     address[3] beacons;
-        //     bytes32 seed;
-        // }
-
-        emit Retry(
-            packed.id,
-            SRequestEventData(
-                packed.data.ethReserved,
-                packed.data.beaconFee,
-                packed.data.height,
-                packed.data.timestamp,
-                expirationSeconds,
-                expirationBlocks,
-                packed.data.callbackGasLimit,
-                accounts.client,
-                accounts.beacons,
-                _seed
-            )
+        SRequestEventData memory eventData = SRequestEventData(
+            packed.data.ethReserved,
+            packed.data.beaconFee,
+            packed.data.height,
+            packed.data.timestamp,
+            expirationSeconds,
+            expirationBlocks,
+            packed.data.callbackGasLimit,
+            accounts.client,
+            accounts.beacons,
+            _seed
         );
 
         // The paying non-submitter might fall below collateral here. It will be removed on next strike if it doesn't add collateral.
-        uint256 totalStrikeFee = ((gasAtStart - gasleft()) * _getGasPrice()) +
+        uint256 renewFee = ((gasAtStart - gasleft()) * _getGasPrice()) +
             beaconFee;
         uint256 refundToClient = requestToFeePaid[packed.id];
-        ethCollateral[firstStrikeBeacon] -= totalStrikeFee + refundToClient;
+        uint256 totalCharge = renewFee + refundToClient;
+        ethCollateral[firstStrikeBeacon] -= totalCharge;
         // Refund this function's gas to the caller
-        ethCollateral[msg.sender] += totalStrikeFee;
+        ethCollateral[msg.sender] += renewFee;
         // Fees paid on this request are reset to 0
         requestToFeePaid[packed.id] = 0;
         // Client receives refund to ensure they have enough to pay for the next request
@@ -226,6 +208,26 @@ contract SoRandom is Client, Beacon {
         // the non-submitting beacon should pay for the delay.
         ethDeposit[accounts.client] += refundToClient;
 
-        // TODO: emit Retry here and add chargedToBeacon, addedToCaller, and addedToClient to the event data
+        // Log charge from striked beacon to caller (collateral to collateral)
+        emit ChargeEth(firstStrikeBeacon, msg.sender, totalCharge, true, true);
+
+        // Log charge from striked beacon to client (collateral to deposit)
+        emit ChargeEth(
+            firstStrikeBeacon,
+            accounts.client,
+            totalCharge,
+            true,
+            false
+        );
+
+        // Log Retry
+        emit Retry(
+            packed.id,
+            eventData,
+            firstStrikeBeacon,
+            msg.sender,
+            refundToClient,
+            renewFee
+        );
     }
 }

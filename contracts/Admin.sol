@@ -15,7 +15,6 @@ contract Admin is Ownable, Store {
     uint256 internal constant RENEW_GAS_OFFSET = 21000;
 
     // Contract addresses
-    address public arbGas;
     address public developer;
 
     // Re-entrancy guard for final beacon submit
@@ -32,7 +31,14 @@ contract Admin is Ownable, Store {
 
     /// @notice Emits if a request is retried (has new beacons)
     /// @param request request id
-    event Retry(uint128 indexed id, SRequestEventData request);
+    event Retry(
+        uint128 indexed id,
+        SRequestEventData request,
+        address indexed chargedBeacon,
+        address indexed caller,
+        uint256 ethToClient,
+        uint256 ethToCaller
+    );
 
     event BeaconStakeEth(address indexed beacon, uint256 amount);
     event BeaconUnstake(address indexed beacon, uint256 amount);
@@ -43,7 +49,17 @@ contract Admin is Ownable, Store {
         address indexed to,
         uint256 amount
     );
-    event Charge(address indexed from, address indexed to, uint256 amount);
+    /// @notice Emits when ETH is charged from a client to a beacon
+    /// @param fromDepositOrCollateral charged from ethDeposit (client) or ethCollateral (beacon). False = deposit, true = collateral.
+    /// @param toDepositOrCollateral sent to ethDeposit (client) or ethCollateral (beacon).
+    event ChargeEth(
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        bool fromDepositOrCollateral,
+        bool toDepositOrCollateral
+    );
+
     event WithdrawEth(address indexed to, uint256 amount);
     event RegisterBeacon(address indexed beacon);
     event UnregisterBeacon(address indexed beacon, uint256 strikes);
@@ -77,6 +93,13 @@ contract Admin is Ownable, Store {
         uint128 request,
         uint256 amount,
         uint256 slashedTokens
+    );
+
+    event CallbackFailed(
+        address client,
+        uint256 id,
+        bytes32 value,
+        bytes txData
     );
 
     function setBeaconFee(uint256 _amount) external onlyOwner {
