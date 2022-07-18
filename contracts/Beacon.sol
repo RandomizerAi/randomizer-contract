@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSL 1.1
 
 import "./Utils.sol";
-import "hardhat/console.sol";
 
 interface IRandomReceiver {
     function soRandomCallback(uint256 _id, bytes32 value) external;

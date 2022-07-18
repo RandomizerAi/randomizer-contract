@@ -8,7 +8,6 @@
 
 pragma solidity ^0.8.15;
 
-import "hardhat/console.sol";
 import "./Client.sol";
 
 contract SoRandom is Client, Beacon {
