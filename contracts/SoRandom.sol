@@ -19,7 +19,6 @@ contract SoRandom is Client, Beacon {
         uint256 height,
         uint256 expirationHeight
     );
-    error NoBeaconsAvailable(uint256 requiredBeacons, uint256 availableBeacons);
 
     constructor(
         address _developer,
@@ -47,6 +46,7 @@ contract SoRandom is Client, Beacon {
             sBeacon[_beacons[i]] = SBeacon(true, 0, 0, 0);
         }
         _status = _NOT_ENTERED;
+        requestMinGasLimit = 50000;
     }
 
     function getResult(uint128 _request) public view returns (bytes32) {
@@ -72,7 +72,7 @@ contract SoRandom is Client, Beacon {
         bytes32 generatedHash = _getRequestRenewHash(accounts, packed, _seed);
 
         if (requestToHash[packed.id] != generatedHash)
-            revert RequestDataMismatch(requestToHash[packed.id], generatedHash);
+            revert RequestDataMismatch(generatedHash, requestToHash[packed.id]);
 
         uint256 _expirationBlocks;
         uint256 _expirationSeconds;
@@ -119,17 +119,20 @@ contract SoRandom is Client, Beacon {
                 SBeacon memory tempBeacon = sBeacon[beaconAddress];
                 tempBeacon.strikes++;
                 tempBeacon.consecutiveSubmissions = 0;
-                if (tempBeacon.pendingCount > 0) tempBeacon.pendingCount--;
+                if (tempBeacon.pending > 0) tempBeacon.pending--;
                 sBeacon[beaconAddress] = tempBeacon;
                 beaconsToStrike[i] = beaconAddress;
             }
         }
 
         // Checks if enough beacons are available to replace with
-        if (beaconsToStrike.length * 2 > beacons.length)
-            revert NoBeaconsAvailable(
-                beaconsToStrike.length * 2,
-                beacons.length
+        if (
+            beacons.length < 5 ||
+            beaconsToStrike.length * 2 > beacons.length - 1
+        )
+            revert NotEnoughBeaconsAvailable(
+                beacons.length,
+                beacons.length < 5 ? 5 : beaconsToStrike.length * 2
             );
 
         accounts.beacons = _replaceNonSubmitters(
@@ -163,6 +166,10 @@ contract SoRandom is Client, Beacon {
             ) {
                 // Remove beacon from beacons
                 _removeBeacon(beaconsToStrike[i]);
+                emit RemoveBeacon(
+                    beaconsToStrike[i],
+                    sBeacon[beaconsToStrike[i]].strikes
+                );
             }
         }
 
@@ -218,5 +225,7 @@ contract SoRandom is Client, Beacon {
         // Also since the request is taking slower than expected due to a non-submitting beacon,
         // the non-submitting beacon should pay for the delay.
         ethDeposit[accounts.client] += refundToClient;
+
+        // TODO: emit Retry here and add chargedToBeacon, addedToCaller, and addedToClient to the event data
     }
 }

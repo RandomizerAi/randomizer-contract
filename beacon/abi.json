@@ -544,7 +544,7 @@
           },
           {
             "internalType": "uint8",
-            "name": "pendingCount",
+            "name": "pending",
             "type": "uint8"
           },
           {
@@ -676,7 +676,7 @@
   },
   {
     "inputs": [],
-    "name": "getPendingRequestIds",
+    "name": "pendingRequestIds",
     "outputs": [
       {
         "internalType": "uint128[]",

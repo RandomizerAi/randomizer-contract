@@ -8,7 +8,7 @@ contract Client is Utils {
     // Errors exclusive to Client.sol
     error WithdrawingTooMuch(uint256 amount, uint256 allowedAmount);
     error CallbackGasLimitTooLow(uint256 inputLimit, uint256 minimumLimit);
-    error EthDepositTooLow(uint256 fee, uint256 available);
+    error EthDepositTooLow(uint256 availableAmount, uint256 requiredAmount);
 
     uint256 internal constant SUBMIT_GAS_ESTIMATE = 201000;
 
@@ -73,16 +73,19 @@ contract Client is Utils {
         //     "FINALSIGNER_NOT_A_BEACON"
         // );
 
-        if (_callbackGasLimit < 50000)
-            revert CallbackGasLimitTooLow(_callbackGasLimit, 50000);
+        if (_callbackGasLimit < requestMinGasLimit)
+            revert CallbackGasLimitTooLow(
+                _callbackGasLimit,
+                requestMinGasLimit
+            );
 
         // Requester must have enough to cover gas for each beacon + the callback gas limit
         uint256 estimateFee = getFeeEstimate(_callbackGasLimit, 3);
 
         if (estimateFee > (ethDeposit[msg.sender] - ethReserved[msg.sender]))
             revert EthDepositTooLow(
-                estimateFee,
-                ethDeposit[msg.sender] - ethReserved[msg.sender]
+                ethDeposit[msg.sender] - ethReserved[msg.sender],
+                estimateFee
             );
 
         ethReserved[msg.sender] += estimateFee;

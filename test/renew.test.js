@@ -34,7 +34,7 @@ describe("Renew", function () {
     // uint256 _expirationSeconds,
     // uint256 _beaconFee,
     // address[] memory _beacons
-    soRandom = await SoRandom.deploy(ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, ethers.utils.parseEther("0.00005"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]);
+    soRandom = await SoRandom.deploy(ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, ethers.utils.parseEther("0.1"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]);
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(soRandom.address);
 
@@ -49,7 +49,7 @@ describe("Renew", function () {
     return req;
   }
 
-  it("Should make a random request and renew all non-submitters", async function () {
+  it("should make a random request and renew all non-submitters", async function () {
     // Deposit
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
@@ -101,7 +101,7 @@ describe("Renew", function () {
 
     expect(request.beacons.length).to.equal(3);
   });
-  it("Should renew only the single non-submitter", async function () {
+  it("should renew only the single non-submitter", async function () {
     // Deposit
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
@@ -162,7 +162,7 @@ describe("Renew", function () {
     expect(newSigs[2]).to.equal("0x000000000000000000000000");
   });
 
-  it("Should renew final non-submitter", async function () {
+  it("should renew final non-submitter", async function () {
     // const tx = await signers[4].sendTransaction({ to: subscriber.address, value: ethers.utils.parseEther("1") });
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
@@ -246,7 +246,7 @@ describe("Renew", function () {
     expect(newSigs[2]).to.equal("0x000000000000000000000000");
   });
 
-  it("Should slash stake of non-submitters and refund caller gas", async function () {
+  it("should slash stake of non-submitters and refund caller gas", async function () {
     // Expect kicked beacon IDs to be replaced properly and all beacons[] addresses and beaconIndex[] indices are aligned
     // Deploy soRandom with 1-strike removal
 
@@ -273,18 +273,15 @@ describe("Renew", function () {
     );
     const sig = ethers.utils.splitSignature(await selectedSigners[0].signMessage(ethers.utils.arrayify(messageHash)));
 
-
     const addressData = [request.client].concat(request.beacons);
     const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
     const bytesData = [sig.r, sig.s, request.seed];
-
     await soRandom2.connect(selectedSigners[0]).submitRandom(addressData, uintData, bytesData);
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
+    const oldClientBalanceOf = ethers.BigNumber.from(await soRandom2.clientBalanceOf(request.client));
 
     const renewUintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
-
     const beaconStakeOfRenewer = ethers.BigNumber.from(await soRandom2.getBeaconStakeEth(selectedSigners[1].address));
-
     await soRandom2.connect(selectedSigners[1]).renewRequest(addressData, renewUintData, request.seed);
 
     const newBeaconStakeOfRenewer = ethers.BigNumber.from(await soRandom2.getBeaconStakeEth(selectedSigners[1].address));
@@ -295,8 +292,232 @@ describe("Renew", function () {
     // Check that ETH balance of wallet that called renewRequest has increased
     expect(beaconStakeOfRenewer.gte(newBeaconStakeOfRenewer)).to.equal(true);
 
-    // TODO: Check that the ETH deposit of request.client has increased
+    // Check that the ETH deposit of request.client has increased
+    const newClientBalanceOf = ethers.BigNumber.from(await soRandom2.clientBalanceOf(request.client));
 
+    expect(oldClientBalanceOf.lt(newClientBalanceOf)).to.equal(true);
+
+  });
+
+  it("should revert on renew if request is not yet renewable", async function () {
+    const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    let request = await makeRequest(testCallback);
+    const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
+
+    const messageHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ["address", "uint256", "bytes32"],
+        [request.client, request.id, request.seed]
+      )
+    );
+    const sig = ethers.utils.splitSignature(await selectedSigners[0].signMessage(ethers.utils.arrayify(messageHash)));
+
+    const addressData = [request.client].concat(request.beacons);
+    const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
+    try {
+      await soRandom.renewRequest(addressData, uintData, request.seed);
+      expect(true).to.equal(false);
+    } catch (e) {
+      expect(e).to.match(/NotYetRenewable/g);
+    }
+  });
+
+  it("should only allow the first submitter to renew for the first 5 minutes/20 blocks", async function () {
+    const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    let request = await makeRequest(testCallback);
+    const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
+
+    const messageHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ["address", "uint256", "bytes32"],
+        [request.client, request.id, request.seed]
+      )
+    );
+    const sig = ethers.utils.splitSignature(await selectedSigners[0].signMessage(ethers.utils.arrayify(messageHash)));
+
+    const addressData = [request.client].concat(request.beacons);
+    const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
+    const bytesData = [sig.r, sig.s, request.seed];
+    // Submit request with first selectedSigner
+    await soRandom.connect(selectedSigners[0]).submitRandom(addressData, uintData, bytesData);
+    const renewUintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
+    // Mine 20 blocks with 45 seconds per block
+    await hre.network.provider.send("hardhat_mine", ["0x20", ethers.utils.hexlify(45)]);
+    try {
+      await soRandom.connect(selectedSigners[1]).renewRequest(addressData, renewUintData, request.seed);
+      expect(true).to.equal(false);
+    } catch (e) {
+      expect(e).to.match(/NotYetRenewable/g);
+    }
+    const renewTx = await soRandom.connect(selectedSigners[0]).renewRequest(addressData, renewUintData, request.seed);
+    const renew = await renewTx.wait();
+    // Expect event "Retry" to be emitted by renew
+    expect(renew.events).to.have.lengthOf(1);
+    expect(renew.events[0].event).to.equal("Retry");
+  });
+
+  it("should allow any signer to renew a request after the first 5 minutes/20 blocks of expiration", async function () {
+    const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    let request = await makeRequest(testCallback);
+    const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
+
+    const messageHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ["address", "uint256", "bytes32"],
+        [request.client, request.id, request.seed]
+      )
+    );
+    const sig = ethers.utils.splitSignature(await selectedSigners[0].signMessage(ethers.utils.arrayify(messageHash)));
+
+    const addressData = [request.client].concat(request.beacons);
+    const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
+    const bytesData = [sig.r, sig.s, request.seed];
+    // Submit request with first selectedSigner
+    await soRandom.connect(selectedSigners[0]).submitRandom(addressData, uintData, bytesData);
+    const renewUintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
+    // Mine 20 blocks with 45 seconds per block
+    await hre.network.provider.send("hardhat_mine", ["0x20", ethers.utils.hexlify(45)]);
+    try {
+      await soRandom.connect(selectedSigners[1]).renewRequest(addressData, renewUintData, request.seed);
+      expect(true).to.equal(false);
+    } catch (e) {
+      expect(e).to.match(/NotYetRenewable/g);
+    }
+    await hre.network.provider.send("hardhat_mine", ["0x20", ethers.utils.hexlify(45)]);
+    const renewTx = await soRandom.connect(selectedSigners[1]).renewRequest(addressData, renewUintData, request.seed);
+    const renew = await renewTx.wait();
+    // Expect event "Retry" to be emitted by renew
+    expect(renew.events).to.have.lengthOf(1);
+    expect(renew.events[0].event).to.equal("Retry");
+  });
+
+
+  it("should revert with RequestDataMismatch when renewing a request with a different hash", async function () {
+    // Deposit
+    const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    let request = await makeRequest(testCallback);
+    // submitRequest with first beacon in request.beacons
+    const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
+    const messageHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ["address", "uint256", "bytes32"],
+        [request.client, request.id, request.seed]
+      )
+    );
+    const sig = ethers.utils.splitSignature(await selectedSigners[0].signMessage(ethers.utils.arrayify(messageHash)));
+    const addressData = [request.client].concat(request.beacons);
+    const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
+    const bytesData = [sig.r, sig.s, request.seed];
+    await soRandom.connect(selectedSigners[0]).submitRandom(addressData, uintData, bytesData);
+    await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
+    // Renew the request
+    const renewUintData = [request.id, request.ethReserved, request.beaconFee, request.height, 123, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
+    try {
+      await soRandom.renewRequest(addressData, renewUintData, request.seed);
+      expect(true).to.equal(false);
+    } catch (e) {
+      expect(e).to.match(/RequestDataMismatch.*/g);
+    }
+  });
+
+
+  it("should revert with NotEnoughBeaconsAvailable if renewing a request without enough beacons", async function () {
+    const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    const req = await makeRequest(testCallback);
+
+    // Unregister beacons
+    for (const signer of signers) {
+      if ((await soRandom.getBeacons()).includes(signer.address) && ethers.BigNumber.from((await soRandom.getBeacon(signer.address)).pending).eq(0)) {
+        const tx = await soRandom.connect(signer).unregisterBeacon(signer.address);
+        await tx.wait();
+      }
+    }
+
+    await hre.network.provider.send("hardhat_mine", ["0x40", ethers.utils.hexlify(45)]);
+
+    // Renew request with first selectedSigner
+    const renewUintData = [req.id, req.ethReserved, req.beaconFee, req.height, req.timestamp, req.expirationSeconds, req.expirationBlocks, req.callbackGasLimit];
+    const addressData = [req.client].concat(req.beacons);
+    try {
+      await soRandom.renewRequest(addressData, renewUintData, req.seed);
+      expect(true).to.equal(false);
+    }
+    catch (e) {
+      expect(e).to.match(/NotEnoughBeaconsAvailable/g);
+    }
+
+  });
+
+  it("should remove a beacon on renewRequest if the beacon did not submit and has below minStakeEth", async function () {
+    // Get beacons.length
+    const oldBeacons = await soRandom.getBeacons();
+    // Deposit
+    const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    // Make request
+    const request = await makeRequest(testCallback);
+    // Get request signer
+    const selectedSigners = [];
+    // Create an array of signers where signer.address matches request.beacons in the same order
+    for (const signer of signers) {
+      if (request.beacons.includes(signer.address)) {
+        selectedSigners[request.beacons.indexOf(signer.address)] = signer;
+      }
+    }
+    // Return selectedSigners.address values in mapping
+    const mappedSigners = selectedSigners.map(signer => signer.address);
+    // beaconUnstakeEth on first selectedSigner
+    // Subtract minStakeEth from beaconStakeEth
+    const minStakeEth = await soRandom.minStakeEth();
+    const beaconStakeEth = await soRandom.getBeaconStakeEth(selectedSigners[0].address);
+    const beaconStakeEthMinusMinStakeEth = ethers.BigNumber.from(beaconStakeEth).sub(minStakeEth);
+    await soRandom.connect(selectedSigners[0]).beaconUnstakeEth(beaconStakeEthMinusMinStakeEth);
+    // Mine 20 blocks with 45 seconds per block
+    await hre.network.provider.send("hardhat_mine", ["0x40", ethers.utils.hexlify(45)]);
+    // Renew request with second selectedSigner
+    const renewUintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
+    const addressData = [request.client].concat(request.beacons);
+    const renewTx = await soRandom.connect(selectedSigners[1]).renewRequest(addressData, renewUintData, request.seed);
+    const renew = await renewTx.wait();
+    expect(renew.events).to.have.lengthOf(1);
+    expect(renew.events[0].event).to.equal("Retry");
+
+    // Make new requests until request2.beacons includes selectedSigners[0].address
+    let request2 = await makeRequest(testCallback);
+    while (!request2.beacons.includes(selectedSigners[0].address)) {
+      request2 = await makeRequest(testCallback);
+    }
+    // Mine 20 blocks with 45 seconds per block
+    await hre.network.provider.send("hardhat_mine", ["0x40", ethers.utils.hexlify(45)]);
+    // Get request2 selectedSigners
+    const selectedSigners2 = [];
+    for (const signer of signers) {
+      if (request2.beacons.includes(signer.address)) {
+        selectedSigners2[request2.beacons.indexOf(signer.address)] = signer;
+      }
+    }
+    const mappedSigners2 = selectedSigners2.map(signer => signer.address);
+
+    // Get the selectedSigner that isn't selectedSigners[0]
+    const selectedSigner2 = selectedSigners2.filter(signer => signer.address !== selectedSigners[0].address)[0];
+    const renewUintData2 = [request2.id, request2.ethReserved, request2.beaconFee, request2.height, request2.timestamp, request2.expirationSeconds, request2.expirationBlocks, request2.callbackGasLimit];
+    const addressData2 = [request2.client].concat(request2.beacons);
+    const renewTx2 = await soRandom.connect(selectedSigner2).renewRequest(addressData2, renewUintData2, request2.seed);
+    const renew2 = await renewTx2.wait();
+    // Expect event "RemoveBeacon" to be emitted by renew
+    expect(renew2.events).to.have.lengthOf(2);
+    expect(renew2.events[0].event).to.equal("RemoveBeacon");
+    // Expect event "BeaconRemoved" to have correct data
+    expect(renew2.events[0].args.beacon).to.equal(selectedSigners[0].address);
+    // Get beacons
+    const newBeacons = await soRandom.getBeacons();
+    // Expect beacons to have one less than before
+    expect(newBeacons).to.have.lengthOf(oldBeacons.length - 1);
   });
 
 });

@@ -61,18 +61,20 @@ struct SBeacon {
     bool exists;
     uint8 strikes;
     uint8 consecutiveSubmissions;
-    uint64 pendingCount;
+    uint64 pending;
 }
 
 contract Store {
     address[] beacons;
     uint256 strikeBurn;
     uint256 minToken;
-    uint256 minStakeEth;
-    uint256 expirationBlocks;
-    uint256 expirationSeconds;
-    // uint256 minerTip;
-    uint128 latestRequestId;
+    uint256 public minStakeEth;
+    uint256 public expirationBlocks;
+    uint256 public expirationSeconds;
+    uint256 public requestMinGasLimit;
+    // Fees
+    uint256 public beaconFee;
+    uint128 public latestRequestId;
     uint8 maxStrikes;
     uint128[] pendingRequestIds;
     mapping(uint256 => bytes32) results;
@@ -85,8 +87,6 @@ contract Store {
     mapping(address => SBeacon) sBeacon;
 
     // Random Stores
-    mapping(uint256 => bytes32[]) value;
-
     mapping(uint128 => bytes32) requestToHash;
     mapping(uint128 => bytes12[3]) requestToSignatures;
     mapping(uint128 => address) requestToFinalBeacon;
@@ -95,7 +95,4 @@ contract Store {
     // Collateral
     mapping(address => uint256) ethCollateral;
     mapping(address => uint256) tokenCollateral;
-
-    // Fees
-    uint256 public beaconFee;
 }

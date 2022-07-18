@@ -10,7 +10,8 @@ describe("Request & Submit", function () {
     return req;
   }
 
-  const signAndCallback = async (request) => {
+  const signAndCallback = async (request, client) => {
+    if (!client) client = testCallback;
     // Get beacons
     const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
 
@@ -18,7 +19,7 @@ describe("Request & Submit", function () {
     const messageHash = ethers.utils.keccak256(
       ethers.utils.defaultAbiCoder.encode(
         ["address", "uint256", "bytes32"],
-        [request.client, 1, request.seed]
+        [request.client, request.id ? request.id : 1, request.seed]
       )
     );
 
@@ -63,7 +64,6 @@ describe("Request & Submit", function () {
   let signers;
   let soRandom;
   let testCallback;
-  let arbGasInfo;
   beforeEach(async function () {
     await network.provider.request({
       method: "hardhat_reset",
@@ -76,45 +76,16 @@ describe("Request & Submit", function () {
         // },
       ],
     });
-    const ArbGasInfo = await ethers.getContractFactory("ArbGasInfo");
-    arbGasInfo = await ArbGasInfo.deploy();
     signers = await ethers.getSigners();
-    const SoRandom = await ethers.getContractFactory("SoRandom");
-    // const Factory = await ethers.getContractFactory("SoRandomFactory");
-
-    // address _developer,
-    // address _arbGas,
-    // uint8 _maxStrikes,
-    // uint256 _minCollateralEth,
-    // uint256 _expirationBlocks,
-    // uint256 _expirationSeconds,
-    // uint256 _beaconFee,
-    // address[] memory _beacons
+    const SoRandom = await ethers.getContractFactory("SoRandomWithStorageControls");
     soRandom = await SoRandom.deploy(ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, ethers.utils.parseEther("0.00005"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]);
-
-    // factory = await Factory.deploy(soRandom.address);
-
+    await soRandom.deployed();
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(soRandom.address);
 
-    // await factory.connect(signers[4]).subscribe(testCallback.address);
-
-    // const Subscriber = await ethers.getContractFactory("SoRandomSubscriber");
-    // subscriber = await Subscriber.attach(
-    //   await soRandom.getSubscriber(testCallback.address)
-    // );
-    // await testCallback.setSubscriber(soRandom.address);
   });
-  // it("Should return the subscriber address for the client contract", async function () {
-  //   const subscriberAddress = await soRandom.getSubscriber(testCallback.address);
-  //   expect(await soRandom.getClient(subscriberAddress)).to.equal(testCallback.address);
-  // });
 
-  // it("Should make a deposit", async function () {
-  //   await signers[4].sendTransaction({ to: subscriber.address, value: 1000000000000000000 });
-  // });
-
-  it("Should make deposit and a new random request", async function () {
+  it("should make deposit and a new random request", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     /*  uint256 _minPrioFee,
@@ -130,7 +101,22 @@ describe("Request & Submit", function () {
     expect(request.beacons.length).to.equal(3);
   });
 
-  it("Should make multiple deposits and random requests", async function () {
+  it("should revert on requestRandom with gas limit too low", async function () {
+    const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    await expect(testCallback.makeRequestWithGasTooLow()).to.be.revertedWith("CallbackGasLimitTooLow(1, 50000)");
+  });
+
+  it("should revert on requestRandom with insufficient funds", async function () {
+    try {
+      await testCallback.makeRequest();
+      expect(true).to.be.false("", "should have reverted")
+    } catch (e) {
+      expect(e).to.match(/EthDepositTooLow.*/g);
+    }
+  });
+
+  it("should make multiple deposits and random requests", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     /*  uint256 _minPrioFee,
@@ -178,7 +164,88 @@ describe("Request & Submit", function () {
     }
   });
 
-  it("Should accept random submissions from beacons and finally callback", async function () {
+  it("should revert with RequestDataMismatch when submitting a result with a different hash", async function () {
+    const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+
+    let req = await testCallback.makeRequest();
+    const res = await req.wait();
+    // Get request data
+    let request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
+
+    const selectedBeacons = request.beacons;
+    const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
+    const signer = selectedSigners[0];
+    // Sign some requests but don't finish
+    const messageHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ["address", "uint256", "bytes32"],
+        [request.client, request.id, request.seed]
+      )
+    );
+
+    const messageHashBytes = ethers.utils.arrayify(messageHash);
+    const flatSig = await signer.signMessage(messageHashBytes);
+    const sig = ethers.utils.splitSignature(flatSig);
+    // gasLimit is replaced with incorrect value
+    const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, 1234, sig.v];
+    const addressData = [request.client].concat(request.beacons);
+    const bytesData = [sig.r, sig.s, request.seed];
+
+    // Regex to match the string "RequestDataMismatch" and any infinite characters after
+
+    try {
+      await soRandom.connect(signer).submitRandom(addressData, uintData, bytesData)
+      expect(true).to.equal(false, "Transaction should have reverted");
+    } catch (e) {
+      expect(e).to.match(/RequestDataMismatch.*/g);
+    }
+  });
+
+  it("should reset strikes and consecutiveSubmissions of sBeacon after consecutiveSubmissions reaches 100", async function () {
+    const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+
+    let req = await testCallback.makeRequest();
+    const res = await req.wait();
+    // Get request data
+    let request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
+
+    const selectedBeacons = request.beacons;
+    const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
+    const signer = selectedSigners[0];
+    // Sign some requests but don't finish
+    const messageHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ["address", "uint256", "bytes32"],
+        [request.client, request.id, request.seed]
+      )
+    );
+
+    await soRandom._debug_setSBeacon(signer.address, 99, 2);
+
+    // check that beacon returns 99 consecutiveSubmissions and 2 strikes
+    let beacon = await soRandom.getBeacon(signer.address);
+    expect(beacon.strikes).to.equal(2);
+    expect(beacon.consecutiveSubmissions).to.equal(99);
+
+    const messageHashBytes = ethers.utils.arrayify(messageHash);
+    const flatSig = await signer.signMessage(messageHashBytes);
+    const sig = ethers.utils.splitSignature(flatSig);
+    // gasLimit is replaced with incorrect value
+    const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
+    const addressData = [request.client].concat(request.beacons);
+    const bytesData = [sig.r, sig.s, request.seed];
+
+
+    await soRandom.connect(signer).submitRandom(addressData, uintData, bytesData)
+    beacon = await soRandom.getBeacon(signer.address);
+    expect(beacon.strikes).to.equal(0);
+    expect(beacon.consecutiveSubmissions).to.equal(0);
+
+  });
+
+  it("should accept random submissions from beacons and finally callback", async function () {
     // const tx = await signers[4].sendTransaction({ to: subscriber.address, value: ethers.utils.parseEther("1") });
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
@@ -247,7 +314,7 @@ describe("Request & Submit", function () {
 
   });
 
-  it("Should charge enough per submit to cover gas cost and let beacon withdraw", async function () {
+  it("should charge enough per submit to cover gas cost and let beacon withdraw [ @skip-on-coverage ]", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
 
@@ -266,11 +333,9 @@ describe("Request & Submit", function () {
 
     const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
     const messageHashBytes = ethers.utils.arrayify(messageHash);
-    const arbGasPrice = ethers.BigNumber.from((await arbGasInfo.getPricesInWei())[5]);
 
     let selectedFinalBeacon;
     for (const signer of selectedSigners) {
-
       const flatSig = await signer.signMessage(messageHashBytes);
       const sig = ethers.utils.splitSignature(flatSig);
       const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
@@ -278,8 +343,10 @@ describe("Request & Submit", function () {
       const bytesData = [sig.r, sig.s, request.seed];
       const tx = await soRandom.connect(signer).submitRandom(addressData, uintData, bytesData);
       const receipt = await tx.wait();
-      const gasPaid = arbGasPrice.mul(receipt.gasUsed).add(await soRandom.beaconFee());
-      expect((await soRandom.getBeaconStakeEth(signer.address)).gte(gasPaid)).to.be.true;
+      const receiptBlockBaseFee = (await ethers.provider.getBlock(receipt.blockNumber)).baseFeePerGas;
+      const gasPaid = receiptBlockBaseFee.mul(receipt.gasUsed).add(request.beaconFee);
+      const beaconStake = await soRandom.getBeaconStakeEth(signer.address);
+      expect(beaconStake.gte(gasPaid)).to.be.true;
       const requestEvent = soRandom.interface.parseLog(receipt.logs[0]);
 
       if (requestEvent.name == "RequestBeacon") {
@@ -297,48 +364,179 @@ describe("Request & Submit", function () {
     const bytesData = [sig.r, sig.s, request.seed];
     const tx = await soRandom.connect(finalSigner).submitRandom(addressData, uintData, bytesData);
     const receipt = await tx.wait();
-    const minFee = arbGasPrice.mul(receipt.gasUsed).add(await soRandom.beaconFee());
+    const receiptBlockBaseFee = (await ethers.provider.getBlock(receipt.blockNumber)).baseFeePerGas;
+    const minFee = receiptBlockBaseFee.mul(receipt.gasUsed).add(request.beaconFee);
     const balance = await soRandom.getBeaconStakeEth(finalSigner.address);
     expect(balance.gte(minFee)).to.be.true;
   });
 
-  it("Should fail client withdraw when it has pending requests", async function () {
+  it("should fail client withdraw when it has pending requests", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     const req = await testCallback.makeRequest();
     const res = await req.wait();
     const request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
-    expect((await soRandom.getEthReserved(testCallback.address)).gt(0)).to.be.true;
-    await expect(testCallback.soRandomWithdraw(ethers.utils.parseEther("5"))).to.be.revertedWith(`WithdrawingTooMuch(${ethers.utils.parseEther("5").toString()}, ${ethers.utils.parseEther("5").sub(await soRandom.getEthReserved(testCallback.address)).toString()})`);
+    let ethReserved = await soRandom.getEthReserved(testCallback.address);
+    expect(ethReserved.gt(0)).to.be.true;
+    try {
+      await testCallback.soRandomWithdraw(ethers.utils.parseEther("5"));
+      expect(true).to.be.false;
+    } catch (e) {
+      expect(e.message).to.include(`WithdrawingTooMuch(${ethers.utils.parseEther("5").toString()}, ${ethers.utils.parseEther("5").sub(await soRandom.getEthReserved(testCallback.address)).toString()})`);
+    }
+
     await signAndCallback(request);
-    expect((await soRandom.getEthReserved(testCallback.address)).eq(0)).to.be.true;
-    await expect(testCallback.soRandomWithdraw(ethers.utils.parseEther("5"))).to.be.revertedWith(`WithdrawingTooMuch(${ethers.utils.parseEther("5").toString()}, ${(await soRandom.clientBalanceOf(testCallback.address)).toString()})`);
+    ethReserved = await soRandom.getEthReserved(testCallback.address);
+    expect(ethReserved.eq(0)).to.be.true;
+    try {
+      await testCallback.soRandomWithdraw(ethers.utils.parseEther("5"));
+      expect(true).to.be.false;
+    } catch (e) {
+      expect(e.message).to.include(`WithdrawingTooMuch(${ethers.utils.parseEther("5").toString()}, ${(await soRandom.clientBalanceOf(testCallback.address)).toString()})`);
+    }
     const remaining = await soRandom.clientBalanceOf(testCallback.address);
-    await expect(testCallback.soRandomWithdraw(remaining)).to.not.be.reverted;
+    try {
+      await testCallback.soRandomWithdraw(remaining);
+    } catch (e) {
+      expect(true).to.be.false(e);
+    }
     expect((await soRandom.clientBalanceOf(testCallback.address)).eq(0)).to.be.true;
   });
 
-  it("Should fail beacon withdraw when it has pending requests", async function () {
+  it("should complete submitRandom even if the callback reverts", async function () {
+    // Deploy contract TestCallbackWithRevert
+    const TestCallbackWithRevert = await ethers.getContractFactory("TestCallbackWithRevert");
+    const testCallbackWithRevert = await TestCallbackWithRevert.deploy(soRandom.address);
+    await testCallbackWithRevert.deployed();
+    const deposit = await soRandom.clientDeposit(testCallbackWithRevert.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    const req = await testCallbackWithRevert.makeRequest();
+    const res = await req.wait();
+    const request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
+    await signAndCallback(request, testCallbackWithRevert);
+    // Except getResult(request.id) to return not be bytes32(0)
+    const result = await soRandom.getResult(request.id);
+    expect(result).to.not.equal(ethers.constants.HashZero);
+  });
+
+  it("should complete submitRandom even if the callback runs out of gas", async function () {
+    // Deploy contract TestCallbackWithTooMuchGas
+    const TestCallbackWithTooMuchGas = await ethers.getContractFactory("TestCallbackWithTooMuchGas");
+    const testCallbackWithTooMuchGas = await TestCallbackWithTooMuchGas.deploy(soRandom.address);
+    await testCallbackWithTooMuchGas.deployed();
+    const deposit = await soRandom.clientDeposit(testCallbackWithTooMuchGas.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    const req = await testCallbackWithTooMuchGas.makeRequest();
+    const res = await req.wait();
+    const request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
+    await signAndCallback(request, testCallbackWithTooMuchGas);
+    // Except getResult(request.id) to return not be bytes32(0)
+    const result = await soRandom.getResult(request.id);
+    expect(result).to.not.equal(ethers.constants.HashZero);
+  });
+
+  it("should revert with NotEnoughBeaconsAvailable when second-to-last beacon calls submitRandom with all other beacons unregistered", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     const req = await testCallback.makeRequest();
-    // Get request data
     const res = await req.wait();
-    const request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
-    const selectedSigner = signers.filter(signer => request.beacons[0] == signer.address)[0];
-    let pending = (await soRandom.getBeacon(selectedSigner.address)).pendingCount.toNumber();
-    expect(pending).to.be.gt(0);
+    let request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
 
-    await expect(soRandom.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.be.revertedWith(`BeaconHasPending(${pending})`);
+    const messageHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ["address", "uint256", "bytes32"],
+        [request.client, 1, request.seed]
+      )
+    );
 
-    await signAndCallback(request);
+    const selectedBeacons = request.beacons;
 
-    await expect(soRandom.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.not.be.reverted;
-    pending = (await soRandom.getBeacon(selectedSigner.address)).pendingCount.toNumber();
-    expect(pending).to.equal(0);
+    const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
+    const messageHashBytes = ethers.utils.arrayify(messageHash);
+
+    let selectedFinalBeacon;
+    for (const signer of selectedSigners) {
+      const flatSig = await signer.signMessage(messageHashBytes);
+      const sig = ethers.utils.splitSignature(flatSig);
+      const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
+      const addressData = [request.client].concat(request.beacons);
+      const bytesData = [sig.r, sig.s, request.seed];
+
+      // If signer is of index 1 in selectedSigners
+      if (selectedSigners.indexOf(signer) === 1) {
+        // Call soRandom.unregisterBeacon(signer.address) all signers except for this signer
+        for (const otherSigner of signers.filter(fSigner => fSigner.address !== signer.address)) {
+          if ((await soRandom.getBeacons()).includes(otherSigner.address)) {
+            const tx = await soRandom.connect(otherSigner).unregisterBeacon(otherSigner.address);
+            await tx.wait();
+          }
+        }
+        // submitRandom should fail with NotEnoughBeaconsAvailable
+        try {
+          await soRandom.connect(signer).submitRandom(addressData, uintData, bytesData);
+          expect(true).to.be.false;
+        } catch (e) {
+          expect(e).to.match(/NotEnoughBeaconsAvailable/);
+        }
+      } else {
+        const tx = await soRandom.connect(signer).submitRandom(addressData, uintData, bytesData);
+        await tx.wait();
+      }
+    }
+
   });
 
-  // it("Should allow beacon completeAndUnregister", async function () {
+  it("should revert with NotEnoughBeaconsAvailable if making a request without 5 beacons", async function () {
+    const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    // Unregister all beacons
+    for (const signer of signers) {
+      if ((await soRandom.getBeacons()).includes(signer.address)) {
+        const tx = await soRandom.connect(signer).unregisterBeacon(signer.address);
+        await tx.wait();
+      }
+    }
+    // Make request
+    try {
+      const req = await testCallback.makeRequest();
+      await req.wait();
+      expect(true).to.be.false;
+    } catch (e) {
+      expect(e).to.match(/NotEnoughBeaconsAvailable/);
+    }
+  });
+
+  it("should add & remove pendingRequestIds", async function () {
+    const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    let i = 0;
+    const requests = [];
+    while (i < 10) {
+      const req = await testCallback.makeRequest();
+      const res = await req.wait();
+      const request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
+      requests.push(request);
+      const pendingRequests = await soRandom.getPendingRequestIds();
+      // Convert values in pendingRequests array from BigNumber to number
+      const pendingRequestsNum = pendingRequests.map(pendingRequest => ethers.BigNumber.from(pendingRequest).toNumber());
+      i++;
+      expect(pendingRequestsNum.includes(ethers.BigNumber.from(request.id).toNumber())).to.be.true;
+      expect(pendingRequestsNum).to.have.lengthOf(i);
+    }
+
+    // signAndCallback requests
+    for (const request of requests) {
+      await signAndCallback(request, testCallback);
+      const pendingRequests = await soRandom.getPendingRequestIds();
+      const pendingRequestsNum = pendingRequests.map(pendingRequest => pendingRequest.toNumber());
+      expect(!pendingRequestsNum.includes(ethers.BigNumber.from(request.id).toNumber())).to.be.true;
+      i--;
+      expect(pendingRequestsNum).to.have.lengthOf(i);
+    }
+  });
+
+
+  // it("should allow beacon completeAndUnregister", async function () {
   //   const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
   //   await deposit.wait();
 

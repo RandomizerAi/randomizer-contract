@@ -9,10 +9,14 @@ import "./GasHandler.sol";
 
 contract Utils is Admin, GasHandler {
     // Errors used by Utils, Beacon, and Client
-    error RequestDataMismatch(bytes32 expectedHash, bytes32 givenHash);
+    error RequestDataMismatch(bytes32 givenHash, bytes32 expectedHash);
     error RequestNotFound(uint256 id);
     error BeaconNotFound();
-    error FailedToSendEth();
+    error FailedToSendEth(address to, uint256 amount);
+    error NotEnoughBeaconsAvailable(
+        uint256 availableBeacons,
+        uint256 requiredBeacons
+    );
 
     /// @dev Replaces all non-submitting beacons from a request (called when a request is renewed)
     function _replaceNonSubmitters(
@@ -53,7 +57,7 @@ contract Utils is Admin, GasHandler {
                         }
                     }
                 }
-                // If no duplicates: assign to newSelectedBeacons and update beacon pendingCount
+                // If no duplicates: assign to newSelectedBeacons and update beacon pending
                 if (!duplicate) {
                     newSelectedBeacons[i] = randomBeacon;
                     i++;
@@ -87,7 +91,6 @@ contract Utils is Admin, GasHandler {
         // The replacing beacon gets assigned the replaced beacon's index
         beaconIndex[newBeacon] = index;
         beacons.pop();
-        emit RemoveBeacon(_beacon, sBeacon[_beacon].strikes);
     }
 
     /// @dev Pops a pending request ID from the list of pendingRequestIDs (called when a request is successful)
@@ -131,6 +134,8 @@ contract Utils is Admin, GasHandler {
         internal
         returns (address[3] memory)
     {
+        if (beacons.length < 5)
+            revert NotEnoughBeaconsAvailable(beacons.length, 5);
         // Using _request hash so that the beacons are unique for multiple requests within the same block
         bytes32 random = keccak256(abi.encode(_request, _seed));
 
@@ -153,7 +158,7 @@ contract Utils is Admin, GasHandler {
                 }
             }
             if (!duplicate) {
-                sBeacon[randomBeacon].pendingCount++;
+                sBeacon[randomBeacon].pending++;
                 indices[i] = randomBeacon;
                 i++;
             }
@@ -166,8 +171,10 @@ contract Utils is Admin, GasHandler {
     function _randomBeacon(bytes32 _seed, address[3] memory _selectedBeacons)
         internal
         view
-        returns (address)
+        returns (address beacon)
     {
+        if (beacons.length < 5)
+            revert NotEnoughBeaconsAvailable(beacons.length, 5);
         // Using _request hash so that the beacons are unique for multiple requests within the same block
         bytes32 random = keccak256(abi.encode(_seed));
 
@@ -189,7 +196,6 @@ contract Utils is Admin, GasHandler {
                 return randomBeacon;
             }
         }
-        return address(0);
     }
 
     function _resolveUintData(uint256[9] calldata _data)
@@ -298,6 +304,10 @@ contract Utils is Admin, GasHandler {
 
     function _transferEth(address _to, uint256 _amount) internal {
         (bool sent, ) = _to.call{value: _amount}("");
-        if (!sent) revert FailedToSendEth();
+        if (sent) {
+            emit WithdrawEth(_to, _amount);
+        } else {
+            revert FailedToSendEth(_to, _amount);
+        }
     }
 }

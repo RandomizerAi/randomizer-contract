@@ -44,7 +44,10 @@ contract Admin is Ownable, Store {
         uint256 amount
     );
     event Charge(address indexed from, address indexed to, uint256 amount);
+    event WithdrawEth(address indexed to, uint256 amount);
     event RegisterBeacon(address indexed beacon);
+    event UnregisterBeacon(address indexed beacon, uint256 strikes);
+    event RemoveBeacon(address indexed beacon, uint8 strikes);
 
     /// @notice Emits an event that contains all data needed for a beacon to submit a random number.
     /// @param request request event data (id, ethReserved, beaconFee, height, timestamp, expirationSeconds, expirationBlocks, callbackGasLimit, client, beacons, lastBeaconSeed)
@@ -76,8 +79,6 @@ contract Admin is Ownable, Store {
         uint256 slashedTokens
     );
 
-    event RemoveBeacon(address indexed beacon, uint256 strikes);
-
     function setBeaconFee(uint256 _amount) external onlyOwner {
         beaconFee = _amount;
     }
@@ -90,14 +91,14 @@ contract Admin is Ownable, Store {
         expirationBlocks = _expirationBlocks;
     }
 
-    function setMaxStrikes(uint8 _maxStrikes) external onlyOwner {
-        maxStrikes = _maxStrikes;
-    }
-
     function setExpirationSeconds(uint256 _expirationSeconds)
         external
         onlyOwner
     {
         expirationSeconds = _expirationSeconds;
+    }
+
+    function setMaxStrikes(uint8 _maxStrikes) external onlyOwner {
+        maxStrikes = _maxStrikes;
     }
 }

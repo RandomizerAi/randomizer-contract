@@ -14,7 +14,7 @@ contract Beacon is Utils {
     // Errors exclusive to Beacon.sol
     error BeaconExists();
     error BeaconNotSelected();
-    error BeaconHasPending(uint256 pendingCount);
+    error BeaconHasPending(uint256 pending);
     error NotABeacon();
     error ResultExists();
     error SignatureMismatch();
@@ -79,10 +79,11 @@ contract Beacon is Utils {
             ethCollateral[msg.sender] < minStakeEth &&
             beaconIndex[msg.sender] != 0
         ) {
-            if (sBeacon[msg.sender].pendingCount != 0)
-                revert BeaconHasPending(sBeacon[msg.sender].pendingCount);
+            if (sBeacon[msg.sender].pending != 0)
+                revert BeaconHasPending(sBeacon[msg.sender].pending);
 
             _removeBeacon(msg.sender);
+            emit UnregisterBeacon(msg.sender, sBeacon[msg.sender].strikes);
         }
         _transferEth(msg.sender, _amount);
     }
@@ -93,12 +94,13 @@ contract Beacon is Utils {
             revert NotOwnerOrBeacon();
 
         if (beaconIndex[_beacon] == 0) revert NotABeacon();
-        if (sBeacon[_beacon].pendingCount != 0)
-            revert BeaconHasPending(sBeacon[_beacon].pendingCount);
+        if (sBeacon[_beacon].pending != 0)
+            revert BeaconHasPending(sBeacon[_beacon].pending);
 
         uint256 collateral = ethCollateral[_beacon];
 
         _removeBeacon(_beacon);
+        emit UnregisterBeacon(_beacon, sBeacon[_beacon].strikes);
 
         if (collateral > 0) {
             // Remove collateral
@@ -159,7 +161,7 @@ contract Beacon is Utils {
          * generatedHash can never be bytes(0) because packed.data.height must be greater than 0 */
 
         if (requestToHash[packed.id] != generatedHash)
-            revert RequestDataMismatch(requestToHash[packed.id], generatedHash);
+            revert RequestDataMismatch(generatedHash, requestToHash[packed.id]);
 
         // SRandomRequest storage request = requests[requestId];
         if (packed.data.height == 0) revert RequestNotFound(packed.id);
@@ -281,7 +283,7 @@ contract Beacon is Utils {
         } else {
             beacon.consecutiveSubmissions++;
         }
-        if (beacon.pendingCount > 0) beacon.pendingCount--;
+        if (beacon.pending > 0) beacon.pending--;
         sBeacon[msg.sender] = beacon;
     }
 
@@ -330,7 +332,7 @@ contract Beacon is Utils {
                 accounts.beacons
             );
 
-            sBeacon[randomBeacon].pendingCount++;
+            sBeacon[randomBeacon].pending++;
 
             // requestToFinalBeacon[packed.id] = randomBeacon;
 
