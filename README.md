@@ -13,8 +13,8 @@ Supported gas fee handlers:
 
 Note that the protocol stores & verifies hashed calldata instead of storing independent variables so as to minimize storage gas fees. 
 
-1. Beacon deposits ETH by adding `msg.value` in a `beaconStakeEth(address _beacon)` call. This ETH is staked (can be unstaked at any time) and can be slashed by the protocol when the beacon misses a request.
-2. Devs (or dapp users) deposit ETH on behalf of their smart contract ("client") by adding `msg.value` to a `clientDeposit(address _client)` call. The total deposited balance is reserved (and finally charged) for paying fees (gas fees + premium) for their random requests.
+1. Beacon deposits ETH by attaching ETH in `msg.value` in a `beaconStakeEth(address _beacon)` call. This ETH is staked (can be unstaked at any time) and can be slashed by the protocol when the beacon misses a request.
+2. Devs (or dapp users) deposit ETH on behalf of their smart contract ("client") by adding `msg.value` to a `clientDeposit(address _client)` call. When a client contract calls `soRandom.requestRandom()`, the estimate gas fee + premium is reserved from the deposit and finally charged on completion.
 3. Client contract calls `requestRandom(uint256 _callbackGasLimit)` to request a random number. The function returns a uint256 id (which the client contract refer to when it receives a callback with a random value).
 4. 2 beacons are selected in the `requestRandom()` function which sign the existing request data (client address, request id, seed generated from block data) and submit their signature to `submitRandom()`.
 5. When the 2nd beacon submits its signature, the 2 signatures are hashed to generate a seed with which a 3rd (final) beacon is randomly selected. The event `RequestBeacon(uint256 id, RequestEventData request, address beacon)` is emitted.
