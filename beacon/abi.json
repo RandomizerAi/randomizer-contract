@@ -7,11 +7,6 @@
         "type": "address"
       },
       {
-        "internalType": "address",
-        "name": "_arbGas",
-        "type": "address"
-      },
-      {
         "internalType": "uint8",
         "name": "_maxStrikes",
         "type": "uint8"
@@ -44,6 +39,190 @@
     ],
     "stateMutability": "nonpayable",
     "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "BeaconExists",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "pending",
+        "type": "uint256"
+      }
+    ],
+    "name": "BeaconHasPending",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BeaconNotFound",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BeaconNotSelected",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "inputLimit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minimumLimit",
+        "type": "uint256"
+      }
+    ],
+    "name": "CallbackGasLimitTooLow",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "availableAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "requiredAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "EthDepositTooLow",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "FailedToSendEth",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotABeacon",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "availableBeacons",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "requiredBeacons",
+        "type": "uint256"
+      }
+    ],
+    "name": "NotEnoughBeaconsAvailable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotOwnerOrBeacon",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "expirationSeconds",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "height",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "expirationHeight",
+        "type": "uint256"
+      }
+    ],
+    "name": "NotYetRenewable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuard",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "givenHash",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "expectedHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "RequestDataMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ],
+    "name": "RequestNotFound",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ResultExists",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "SignatureMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "allowedAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "WithdrawingTooMuch",
+    "type": "error"
   },
   {
     "anonymous": false,
@@ -214,9 +393,9 @@
       },
       {
         "indexed": false,
-        "internalType": "uint256",
+        "internalType": "uint8",
         "name": "strikes",
-        "type": "uint256"
+        "type": "uint8"
       }
     ],
     "name": "RemoveBeacon",
@@ -227,27 +406,67 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "address",
-        "name": "client",
-        "type": "address"
-      },
-      {
-        "indexed": true,
         "internalType": "uint128",
-        "name": "request",
+        "name": "id",
         "type": "uint128"
       },
       {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "ethReserved",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "beaconFee",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "height",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expirationSeconds",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expirationBlocks",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "callbackGasLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "client",
+            "type": "address"
+          },
+          {
+            "internalType": "address[3]",
+            "name": "beacons",
+            "type": "address[3]"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "seed",
+            "type": "bytes32"
+          }
+        ],
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "seed",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "address[2]",
-        "name": "beacons",
-        "type": "address[2]"
+        "internalType": "struct SRequestEventData",
+        "name": "request",
+        "type": "tuple"
       }
     ],
     "name": "Request",
@@ -258,21 +477,67 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "address",
-        "name": "client",
-        "type": "address"
-      },
-      {
-        "indexed": true,
         "internalType": "uint128",
-        "name": "request",
+        "name": "id",
         "type": "uint128"
       },
       {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "ethReserved",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "beaconFee",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "height",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expirationSeconds",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expirationBlocks",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "callbackGasLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "client",
+            "type": "address"
+          },
+          {
+            "internalType": "address[3]",
+            "name": "beacons",
+            "type": "address[3]"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "seed",
+            "type": "bytes32"
+          }
+        ],
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "seed",
-        "type": "bytes32"
+        "internalType": "struct SRequestEventData",
+        "name": "request",
+        "type": "tuple"
       },
       {
         "indexed": false,
@@ -289,9 +554,9 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "uint256",
-        "name": "request",
-        "type": "uint256"
+        "internalType": "uint128",
+        "name": "id",
+        "type": "uint128"
       },
       {
         "indexed": false,
@@ -308,27 +573,67 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "address",
-        "name": "client",
-        "type": "address"
-      },
-      {
-        "indexed": true,
         "internalType": "uint128",
-        "name": "request",
+        "name": "id",
         "type": "uint128"
       },
       {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "ethReserved",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "beaconFee",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "height",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expirationSeconds",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expirationBlocks",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "callbackGasLimit",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "client",
+            "type": "address"
+          },
+          {
+            "internalType": "address[3]",
+            "name": "beacons",
+            "type": "address[3]"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "seed",
+            "type": "bytes32"
+          }
+        ],
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "seed",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "address[3]",
-        "name": "beacons",
-        "type": "address[3]"
+        "internalType": "struct SRequestEventData",
+        "name": "request",
+        "type": "tuple"
       }
     ],
     "name": "Retry",
@@ -344,7 +649,7 @@
         "type": "address"
       },
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "address",
         "name": "striker",
         "type": "address"
@@ -357,9 +662,9 @@
       },
       {
         "indexed": false,
-        "internalType": "uint256",
+        "internalType": "uint128",
         "name": "request",
-        "type": "uint256"
+        "type": "uint128"
       },
       {
         "indexed": false,
@@ -375,6 +680,44 @@
       }
     ],
     "name": "Strike",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "beacon",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "strikes",
+        "type": "uint256"
+      }
+    ],
+    "name": "UnregisterBeacon",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "WithdrawEth",
     "type": "event"
   },
   {
@@ -480,34 +823,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint128[]",
-        "name": "_requests",
-        "type": "uint128[]"
-      },
-      {
-        "internalType": "bytes32[]",
-        "name": "r",
-        "type": "bytes32[]"
-      },
-      {
-        "internalType": "bytes32[]",
-        "name": "s",
-        "type": "bytes32[]"
-      },
-      {
-        "internalType": "uint8[]",
-        "name": "v",
-        "type": "uint8[]"
-      }
-    ],
-    "name": "completeAndUnregister",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "developer",
     "outputs": [
@@ -515,6 +830,32 @@
         "internalType": "address",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "expirationBlocks",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "expirationSeconds",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -544,13 +885,13 @@
           },
           {
             "internalType": "uint8",
-            "name": "pending",
+            "name": "consecutiveSubmissions",
             "type": "uint8"
           },
           {
-            "internalType": "uint8",
-            "name": "consecutiveSubmissions",
-            "type": "uint8"
+            "internalType": "uint64",
+            "name": "pending",
+            "type": "uint64"
           }
         ],
         "internalType": "struct SBeacon",
@@ -575,25 +916,6 @@
         "internalType": "uint256",
         "name": "index",
         "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_beacon",
-        "type": "address"
-      }
-    ],
-    "name": "getBeaconPendingRequestIds",
-    "outputs": [
-      {
-        "internalType": "uint128[]",
-        "name": "",
-        "type": "uint128[]"
       }
     ],
     "stateMutability": "view",
@@ -653,14 +975,14 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
+        "internalType": "uint24",
         "name": "_callbackGasLimit",
-        "type": "uint256"
+        "type": "uint24"
       },
       {
-        "internalType": "uint256",
+        "internalType": "uint8",
         "name": "_numberOfBeacons",
-        "type": "uint256"
+        "type": "uint8"
       }
     ],
     "name": "getFeeEstimate",
@@ -676,25 +998,12 @@
   },
   {
     "inputs": [],
-    "name": "pendingRequestIds",
+    "name": "getPendingRequestIds",
     "outputs": [
       {
         "internalType": "uint128[]",
         "name": "",
         "type": "uint128[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getRenewableRequestIds",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
       }
     ],
     "stateMutability": "view",
@@ -708,69 +1017,12 @@
         "type": "uint128"
       }
     ],
-    "name": "getRequest",
+    "name": "getRequestSignatures",
     "outputs": [
       {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "client",
-            "type": "address"
-          },
-          {
-            "internalType": "address[3]",
-            "name": "beacons",
-            "type": "address[3]"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "seed",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "uint256",
-            "name": "ethReserved",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "beaconFee",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "height",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "timestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expirationSeconds",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expirationBlocks",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint24",
-            "name": "callbackGasLimit",
-            "type": "uint24"
-          },
-          {
-            "internalType": "bytes12[3]",
-            "name": "signatures",
-            "type": "bytes12[3]"
-          }
-        ],
-        "internalType": "struct SRandomRequest",
+        "internalType": "bytes12[3]",
         "name": "",
-        "type": "tuple"
+        "type": "bytes12[3]"
       }
     ],
     "stateMutability": "view",
@@ -790,6 +1042,32 @@
         "internalType": "bytes32",
         "name": "",
         "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "latestRequestId",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "minStakeEth",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -824,9 +1102,19 @@
   {
     "inputs": [
       {
-        "internalType": "uint128",
-        "name": "_request",
-        "type": "uint128"
+        "internalType": "address[4]",
+        "name": "_addressData",
+        "type": "address[4]"
+      },
+      {
+        "internalType": "uint256[8]",
+        "name": "_uintData",
+        "type": "uint256[8]"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "_seed",
+        "type": "bytes32"
       }
     ],
     "name": "renewRequest",
@@ -839,6 +1127,19 @@
     "name": "renounceOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "requestMinGasLimit",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -902,6 +1203,19 @@
   {
     "inputs": [
       {
+        "internalType": "uint8",
+        "name": "_maxStrikes",
+        "type": "uint8"
+      }
+    ],
+    "name": "setMaxStrikes",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "_amount",
         "type": "uint256"
@@ -915,24 +1229,19 @@
   {
     "inputs": [
       {
-        "internalType": "uint128",
-        "name": "_request",
-        "type": "uint128"
+        "internalType": "address[4]",
+        "name": "_addressData",
+        "type": "address[4]"
       },
       {
-        "internalType": "bytes32",
-        "name": "r",
-        "type": "bytes32"
+        "internalType": "uint256[9]",
+        "name": "_uintData",
+        "type": "uint256[9]"
       },
       {
-        "internalType": "bytes32",
-        "name": "s",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "uint8",
-        "name": "v",
-        "type": "uint8"
+        "internalType": "bytes32[3]",
+        "name": "_rsAndSeed",
+        "type": "bytes32[3]"
       }
     ],
     "name": "submitRandom",
