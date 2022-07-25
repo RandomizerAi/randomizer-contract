@@ -1,6 +1,6 @@
 # soRandom - Easy & secure randomness for smart contracts
 
-soRandom is a Verifiable Random Function (VRF) protocol. Smart contracts can make external calls to soRandom's `requestRandom()` function and receive a callback to their contract's `soRandomCallback(id, value)` function which contains the request id and verifiably unpredictable pseudo-random bytes. All within seconds.
+soRandom is a Verifiable Random Function (VRF) protocol that lets contracts easily get randomness e.g. for NFT generation, drop rates, gaming etc. Smart contracts can make external calls to soRandom's `requestRandom()` function to receive callbacks that contain random bytes to their `soRandomCallback(id, value)` function. The protocol uses native ETH for fees.
 
 ## IMPORTANT: Before getting started
 Set the network using `yarn set-network:{network}`. This will copy over the desired gas price handler for the network.
