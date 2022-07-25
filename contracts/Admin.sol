@@ -1,10 +1,14 @@
-import "./Store.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+// SPDX-License-Identifier: BSL 1.1
 
 /// @title SoRandom Admin Functions
 /// @author Deanpress (hello@dean.press)
 /// @notice Administrative functions, variables, and constants used by SoRandom.
-contract Admin is Ownable, Store {
+pragma solidity ^0.8.15;
+
+import "./Store.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+contract Admin is OwnableUpgradeable, Store {
     // Number of beacons per request
     uint256 internal constant BLOCKS_UNTIL_RENEWABLE_ALL = 20;
     uint256 internal constant SECONDS_UNTIL_RENEWABLE_ALL = 5 minutes;

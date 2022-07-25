@@ -63,7 +63,7 @@ describe("Beacon", function () {
     });
     signers = await ethers.getSigners();
     const SoRandom = await ethers.getContractFactory("SoRandomWithStorageControls");
-    soRandom = await SoRandom.deploy(ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, ethers.utils.parseEther("0.00005"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]);
+    soRandom = await SoRandom.deploy(signers[0].address, 3, "500000000000000000", 20, 900, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]);
     await soRandom.deployed();
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(soRandom.address);
@@ -83,7 +83,7 @@ describe("Beacon", function () {
 
     await expect(soRandom.connect(selectedSigner).beaconUnstakeEth(await soRandom.getBeaconStakeEth(selectedSigner.address))).to.be.revertedWith(`BeaconHasPending(${ethers.BigNumber.from(1)})`);
     await expect(soRandom.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.be.revertedWith(`BeaconHasPending(${ethers.BigNumber.from(1)})`);
-    await expect(soRandom.connect(signers[6]).unregisterBeacon(selectedSigner.address)).to.be.revertedWith(`NotOwnerOrBeacon`);
+    await expect(soRandom.connect(signers[7]).unregisterBeacon(selectedSigner.address)).to.be.revertedWith(`NotOwnerOrBeacon`);
     await signAndCallback(request);
 
     await expect(soRandom.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.not.be.reverted;
@@ -92,16 +92,16 @@ describe("Beacon", function () {
   });
 
   it("should send full beacon ETH stake to beacon after unregisterBeacon", async function () {
-    await soRandom.connect(signers[0]).beaconStakeEth(signers[0].address, { value: ethers.utils.parseEther("5") });
+    await soRandom.connect(signers[1]).beaconStakeEth(signers[1].address, { value: ethers.utils.parseEther("5") });
     // Get balance of wallet signers[0]
-    const oldBalance = await signers[0].getBalance();
-    await soRandom.connect(signers[0]).unregisterBeacon(signers[0].address);
-    const newBalance = await signers[0].getBalance();
+    const oldBalance = await signers[1].getBalance();
+    await soRandom.connect(signers[1]).unregisterBeacon(signers[1].address);
+    const newBalance = await signers[1].getBalance();
     expect(newBalance.gt(oldBalance)).to.be.true;
   });
 
   it("should register a new beacon", async function () {
-    const tx = await soRandom.registerBeacon(signers[6].address);
+    const tx = await soRandom.registerBeacon(signers[7].address);
     const receipt = await tx.wait();
     // Check if receipt emitted a RegisterBeacon event
     const event = receipt.events.find(e => e.event == "RegisterBeacon");
@@ -110,8 +110,8 @@ describe("Beacon", function () {
   });
 
   it("should unregister beacon if unstaking more than minimum stake", async function () {
-    await soRandom.beaconStakeEth(signers[0].address, { value: ethers.utils.parseEther("5") });
-    const unstake = await soRandom.connect(signers[0]).beaconUnstakeEth(ethers.utils.parseEther("5"));
+    await soRandom.connect(signers[1]).beaconStakeEth(signers[1].address, { value: ethers.utils.parseEther("5") });
+    const unstake = await soRandom.connect(signers[1]).beaconUnstakeEth(ethers.utils.parseEther("5"));
     const unstakeReceipt = await unstake.wait();
     const event = unstakeReceipt.events.find(e => e.event == "UnregisterBeacon");
     const event2 = unstakeReceipt.events.find(e => e.event == "WithdrawEth");
@@ -120,13 +120,13 @@ describe("Beacon", function () {
   });
 
   it("should revert with FailedToSendEth if beacon unstake more than contract balance", async function () {
-    await soRandom.beaconStakeEth(signers[0].address, { value: ethers.utils.parseEther("5") });
+    await soRandom.beaconStakeEth(signers[1].address, { value: ethers.utils.parseEther("5") });
     await network.provider.send("hardhat_setBalance", [
       soRandom.address,
       "0x0"
     ]);
     try {
-      await soRandom.connect(signers[0]).beaconUnstakeEth(ethers.utils.parseEther("5"));
+      await soRandom.connect(signers[1]).beaconUnstakeEth(ethers.utils.parseEther("5"));
       expect(true).to.be.false;
     } catch (e) {
       expect(e).to.match(/FailedToSendEth/);

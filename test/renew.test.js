@@ -25,7 +25,7 @@ describe("Renew", function () {
     const ArbGasInfo = await ethers.getContractFactory("ArbGasInfo");
     arbGasInfo = await ArbGasInfo.deploy();
     signers = await ethers.getSigners();
-    const SoRandom = await ethers.getContractFactory("SoRandom");
+    const SoRandom = await ethers.getContractFactory("SoRandomStatic");
 
     // address _developer,
     // uint8 _maxStrikes,
@@ -34,7 +34,7 @@ describe("Renew", function () {
     // uint256 _expirationSeconds,
     // uint256 _beaconFee,
     // address[] memory _beacons
-    soRandom = await SoRandom.deploy(ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, ethers.utils.parseEther("0.1"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]);
+    soRandom = await SoRandom.deploy(signers[0].address, 3, "500000000000000000", 20, 900, ethers.utils.parseEther("0.1"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]);
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(soRandom.address);
 
@@ -249,7 +249,7 @@ describe("Renew", function () {
     // Expect kicked beacon IDs to be replaced properly and all beacons[] addresses and beaconIndex[] indices are aligned
     // Deploy soRandom with 1-strike removal
 
-    const soRandom2 = await (await ethers.getContractFactory("SoRandom")).deploy(ethers.constants.AddressZero, 1, "500000000000000000", 50, 600, ethers.utils.parseEther("0.00001"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]);
+    const soRandom2 = await (await ethers.getContractFactory("SoRandomStatic")).deploy(ethers.constants.AddressZero, 1, "500000000000000000", 50, 600, ethers.utils.parseEther("0.00001"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]);
     const testCallback2 = await (await ethers.getContractFactory("TestCallback")).deploy(soRandom2.address);
 
     await soRandom2.clientDeposit(testCallback2.address, { value: ethers.utils.parseEther("50") });

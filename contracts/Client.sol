@@ -1,8 +1,10 @@
-import "./Beacon.sol";
+// SPDX-License-Identifier: BSL 1.1
 
 /// @title SoRandom Client Service
 /// @author Deanpress (hello@dean.press)
 /// @notice SoRandom client contract management functions (deposits/withdrawals and fee estimates)
+
+import "./Beacon.sol";
 
 contract Client is Utils {
     // Errors exclusive to Client.sol

@@ -1,11 +1,14 @@
-import "./Admin.sol";
-
-// Import the gas handler for the desired network to deploy to
-import "./GasHandler.sol";
+// SPDX-License-Identifier: BSL 1.1
 
 /// @title SoRandom Utils
 /// @author Deanpress (hello@dean.press)
 /// @notice Internal utilities used by SoRandom functions
+
+pragma solidity ^0.8.15;
+import "./Admin.sol";
+
+// Import the gas handler for the desired network to deploy to
+import "./GasHandler.sol";
 
 contract Utils is Admin, GasHandler {
     // Errors used by Utils, Beacon, and Client

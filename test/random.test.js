@@ -1,14 +1,8 @@
 const { expect } = require("chai");
-const { ethers } = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 // const hre = require("hardhat");
 
 describe("Request & Submit", function () {
-
-  const makeRequest = async (contract) => {
-    let res = await (await contract.makeRequest()).wait();
-    const req = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
-    return req;
-  }
 
   const signAndCallback = async (request, client) => {
     if (!client) client = testCallback;
@@ -75,7 +69,7 @@ describe("Request & Submit", function () {
     });
     signers = await ethers.getSigners();
     const SoRandom = await ethers.getContractFactory("SoRandomWithStorageControls");
-    soRandom = await SoRandom.deploy(ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, ethers.utils.parseEther("0.00005"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]);
+    soRandom = await SoRandom.deploy(ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]);
     await soRandom.deployed();
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(soRandom.address);

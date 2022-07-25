@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSL 1.1
+// Upgradeable version of SoRandom for EVM networks that support OpenZeppelin's Upgradeable contract.
 pragma solidity ^0.8.15;
 import "../SoRandom.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract SoRandomWithStorageControls is SoRandom {
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(
+contract SoRandomUpgradeableV2 is Initializable, SoRandom {
+    function initialize(
         address _developer,
         uint8 _maxStrikes,
         uint256 _minStakeEth,
@@ -13,8 +14,7 @@ contract SoRandomWithStorageControls is SoRandom {
         // uint256 _minCollateralToken,
         uint256 _beaconFee,
         address[] memory _beacons
-    ) initializer {
-        __Ownable_init();
+    ) public initializer {
         init(
             _developer,
             _maxStrikes,
@@ -26,12 +26,10 @@ contract SoRandomWithStorageControls is SoRandom {
         );
     }
 
-    function _debug_setSBeacon(
-        address beacon,
-        uint8 submissions,
-        uint8 strikes
-    ) external {
-        sBeacon[beacon].consecutiveSubmissions = submissions;
-        sBeacon[beacon].strikes = strikes;
+    function newFunction() public pure returns (string memory) {
+        return "Hello World";
     }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
 }

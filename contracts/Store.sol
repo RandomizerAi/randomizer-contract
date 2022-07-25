@@ -1,8 +1,10 @@
-pragma solidity ^0.8.15;
+// SPDX-License-Identifier: BSL 1.1
 
 /// @title SoRandom State
 /// @author Deanpress (hello@dean.press)
 /// @notice Contains state variables and structs used by SoRandom
+
+pragma solidity ^0.8.15;
 
 /// @notice SRandomRequest holds the data needed to fulfill a request
 
