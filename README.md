@@ -1,8 +1,7 @@
-# soRandom
+# soRandom - Easy & secure randomness for smart contracts
 
-soRandom is a Verifiable Random Function (VRF) protocol. Smart contracts can make external calls to soRandom's `requestRandom()` function and receive a callback to their contract's `soRandomCallback(id, value)` function containing the request id and the verifiably unpredictable pseudo-random bytes within seconds.
+soRandom is a Verifiable Random Function (VRF) protocol. Smart contracts can make external calls to soRandom's `requestRandom()` function and receive a callback to their contract's `soRandomCallback(id, value)` function which contains the request id and verifiably unpredictable pseudo-random bytes. All within seconds.
 
----
 ## IMPORTANT: Before getting started
 Set the network using `yarn set-network:{network}`. This will copy over the desired gas price handler for the network.
 
@@ -13,7 +12,6 @@ Supported gas fee handlers:
 * **Ethereum**: 25% over the block's basefee.
 * **Arbitrum**: The latest gasPrice value returned by Arbitrum's native ArbGasInfo contract.
 * **Generic**: The tx.gasprice value.
----
 ## Protocol steps
 
 Note that the protocol stores & verifies hashed calldata instead of storing independent variables so as to minimize storage gas fees. 
@@ -32,8 +30,6 @@ If a beacon misses a request, the first beacon that *did* submit a request can c
 If the request is renewed, the non-submitting beacon addresses are replaced with new beacon addresses and the request gets a new timeline (blocks/seconds) to be completed. ETH from the first non-submitting beacon's stake is transferred to the client contract deposit (for the full amount that they already paid for the request), and to the address that called `renewRequest()` to cover for its transaction fee. Non-submitting beacons also receive a strike. If a beacon gets 3 strikes in 100 requests, they are automatically removed from the list of beacons. Every 100 fulfilled requests, the strike count resets.
 
 Review the tests for a technical overview.
-
----
 
 ## External functions
 
@@ -61,9 +57,7 @@ Review the tests for a technical overview.
 
 * `renewRequest(address[4] calldata _addressData, uint256[8] calldata _uintData, bytes32 _seed)` - Renews an unfulfilled request. Only callable when the request passed its `expirationBlocks` and `expirationSeconds`. Only callable by the first submitting beacon first. Callable by any wallet 20 blocks and 5 minutes after the expiration. The first beacon that didn't submit will have their stake slashed for the transaction fees of this call, for the fees already paid for the `submitRandom()` calls that were already made, and for a small premium that incentivizes the `renewRequest` call. The caller is refunded the transaction fee + a premium. The client contract is refunded the fees that had already been deducted for this request. After renewal, an event is emitted that instructs newly selected beacons to fulfill the request (as if a new request was made).
 
----
-
-# Example
+## Example
 
 A simple coinflip contract that uses soRandom to get a seed.
 
@@ -123,9 +117,8 @@ contract CoinFlip {
 }
 ```
 
----
 
-# Basic Harhdat commands
+## Basic Harhdat commands
 
 Try running some of the following tasks:
 
