@@ -111,7 +111,7 @@ contract Beacon is Utils {
         }
     }
 
-    /// @notice Completes all pending requests and then unregisters the beacon
+    // /// @notice Completes all pending requests and then unregisters the beacon
     // function completeAndUnregister(
     //     uint128[] calldata _requests,
     //     bytes32[] memory r,
@@ -128,7 +128,6 @@ contract Beacon is Utils {
 
     /// @notice Submit the random value of a beacon for a request
     function submitRandom(
-        // address _client,
         address[4] calldata _addressData,
         uint256[9] calldata _uintData,
         // 0 requestId

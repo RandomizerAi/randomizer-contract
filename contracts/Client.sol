@@ -62,7 +62,7 @@ contract Client is Utils {
 
     function requestRandom(uint24 _callbackGasLimit)
         external
-        returns (uint256)
+        returns (uint256 id)
     {
         // uint8 _numberOfBeacons = 3;
         // require(
