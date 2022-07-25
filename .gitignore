@@ -11,3 +11,5 @@ artifacts-zk
 cache-zk
 
 /contracts/GasHandler.sol
+
+.openzeppelin
