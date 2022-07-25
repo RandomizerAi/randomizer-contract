@@ -33,7 +33,7 @@ Review the tests for a technical overview.
 
 ## Beacon node
 
-The beacon node server is located in `beacon/start.eth.js`. This script loads all private keys defined as `SIGNER_1`, `SIGNER_2` etc in the root `.env` file and immediately signs & submits new random requests for the configured beacons. In production only 1 signer is used per node server seeing as all nodes are operated by independent parties. 
+The beacon node server is located in `beacon/start.eth.js`. This application loads all private keys defined as `SIGNER_1`, `SIGNER_2` etc in the root `.env` file and immediately signs & submits new random requests for the configured beacons. In production only 1 signer is used per node server seeing as all nodes are operated by independent parties. 
 
 
 ## External functions
