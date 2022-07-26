@@ -34,11 +34,11 @@ module.exports = {
   networks: {
     arbitrumMainnet: {
       url: 'https://arb1.arbitrum.io/rpc',
-      accounts: [process.env.SIGNER_1]
+      accounts: [process.env.PRIVATE_KEY]
     },
     arbitrumNitroDevnet: {
-      url: 'https://nitro-devnet.arbitrum.io/rpc',
-      accounts: [process.env.SIGNER_1]
+      url: 'https://goerli-rollup.arbitrum.io/rpc',
+      accounts: [process.env.PRIVATE_KEY]
     },
     arbitrumRinkeby: {
       url: "https://rinkeby.arbitrum.io/rpc",
@@ -46,7 +46,7 @@ module.exports = {
     },
     ganache: {
       url: "HTTP://127.0.0.1:7545",
-      accounts: [process.env.SIGNER_1]
+      accounts: [process.env.PRIVATE_KEY]
     },
     hardhat: {
       chainId: 1337
