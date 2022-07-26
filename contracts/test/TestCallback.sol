@@ -2,7 +2,9 @@
 pragma solidity ^0.8.15;
 
 interface ISoRandom {
-    function requestRandom(uint24 _callbackGasLimit) external returns (uint256);
+    function requestRandom(uint256 _callbackGasLimit)
+        external
+        returns (uint256);
 
     function clientWithdrawTo(address _to, uint256 _amount) external;
 
@@ -41,10 +43,14 @@ contract TestCallback {
     }
 
     function makeRequest() external returns (uint256) {
-        return ISoRandom(soRandom).requestRandom(10000000);
+        return ISoRandom(soRandom).requestRandom(1000000);
     }
 
     function makeRequestWithGasTooLow() external returns (uint256) {
         return ISoRandom(soRandom).requestRandom(1);
+    }
+
+    function makeRequestWithGasTooHigh() external returns (uint256) {
+        return ISoRandom(soRandom).requestRandom(999999999);
     }
 }

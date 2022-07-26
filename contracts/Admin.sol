@@ -128,4 +128,12 @@ contract Admin is OwnableUpgradeable, Store {
     function setMaxStrikes(uint8 _maxStrikes) external onlyOwner {
         maxStrikes = _maxStrikes;
     }
+
+    function setRequestMinGasLimit(uint256 _amount) external onlyOwner {
+        requestMinGasLimit = _amount;
+    }
+
+    function setRequestMaxGasLimit(uint256 _amount) external onlyOwner {
+        requestMaxGasLimit = _amount;
+    }
 }

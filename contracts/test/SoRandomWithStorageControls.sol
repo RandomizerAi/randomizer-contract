@@ -11,6 +11,8 @@ contract SoRandomWithStorageControls is SoRandom {
         uint256 _expirationBlocks,
         uint256 _expirationSeconds,
         // uint256 _minCollateralToken,
+        uint256 _requestMinGasLimit,
+        uint256 _requestMaxGasLimit,
         uint256 _beaconFee,
         address[] memory _beacons
     ) initializer {
@@ -21,6 +23,8 @@ contract SoRandomWithStorageControls is SoRandom {
             _minStakeEth,
             _expirationBlocks,
             _expirationSeconds,
+            _requestMinGasLimit,
+            _requestMaxGasLimit,
             _beaconFee,
             _beacons
         );

@@ -6,7 +6,7 @@ describe("Upgrades", function () {
     const SoRandom = await ethers.getContractFactory('SoRandomUpgradeable');
     const SoRandomV2 = await ethers.getContractFactory("SoRandomUpgradeableV2");
 
-    const soRandom = await upgrades.deployProxy(SoRandom, [signers[0].address, 3, ethers.utils.parseUnits("0.1"), 50, 3600, ethers.utils.parseUnits("20000", "gwei"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]]);
+    const soRandom = await upgrades.deployProxy(SoRandom, [signers[0].address, 3, ethers.utils.parseUnits("0.1"), 50, 3600, 50000, 2000000, ethers.utils.parseUnits("20000", "gwei"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]]);
 
     // It should not yet have newFunction()
     try {
@@ -31,7 +31,7 @@ describe("Upgrades", function () {
     const signers = await ethers.getSigners();
     const SoRandom = await ethers.getContractFactory('SoRandomUpgradeableV2');
     const SoRandomV2 = await ethers.getContractFactory("SoRandomUpgradeable");
-    const soRandom = await upgrades.deployProxy(SoRandom, [signers[0].address, 3, ethers.utils.parseUnits("0.1"), 50, 3600, ethers.utils.parseUnits("20000", "gwei"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]]);
+    const soRandom = await upgrades.deployProxy(SoRandom, [signers[0].address, 3, ethers.utils.parseUnits("0.1"), 50, 3600, 50000, 2000000, ethers.utils.parseUnits("20000", "gwei"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]]);
 
     // It should have newFunction()
     try {
@@ -55,7 +55,7 @@ describe("Upgrades", function () {
     const SoRandom = await ethers.getContractFactory('SoRandomUpgradeable');
     const SoRandomV2 = await ethers.getContractFactory("SoRandomUpgradeableV2");
 
-    const soRandom = await upgrades.deployProxy(SoRandom, [ethers.constants.AddressZero, 3, ethers.utils.parseUnits("0.1"), 50, 3600, ethers.utils.parseUnits("20000", "gwei"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]]);
+    const soRandom = await upgrades.deployProxy(SoRandom, [ethers.constants.AddressZero, 3, ethers.utils.parseUnits("0.1"), 50, 3600, 50000, 2000000, ethers.utils.parseUnits("20000", "gwei"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]]);
     const TestCallback = await ethers.getContractFactory("TestCallback");
     const testCallback = await TestCallback.deploy(soRandom.address);
     const upgraded = await upgrades.upgradeProxy(soRandom.address, SoRandomV2);

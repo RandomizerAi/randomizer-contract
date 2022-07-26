@@ -34,7 +34,7 @@ describe("Renew", function () {
     // uint256 _expirationSeconds,
     // uint256 _beaconFee,
     // address[] memory _beacons
-    soRandom = await SoRandom.deploy(signers[0].address, 3, "500000000000000000", 20, 900, ethers.utils.parseEther("0.1"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]);
+    soRandom = await SoRandom.deploy(signers[0].address, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.1"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]);
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(soRandom.address);
 
@@ -49,7 +49,7 @@ describe("Renew", function () {
     return req;
   }
 
-  it("should make a random request and renew all non-submitters", async function () {
+  it("make a random request and renew all non-submitters", async function () {
     // Deposit
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
@@ -100,7 +100,7 @@ describe("Renew", function () {
 
     expect(request.beacons.length).to.equal(3);
   });
-  it("should renew only the single non-submitter", async function () {
+  it("renew only the single non-submitter", async function () {
     // Deposit
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
@@ -161,7 +161,7 @@ describe("Renew", function () {
     expect(newSigs[2]).to.equal("0x000000000000000000000000");
   });
 
-  it("should renew final non-submitter", async function () {
+  it("renew final non-submitter", async function () {
     // const tx = await signers[4].sendTransaction({ to: subscriber.address, value: ethers.utils.parseEther("1") });
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
@@ -245,11 +245,11 @@ describe("Renew", function () {
     expect(newSigs[2]).to.equal("0x000000000000000000000000");
   });
 
-  it("should slash stake of non-submitters and refund caller gas", async function () {
+  it("slash stake of non-submitters and refund caller gas", async function () {
     // Expect kicked beacon IDs to be replaced properly and all beacons[] addresses and beaconIndex[] indices are aligned
     // Deploy soRandom with 1-strike removal
 
-    const soRandom2 = await (await ethers.getContractFactory("SoRandomStatic")).deploy(ethers.constants.AddressZero, 1, "500000000000000000", 50, 600, ethers.utils.parseEther("0.00001"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]);
+    const soRandom2 = await (await ethers.getContractFactory("SoRandomStatic")).deploy(ethers.constants.AddressZero, 1, "500000000000000000", 50, 600, 50000, 2000000, ethers.utils.parseEther("0.00001"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]);
     const testCallback2 = await (await ethers.getContractFactory("TestCallback")).deploy(soRandom2.address);
 
     await soRandom2.clientDeposit(testCallback2.address, { value: ethers.utils.parseEther("50") });
@@ -298,7 +298,7 @@ describe("Renew", function () {
 
   });
 
-  it("should revert on renew if request is not yet renewable", async function () {
+  it("revert on renew if request is not yet renewable", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     let request = await makeRequest(testCallback);
@@ -322,7 +322,7 @@ describe("Renew", function () {
     }
   });
 
-  it("should only allow the first submitter to renew for the first 5 minutes/20 blocks", async function () {
+  it("only allow the first submitter to renew for the first 5 minutes/20 blocks", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     let request = await makeRequest(testCallback);
@@ -357,7 +357,7 @@ describe("Renew", function () {
     expect(renew.events[renew.events.length - 1].event).to.equal("Retry");
   });
 
-  it("should allow any signer to renew a request after the first 5 minutes/20 blocks of expiration", async function () {
+  it("allow any signer to renew a request after the first 5 minutes/20 blocks of expiration", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     let request = await makeRequest(testCallback);
@@ -394,7 +394,7 @@ describe("Renew", function () {
   });
 
 
-  it("should revert with RequestDataMismatch when renewing a request with a different hash", async function () {
+  it("revert with RequestDataMismatch when renewing a request with a different hash", async function () {
     // Deposit
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
@@ -424,7 +424,7 @@ describe("Renew", function () {
   });
 
 
-  it("should revert with NotEnoughBeaconsAvailable if renewing a request without enough beacons", async function () {
+  it("revert with NotEnoughBeaconsAvailable if renewing a request without enough beacons", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     const req = await makeRequest(testCallback);
@@ -452,7 +452,7 @@ describe("Renew", function () {
 
   });
 
-  it("should remove a beacon on renewRequest if the beacon did not submit and has below minStakeEth", async function () {
+  it("remove a beacon on renewRequest if the beacon did not submit and has below minStakeEth", async function () {
     // Get beacons.length
     const oldBeacons = await soRandom.getBeacons();
     // Deposit

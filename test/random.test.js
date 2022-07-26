@@ -69,14 +69,14 @@ describe("Request & Submit", function () {
     });
     signers = await ethers.getSigners();
     const SoRandom = await ethers.getContractFactory("SoRandomWithStorageControls");
-    soRandom = await SoRandom.deploy(ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]);
+    soRandom = await SoRandom.deploy(ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]);
     await soRandom.deployed();
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(soRandom.address);
 
   });
 
-  it("should make deposit and a new random request", async function () {
+  it("make deposit and a new random request", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     /*  uint256 _minPrioFee,
@@ -92,22 +92,23 @@ describe("Request & Submit", function () {
     expect(request.beacons.length).to.equal(3);
   });
 
-  it("should revert on requestRandom with gas limit too low", async function () {
+  it("revert on requestRandom with gas limit out of bounds", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
-    await expect(testCallback.makeRequestWithGasTooLow()).to.be.revertedWith("CallbackGasLimitTooLow(1, 50000)");
+    await expect(testCallback.makeRequestWithGasTooLow()).to.be.revertedWith("CallbackGasLimitOOB(1, 50000, 2000000)");
+    await expect(testCallback.makeRequestWithGasTooHigh()).to.be.revertedWith("CallbackGasLimitOOB(999999999, 50000, 2000000)");
   });
 
-  it("should revert on requestRandom with insufficient funds", async function () {
+  it("revert on requestRandom with insufficient funds", async function () {
     try {
       await testCallback.makeRequest();
-      expect(true).to.be.false("", "should have reverted")
+      expect(true).to.be.false("", "have reverted")
     } catch (e) {
       expect(e).to.match(/EthDepositTooLow.*/g);
     }
   });
 
-  it("should make multiple deposits and random requests", async function () {
+  it("make multiple deposits and random requests", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     /*  uint256 _minPrioFee,
@@ -155,7 +156,7 @@ describe("Request & Submit", function () {
     }
   });
 
-  it("should revert with RequestDataMismatch when submitting a result with a different hash", async function () {
+  it("revert with RequestDataMismatch when submitting a result with a different hash", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
 
@@ -193,7 +194,7 @@ describe("Request & Submit", function () {
     }
   });
 
-  it("should reset strikes and consecutiveSubmissions of sBeacon after consecutiveSubmissions reaches 100", async function () {
+  it("reset strikes and consecutiveSubmissions of sBeacon after consecutiveSubmissions reaches 100", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
 
@@ -236,7 +237,7 @@ describe("Request & Submit", function () {
 
   });
 
-  it("should accept random submissions from beacons and finally callback", async function () {
+  it("accept random submissions from beacons and finally callback", async function () {
     // const tx = await signers[4].sendTransaction({ to: subscriber.address, value: ethers.utils.parseEther("1") });
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
@@ -305,7 +306,7 @@ describe("Request & Submit", function () {
 
   });
 
-  it("should charge enough per submit to cover gas cost and let beacon withdraw [ @skip-on-coverage ]", async function () {
+  it("charge enough per submit to cover gas cost and let beacon withdraw [ @skip-on-coverage ]", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
 
@@ -361,7 +362,7 @@ describe("Request & Submit", function () {
     expect(balance.gte(minFee)).to.be.true;
   });
 
-  it("should fail client withdraw when it has pending requests", async function () {
+  it("fail client withdraw when it has pending requests", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     const req = await testCallback.makeRequest();
@@ -394,7 +395,7 @@ describe("Request & Submit", function () {
     expect((await soRandom.clientBalanceOf(testCallback.address)).eq(0)).to.be.true;
   });
 
-  it("should complete submitRandom even if the callback reverts", async function () {
+  it("complete submitRandom even if the callback reverts", async function () {
     // Deploy contract TestCallbackWithRevert
     const TestCallbackWithRevert = await ethers.getContractFactory("TestCallbackWithRevert");
     const testCallbackWithRevert = await TestCallbackWithRevert.deploy(soRandom.address);
@@ -413,7 +414,7 @@ describe("Request & Submit", function () {
     expect(result).to.not.equal(ethers.constants.HashZero);
   });
 
-  it("should complete submitRandom even if the callback runs out of gas", async function () {
+  it("complete submitRandom even if the callback runs out of gas", async function () {
     // Deploy contract TestCallbackWithTooMuchGas
     const TestCallbackWithTooMuchGas = await ethers.getContractFactory("TestCallbackWithTooMuchGas");
     const testCallbackWithTooMuchGas = await TestCallbackWithTooMuchGas.deploy(soRandom.address);
@@ -433,7 +434,7 @@ describe("Request & Submit", function () {
     expect(result).to.not.equal(ethers.constants.HashZero);
   });
 
-  it("should revert with NotEnoughBeaconsAvailable when second-to-last beacon calls submitRandom with all other beacons unregistered", async function () {
+  it("revert with NotEnoughBeaconsAvailable when second-to-last beacon calls submitRandom with all other beacons unregistered", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     const req = await testCallback.makeRequest();
@@ -484,7 +485,7 @@ describe("Request & Submit", function () {
 
   });
 
-  it("should revert with NotEnoughBeaconsAvailable if making a request without 5 beacons", async function () {
+  it("revert with NotEnoughBeaconsAvailable if making a request without 5 beacons", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     // Unregister all beacons
@@ -504,7 +505,7 @@ describe("Request & Submit", function () {
     }
   });
 
-  it("should add & remove pendingRequestIds", async function () {
+  it("add & remove pendingRequestIds", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     let i = 0;
@@ -534,7 +535,7 @@ describe("Request & Submit", function () {
   });
 
 
-  // it("should allow beacon completeAndUnregister", async function () {
+  // it("allow beacon completeAndUnregister", async function () {
   //   const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
   //   await deposit.wait();
 

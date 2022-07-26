@@ -63,13 +63,13 @@ describe("Beacon", function () {
     });
     signers = await ethers.getSigners();
     const SoRandom = await ethers.getContractFactory("SoRandomWithStorageControls");
-    soRandom = await SoRandom.deploy(signers[0].address, 3, "500000000000000000", 20, 900, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]);
+    soRandom = await SoRandom.deploy(signers[0].address, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]);
     await soRandom.deployed();
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(soRandom.address);
   });
 
-  it("should fail beacon withdraw when it is not sender/owner or has pending requests", async function () {
+  it("fail beacon withdraw when it is not sender/owner or has pending requests", async function () {
     const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     const req = await testCallback.makeRequest();
@@ -91,7 +91,7 @@ describe("Beacon", function () {
     expect(pending).to.equal(0);
   });
 
-  it("should send full beacon ETH stake to beacon after unregisterBeacon", async function () {
+  it("send full beacon ETH stake to beacon after unregisterBeacon", async function () {
     await soRandom.connect(signers[1]).beaconStakeEth(signers[1].address, { value: ethers.utils.parseEther("5") });
     // Get balance of wallet signers[0]
     const oldBalance = await signers[1].getBalance();
@@ -100,7 +100,7 @@ describe("Beacon", function () {
     expect(newBalance.gt(oldBalance)).to.be.true;
   });
 
-  it("should register a new beacon", async function () {
+  it("register a new beacon", async function () {
     const tx = await soRandom.registerBeacon(signers[7].address);
     const receipt = await tx.wait();
     // Check if receipt emitted a RegisterBeacon event
@@ -109,7 +109,7 @@ describe("Beacon", function () {
 
   });
 
-  it("should unregister beacon if unstaking more than minimum stake", async function () {
+  it("unregister beacon if unstaking more than minimum stake", async function () {
     await soRandom.connect(signers[1]).beaconStakeEth(signers[1].address, { value: ethers.utils.parseEther("5") });
     const unstake = await soRandom.connect(signers[1]).beaconUnstakeEth(ethers.utils.parseEther("5"));
     const unstakeReceipt = await unstake.wait();
@@ -119,7 +119,7 @@ describe("Beacon", function () {
     expect(event2).to.exist;
   });
 
-  it("should revert with FailedToSendEth if beacon unstake more than contract balance", async function () {
+  it("revert with FailedToSendEth if beacon unstake more than contract balance", async function () {
     await soRandom.beaconStakeEth(signers[1].address, { value: ethers.utils.parseEther("5") });
     await network.provider.send("hardhat_setBalance", [
       soRandom.address,
@@ -133,7 +133,7 @@ describe("Beacon", function () {
     }
   });
 
-  it("should return all registered beacons with getBeacons and update indices on unregister", async function () {
+  it("return all registered beacons with getBeacons and update indices on unregister", async function () {
     const beacons = await soRandom.getBeacons();
     expect(beacons.length).to.equal(7);
     // beaconIndex[beacons[1]] is 1
@@ -145,7 +145,7 @@ describe("Beacon", function () {
     expect(beacons2.length).to.equal(6);
   });
 
-  it("should remove the final beacon from the list of beacons", async function () {
+  it("remove the final beacon from the list of beacons", async function () {
     const beacons = await soRandom.getBeacons();
     expect(beacons.length).to.equal(7);
     const secondToLastBeacon = beacons[beacons.length - 2];

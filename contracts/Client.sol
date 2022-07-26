@@ -9,7 +9,11 @@ import "./Beacon.sol";
 contract Client is Utils {
     // Errors exclusive to Client.sol
     error WithdrawingTooMuch(uint256 amount, uint256 allowedAmount);
-    error CallbackGasLimitTooLow(uint256 inputLimit, uint256 minimumLimit);
+    error CallbackGasLimitOOB(
+        uint256 inputLimit,
+        uint256 minLimit,
+        uint256 maxLimit
+    );
     error EthDepositTooLow(uint256 availableAmount, uint256 requiredAmount);
 
     uint256 internal constant SUBMIT_GAS_ESTIMATE = 201000;
@@ -48,7 +52,7 @@ contract Client is Utils {
 
     /// @notice Gets fee estimate for full request fulfillment
     /// @dev If your users pay for a random request, use this to calculate how much ETH a user should add to your payable function.
-    function getFeeEstimate(uint24 _callbackGasLimit, uint8 _numberOfBeacons)
+    function getFeeEstimate(uint256 _callbackGasLimit, uint8 _numberOfBeacons)
         public
         view
         returns (uint256)
@@ -60,7 +64,7 @@ contract Client is Utils {
             (beaconFee * _numberOfBeacons); // All beacon premium fees;
     }
 
-    function requestRandom(uint24 _callbackGasLimit)
+    function requestRandom(uint256 _callbackGasLimit)
         external
         returns (uint256 id)
     {
@@ -75,10 +79,14 @@ contract Client is Utils {
         //     "FINALSIGNER_NOT_A_BEACON"
         // );
 
-        if (_callbackGasLimit < requestMinGasLimit)
-            revert CallbackGasLimitTooLow(
+        if (
+            _callbackGasLimit < requestMinGasLimit ||
+            _callbackGasLimit > requestMaxGasLimit
+        )
+            revert CallbackGasLimitOOB(
                 _callbackGasLimit,
-                requestMinGasLimit
+                requestMinGasLimit,
+                requestMaxGasLimit
             );
 
         // Requester must have enough to cover gas for each beacon + the callback gas limit

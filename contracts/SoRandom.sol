@@ -28,6 +28,8 @@ contract SoRandom is Client, Beacon {
         uint256 _expirationBlocks,
         uint256 _expirationSeconds,
         // uint256 _minCollateralToken,
+        uint256 _requestMinGasLimit,
+        uint256 _requestMaxGasLimit,
         uint256 _beaconFee,
         address[] memory _beacons
     ) internal {
@@ -47,8 +49,9 @@ contract SoRandom is Client, Beacon {
             beacons.push(_beacons[i]);
             sBeacon[_beacons[i]] = SBeacon(true, 0, 0, 0);
         }
+        requestMinGasLimit = _requestMinGasLimit;
+        requestMaxGasLimit = _requestMaxGasLimit;
         _status = _NOT_ENTERED;
-        requestMinGasLimit = 50000;
     }
 
     function getResult(uint128 _request) public view returns (bytes32) {

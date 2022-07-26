@@ -74,6 +74,8 @@ contract Store {
     uint256 public expirationBlocks;
     uint256 public expirationSeconds;
     uint256 public requestMinGasLimit;
+    uint256 public requestMaxGasLimit;
+
     // Fees
     uint256 public beaconFee;
     uint128 public latestRequestId;
