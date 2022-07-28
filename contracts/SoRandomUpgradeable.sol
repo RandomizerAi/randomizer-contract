@@ -17,6 +17,7 @@ contract SoRandomUpgradeable is Initializable, SoRandom {
         uint256 _beaconFee,
         address[] memory _beacons
     ) public initializer {
+        __Ownable_init();
         init(
             _developer,
             _maxStrikes,

@@ -14,8 +14,6 @@ async function main() {
     console.log(event);
     console.log("Callback", (Date.now() - flippedAt));
   });
-
-
 }
 
 main();

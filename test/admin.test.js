@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const { ethers } = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 // const hre = require("hardhat");
 
 describe("Admin", function () {
@@ -21,8 +21,8 @@ describe("Admin", function () {
       ArbGas.bytecode,
     ]);
     signers = await ethers.getSigners();
-    const SoRandom = await ethers.getContractFactory("SoRandomWithStorageControls");
-    soRandom = await SoRandom.deploy(signers[0].address, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]);
+    const SoRandom = await ethers.getContractFactory("SoRandomUpgradeable");
+    soRandom = await upgrades.deployProxy(SoRandom, [signers[0].address, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]]);
     await soRandom.deployed();
   });
 
