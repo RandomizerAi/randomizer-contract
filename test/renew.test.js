@@ -7,7 +7,6 @@ describe("Renew", function () {
   let signers;
   let soRandom;
   let testCallback;
-  let arbGasInfo;
   beforeEach(async function () {
     await network.provider.request({
       method: "hardhat_reset",
@@ -22,8 +21,12 @@ describe("Renew", function () {
     });
 
 
-    const ArbGasInfo = await ethers.getContractFactory("ArbGasInfo");
-    arbGasInfo = await ArbGasInfo.deploy();
+    const ArbGas = await ethers.getContractFactory("ArbGasInfo");
+    await network.provider.send("hardhat_setCode", [
+      "0x000000000000000000000000000000000000006C",
+      ArbGas.bytecode,
+    ]);
+
     signers = await ethers.getSigners();
     const SoRandom = await ethers.getContractFactory("SoRandomStatic");
 

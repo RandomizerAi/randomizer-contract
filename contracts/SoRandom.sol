@@ -214,13 +214,13 @@ contract SoRandom is Client, Beacon {
         ethDeposit[accounts.client] += refundToClient;
 
         // Log charge from striked beacon to caller (collateral to collateral)
-        emit ChargeEth(firstStrikeBeacon, msg.sender, totalCharge, true, true);
+        emit ChargeEth(firstStrikeBeacon, msg.sender, renewFee, true, true);
 
         // Log charge from striked beacon to client (collateral to deposit)
         emit ChargeEth(
             firstStrikeBeacon,
             accounts.client,
-            totalCharge,
+            refundToClient,
             true,
             false
         );

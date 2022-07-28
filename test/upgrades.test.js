@@ -1,6 +1,13 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 describe("Upgrades", function () {
+  beforeEach(async function () {
+    const ArbGas = await ethers.getContractFactory("ArbGasInfo");
+    await network.provider.send("hardhat_setCode", [
+      "0x000000000000000000000000000000000000006C",
+      ArbGas.bytecode,
+    ]);
+  });
   it('deploys and upgrades while keeping storage consistent', async () => {
     const signers = await ethers.getSigners();
     const SoRandom = await ethers.getContractFactory('SoRandomUpgradeable');

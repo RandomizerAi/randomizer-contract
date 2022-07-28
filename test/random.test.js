@@ -67,6 +67,11 @@ describe("Request & Submit", function () {
         // },
       ],
     });
+    const ArbGas = await ethers.getContractFactory("ArbGasInfo");
+    await network.provider.send("hardhat_setCode", [
+      "0x000000000000000000000000000000000000006C",
+      ArbGas.bytecode,
+    ]);
     signers = await ethers.getSigners();
     const SoRandom = await ethers.getContractFactory("SoRandomWithStorageControls");
     soRandom = await SoRandom.deploy(ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]);

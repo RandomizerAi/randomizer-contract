@@ -31,5 +31,7 @@ contract SoRandomUpgradeable is Initializable, SoRandom {
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    constructor() {
+        _disableInitializers();
+    }
 }

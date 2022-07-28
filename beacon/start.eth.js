@@ -79,11 +79,6 @@ const init = async () => {
     signer = new Wallet(process.env["SIGNER_" + i], provider);
     const managedSigner = new NonceManager(signer);
 
-
-    // if (await managedSigner.getAddress() == "0x72453c6f8Eba18840029BF3E65573a474Ce023e4") {
-    //   managedSigner.setTransactionCount("9")
-    // }
-
     managedSigner.getTransactionCount()
 
     managedSigner.setTransactionCount(await managedSigner.getTransactionCount());

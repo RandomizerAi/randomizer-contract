@@ -19,6 +19,7 @@ contract Beacon is Utils {
     error SignatureMismatch();
     error ReentrancyGuard();
     error NotOwnerOrBeacon();
+    error BeaconStakedEthTooLow(uint256 staked, uint256 minimum);
 
     /// @notice Returns all registered beacon addresses
     function getBeacons() external view returns (address[] memory) {
@@ -50,13 +51,11 @@ contract Beacon is Utils {
     /// @notice Registers a new beacon
     function registerBeacon(address _beacon) external onlyOwner {
         if (beaconIndex[_beacon] != 0) revert BeaconExists();
-
-        uint256 index = beacons.length - 1;
-        // beacons[index] = beacons[beacons.length - 1];
+        if (ethCollateral[_beacon] < minStakeEth)
+            revert BeaconStakedEthTooLow(ethCollateral[_beacon], minStakeEth);
         if (!sBeacon[_beacon].exists) sBeacon[_beacon] = SBeacon(true, 0, 0, 0);
-        beaconIndex[_beacon] = index;
-        // beacons[index] = _beacon;
-        // beaconToStrikeCount[_beacon] = 0;
+        beaconIndex[_beacon] = beacons.length;
+        beacons.push(_beacon);
         emit RegisterBeacon(_beacon);
     }
 

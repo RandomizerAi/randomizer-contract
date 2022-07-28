@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-// const hre = require("hardhat");
+const helpers = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("Beacon", function () {
   const signAndCallback = async (request) => {
@@ -61,6 +61,9 @@ describe("Beacon", function () {
         // },
       ],
     });
+    const ArbGas = await ethers.getContractFactory("ArbGasInfo");
+    await helpers.setCode("0x000000000000000000000000000000000000006C", ArbGas.bytecode);
+
     signers = await ethers.getSigners();
     const SoRandom = await ethers.getContractFactory("SoRandomWithStorageControls");
     soRandom = await SoRandom.deploy(signers[0].address, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]);
@@ -101,6 +104,7 @@ describe("Beacon", function () {
   });
 
   it("register a new beacon", async function () {
+    await soRandom.beaconStakeEth(signers[7].address, { value: ethers.utils.parseEther("5") });
     const tx = await soRandom.registerBeacon(signers[7].address);
     const receipt = await tx.wait();
     // Check if receipt emitted a RegisterBeacon event
@@ -131,6 +135,39 @@ describe("Beacon", function () {
     } catch (e) {
       expect(e).to.match(/FailedToSendEth/);
     }
+  });
+
+  it("return all registered beacons with getBeacons and update indices on register", async function () {
+    let beacons = await soRandom.getBeacons();
+    expect(beacons.length).to.equal(7);
+    // beaconIndex[beacons[1]] is 1
+    expect(await soRandom.getBeaconIndex(beacons[1])).to.equal(1);
+    expect(await soRandom.getBeaconIndex(beacons[beacons.length - 1])).to.equal(beacons.length - 1);
+    await soRandom.beaconStakeEth(signers[0].address, { value: ethers.utils.parseEther("5") });
+    await soRandom.registerBeacon(signers[0].address);
+    const newBeacons = await soRandom.getBeacons();
+
+    // Iterate through beacons and check that the indices match in soRandom.getBeaconIndex(beacon)
+    for (let i = 0; i < newBeacons.length; i++) {
+      expect(await soRandom.getBeaconIndex(newBeacons[i])).to.equal(i);
+    }
+
+    // The previously last beacon is now second-to-last
+    expect(await soRandom.getBeaconIndex(beacons[beacons.length - 1])).to.equal(newBeacons.length - 2);
+    beacons = newBeacons;
+    expect(beacons.length).to.equal(8);
+    expect(await soRandom.getBeaconIndex(beacons[7])).to.equal(7);
+    expect(await soRandom.getBeaconIndex(signers[0].address)).to.equal(7);
+    await soRandom.unregisterBeacon(signers[6].address);
+    // The last beacon's index is now 6
+    expect(await soRandom.getBeaconIndex(newBeacons[7])).to.equal(6);
+    expect(await soRandom.getBeaconIndex(newBeacons[6])).to.equal(0);
+    beacons = await soRandom.getBeacons();
+    expect(beacons.length).to.equal(7);
+  });
+
+  it("throw if beacon is registered without enough stake", async function () {
+    await expect(soRandom.registerBeacon(signers[0].address)).to.be.revertedWith("BeaconStakedEthTooLow(0, 500000000000000000)");
   });
 
   it("return all registered beacons with getBeacons and update indices on unregister", async function () {
