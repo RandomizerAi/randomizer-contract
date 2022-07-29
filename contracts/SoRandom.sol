@@ -208,16 +208,53 @@ contract SoRandom is Client, Beacon {
         uint256 totalCharge = renewFee + refundToClient;
 
         // If charging more than the striked beacon has staked, refund the remainder to the client
-        if (totalCharge > ethCollateral[firstStrikeBeacon]) {
-            totalCharge = ethCollateral[firstStrikeBeacon];
-            renewFee = renewFee >= totalCharge ? totalCharge : renewFee;
-            ethCollateral[msg.sender] += renewFee;
-            emit ChargeEth(firstStrikeBeacon, msg.sender, renewFee, true, true);
-            // totalCharge - renewFee is now 0 at its lowest
-            // If collateral is remaining after renewFee, it will be refunded to the client
-            refundToClient = totalCharge - renewFee;
-            if (refundToClient > 0) {
+        if (ethCollateral[firstStrikeBeacon] > 0) {
+            if (totalCharge > ethCollateral[firstStrikeBeacon]) {
+                totalCharge = ethCollateral[firstStrikeBeacon];
+                renewFee = renewFee >= totalCharge ? totalCharge : renewFee;
+                ethCollateral[msg.sender] += renewFee;
+                emit ChargeEth(
+                    firstStrikeBeacon,
+                    msg.sender,
+                    renewFee,
+                    true,
+                    true
+                );
+                // totalCharge - renewFee is now 0 at its lowest
+                // If collateral is remaining after renewFee, it will be refunded to the client
+                refundToClient = totalCharge - renewFee;
+                if (refundToClient > 0) {
+                    ethDeposit[accounts.client] += refundToClient;
+                    emit ChargeEth(
+                        firstStrikeBeacon,
+                        accounts.client,
+                        refundToClient,
+                        true,
+                        false
+                    );
+                }
+                ethCollateral[firstStrikeBeacon] = 0;
+            } else {
+                ethCollateral[firstStrikeBeacon] -= totalCharge;
+                // Refund this function's gas to the caller
+                ethCollateral[msg.sender] += renewFee;
+                // Fees paid on this request are reset to 0
+                requestToFeePaid[packed.id] = 0;
+                // Client receives refund to ensure they have enough to pay for the next request
+                // Also since the request is taking slower than expected due to a non-submitting beacon,
+                // the non-submitting beacon should pay for the delay.
                 ethDeposit[accounts.client] += refundToClient;
+
+                // Log charge from striked beacon to caller (collateral to collateral)
+                emit ChargeEth(
+                    firstStrikeBeacon,
+                    msg.sender,
+                    renewFee,
+                    true,
+                    true
+                );
+
+                // Log charge from striked beacon to client (collateral to deposit)
                 emit ChargeEth(
                     firstStrikeBeacon,
                     accounts.client,
@@ -226,29 +263,6 @@ contract SoRandom is Client, Beacon {
                     false
                 );
             }
-            ethCollateral[firstStrikeBeacon] = 0;
-        } else {
-            ethCollateral[firstStrikeBeacon] -= totalCharge;
-            // Refund this function's gas to the caller
-            ethCollateral[msg.sender] += renewFee;
-            // Fees paid on this request are reset to 0
-            requestToFeePaid[packed.id] = 0;
-            // Client receives refund to ensure they have enough to pay for the next request
-            // Also since the request is taking slower than expected due to a non-submitting beacon,
-            // the non-submitting beacon should pay for the delay.
-            ethDeposit[accounts.client] += refundToClient;
-
-            // Log charge from striked beacon to caller (collateral to collateral)
-            emit ChargeEth(firstStrikeBeacon, msg.sender, renewFee, true, true);
-
-            // Log charge from striked beacon to client (collateral to deposit)
-            emit ChargeEth(
-                firstStrikeBeacon,
-                accounts.client,
-                refundToClient,
-                true,
-                false
-            );
         }
 
         // Log Retry
