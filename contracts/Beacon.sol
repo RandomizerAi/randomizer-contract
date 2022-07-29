@@ -219,7 +219,7 @@ contract Beacon is Utils {
         if (reqValues[beaconPos - 1] != bytes12(0)) revert ResultExists();
 
         // Every 100 consecutive submissions, strikes are reset to 0
-        _updateBeaconSubmissionCount();
+        _updateBeaconSubmissionCount(beacon);
 
         // Store hash of valid signature to results
         if (submissionsCount < 2) {
