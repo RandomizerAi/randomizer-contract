@@ -326,8 +326,8 @@ contract Beacon is Utils {
         if (!success) emit CallbackFailed(_to, _id, _result, callbackTxData);
     }
 
-    function _updateBeaconSubmissionCount() private {
-        SBeacon memory beacon = sBeacon[msg.sender];
+    function _updateBeaconSubmissionCount(address _beacon) private {
+        SBeacon memory beacon = sBeacon[_beacon];
         if (beacon.consecutiveSubmissions == 99) {
             beacon.consecutiveSubmissions = 0;
             beacon.strikes = 0;
@@ -335,7 +335,7 @@ contract Beacon is Utils {
             beacon.consecutiveSubmissions++;
         }
         if (beacon.pending > 0) beacon.pending--;
-        sBeacon[msg.sender] = beacon;
+        sBeacon[_beacon] = beacon;
     }
 
     function _processRandomSubmission(
