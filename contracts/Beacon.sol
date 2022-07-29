@@ -60,8 +60,8 @@ contract Beacon is Utils {
         if (ethCollateral[_beacon] < minStakeEth)
             revert BeaconStakedEthTooLow(ethCollateral[_beacon], minStakeEth);
         // Don't reset beacon pending so that it can pick up where it left off in case it still has pending requests.
-        SBeacon memory tempBeacon = sBeacon[_beacon];
-        sBeacon[_beacon] = SBeacon(true, 0, 0, tempBeacon.pending);
+        uint64 pending = sBeacon[_beacon].pending;
+        sBeacon[_beacon] = SBeacon(true, 0, 0, pending);
         beaconIndex[_beacon] = beacons.length;
         beacons.push(_beacon);
         emit RegisterBeacon(_beacon);
