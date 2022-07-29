@@ -16,7 +16,7 @@ contract Beacon is Utils {
     error BeaconHasPending(uint256 pending);
     error NotABeacon();
     error ResultExists();
-    error SignatureMismatch();
+    error InvalidSignature();
     error ReentrancyGuard();
     error NotOwnerOrBeacon();
     error BeaconStakedEthTooLow(uint256 staked, uint256 minimum);
@@ -183,6 +183,7 @@ contract Beacon is Utils {
 
         // Recover the beacon address from the signature
         address beacon = ecrecover(message, packed.v, rsAndSeed.r, rsAndSeed.s);
+        if (beacon == address(0)) revert InvalidSignature();
 
         // Third parties can only submit on behalf of the beacon after a set amount of time
         if (
@@ -199,7 +200,7 @@ contract Beacon is Utils {
 
         // if (
         //     msg.sender != ecrecover(message, packed.v, rsAndSeed.r, rsAndSeed.s)
-        // ) revert SignatureMismatch();
+        // ) revert InvalidSignature();
 
         uint256 beaconPos;
         uint256 submissionsCount;
