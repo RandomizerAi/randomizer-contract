@@ -94,14 +94,14 @@ contract Admin is OwnableUpgradeable, Store {
         address indexed beacon,
         address indexed striker,
         address client,
-        uint128 request,
+        uint128 id,
         uint256 amount,
         uint256 slashedTokens
     );
 
     event CallbackFailed(
-        address client,
-        uint256 id,
+        address indexed client,
+        uint128 indexed id,
         bytes32 value,
         bytes txData
     );

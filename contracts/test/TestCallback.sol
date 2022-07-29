@@ -29,11 +29,8 @@ contract TestCallback {
         require(msg.sender == soRandom);
         result = value;
         id = _id;
-        // console.log("Callback received", _id);
-        // console.logBytes32(value);
         emit Callback(_id, value);
         // uint256 refund = ISoRandom(soRandom).requestToFeePaid(_id);
-        // console.log("Refund", refund);
     }
 
     function soRandomWithdraw(uint256 _amount) external {

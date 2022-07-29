@@ -33,11 +33,9 @@ describe("Request & Submit", function () {
 
       // Process RequestBeacon event (from 2nd-to-last submitter)
       if (requestEvent.name == "RequestBeacon") {
-
         selectedFinalBeacon = requestEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         request = { ...requestEvent.args.request, id: requestEvent.args.id };
-
       }
     }
 
@@ -151,7 +149,6 @@ describe("Request & Submit", function () {
         let signed = false;
         expect(sigs.length).to.equal(3);
         for (const sig of sigs) {
-          // console.log(sig);
           if (sig != "0x000000000000000000000000") {
             signed = true;
           }
@@ -239,7 +236,6 @@ describe("Request & Submit", function () {
     beacon = await soRandom.getBeacon(signer.address);
     expect(beacon.strikes).to.equal(0);
     expect(beacon.consecutiveSubmissions).to.equal(0);
-
   });
 
   it("accept random submissions from beacons and finally callback", async function () {
@@ -249,7 +245,7 @@ describe("Request & Submit", function () {
 
     const req = await testCallback.makeRequest();
     const res = await req.wait();
-    let request = soRandom.interface.parseLog(res.logs[0]).args.request;
+    let request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
 
     // const request = await soRandom.getRequest(1);
 
@@ -275,6 +271,7 @@ describe("Request & Submit", function () {
 
     let selectedFinalBeacon;
 
+    const localSignatures = [];
     for (const signer of selectedSigners) {
       // await soRandom.testCharge(testCallback.address, signer.address, 1);
       const flatSig = await signer.signMessage(messageHashBytes);
@@ -286,9 +283,48 @@ describe("Request & Submit", function () {
       const res = await tx.wait();
       const requestEvent = soRandom.interface.parseLog(res.logs[0]);
 
+      const requestHash = ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(
+          ["uint8", "bytes32", "bytes32"],
+          [sig.v, sig.r, sig.s]
+        )
+      );
+
+      const requestHashBytes = ethers.utils.arrayify(requestHash);
+      const requestHashHex = ethers.utils.hexlify(requestHashBytes);
+      const requestHashBytes12 = ethers.utils.hexDataSlice(requestHashHex, 0, 12);
+      const requestHash12 = ethers.utils.hexlify(requestHashBytes12);
+      const requestSignatures = await soRandom.getRequestSignatures(request.id);
+      expect(requestSignatures.includes(requestHash12)).to.be.true;
+      const index = request.beacons.indexOf(signer.address);
+      localSignatures[index] = requestHash12;
       if (requestEvent.name == "RequestBeacon") {
+        // Check that the beacon is the one we expect
+        const allBeacons = await soRandom.getBeacons();
+        let seed = ethers.utils.keccak256(
+          ethers.utils.defaultAbiCoder.encode(
+            ["bytes12", "bytes12"],
+            [requestSignatures[0], requestSignatures[1]]
+          )
+        );
+        const getRandomBeacon = (seed) => {
+          let seedBytes = ethers.utils.arrayify(seed);
+          const seedBigNumber = ethers.BigNumber.from(seedBytes);
+          // Select a random allBeacon using seedUint as a seed for modulo
+          let randomBeacon = allBeacons[seedBigNumber.mod(allBeacons.length - 1).add(1).toNumber()];
+          // Check if randomBeacon is in request.beacons
+          if (request.beacons.includes(randomBeacon)) {
+            seed = ethers.utils.keccak256(
+              ethers.utils.defaultAbiCoder.encode(["bytes32"], [seed]));
+            return getRandomBeacon(seed);
+          } else {
+            return randomBeacon;
+          }
+        }
+        const randomBeacon = getRandomBeacon(seed);
         selectedFinalBeacon = requestEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
+        expect(selectedFinalBeacon).to.equal(randomBeacon);
         request = requestEvent.args.request;
       }
 
@@ -303,12 +339,38 @@ describe("Request & Submit", function () {
     const addressData = [request.client].concat(request.beacons);
     const bytesData = [sig.r, sig.s, request.seed];
 
+    const requestSignatures = await soRandom.getRequestSignatures(1);
+
     const tx = await soRandom.connect(finalSigner).submitRandom(addressData, uintData, bytesData);
     await tx.wait();
 
     const callbackResult = await testCallback.result();
-    expect(callbackResult).to.not.equal(ethers.constants.HashZero);
 
+
+    const requestHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ["uint8", "bytes32", "bytes32"],
+        [sig.v, sig.r, sig.s]
+      )
+    );
+
+    const requestHashBytes = ethers.utils.arrayify(requestHash);
+    const requestHashHex = ethers.utils.hexlify(requestHashBytes);
+    const requestHashBytes12 = ethers.utils.hexDataSlice(requestHashHex, 0, 12);
+    const hash = ethers.utils.hexlify(requestHashBytes12);
+
+
+
+
+    const result = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ["bytes12", "bytes12", "bytes12"],
+        [localSignatures[0], localSignatures[1], hash]
+      ));
+
+
+    expect(callbackResult).to.not.equal(ethers.constants.HashZero);
+    expect(callbackResult).to.equal(result);
   });
 
   it("charge enough per submit to cover gas cost and let beacon withdraw [ @skip-on-coverage ]", async function () {
@@ -361,6 +423,7 @@ describe("Request & Submit", function () {
     const bytesData = [sig.r, sig.s, request.seed];
     const tx = await soRandom.connect(finalSigner).submitRandom(addressData, uintData, bytesData);
     const receipt = await tx.wait();
+    const result = await soRandom.getResult(request.id);
     const receiptBlockBaseFee = (await ethers.provider.getBlock(receipt.blockNumber)).baseFeePerGas;
     const minFee = receiptBlockBaseFee.mul(receipt.gasUsed).add(request.beaconFee);
     const balance = await soRandom.getBeaconStakeEth(finalSigner.address);

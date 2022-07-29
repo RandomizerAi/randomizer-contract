@@ -117,7 +117,7 @@ contract SoRandom is Client, Beacon {
         address[3] memory reqBeacons = accounts.beacons;
         for (uint256 i; i < 3; i++) {
             if (
-                requestToSignatures[packed.id][i] == bytes32(0) &&
+                requestToSignatures[packed.id][i] == bytes12(0) &&
                 reqBeacons[i] != address(0)
             ) {
                 address beaconAddress = reqBeacons[i];
@@ -161,6 +161,7 @@ contract SoRandom is Client, Beacon {
             // The beacon will need to be voted back in
             // beaconToStrikeCount = the strikes a beacon has
             // beaconsToStrike = array of all beacon addresses that should be striked in this for-loop
+            // The strikes are reset to 0 since it shouldn't be slashed at every following request
             if (
                 sBeacon[beaconsToStrike[i]].exists &&
                 (ethCollateral[beaconsToStrike[i]] < minStakeEth ||
@@ -173,6 +174,7 @@ contract SoRandom is Client, Beacon {
                     beaconsToStrike[i],
                     sBeacon[beaconsToStrike[i]].strikes
                 );
+                sBeacon[beaconsToStrike[i]].strikes = 0;
             }
         }
 
@@ -201,29 +203,53 @@ contract SoRandom is Client, Beacon {
         // The paying non-submitter might fall below collateral here. It will be removed on next strike if it doesn't add collateral.
         uint256 renewFee = ((gasAtStart - gasleft()) * _getGasPrice()) +
             beaconFee;
+
         uint256 refundToClient = requestToFeePaid[packed.id];
         uint256 totalCharge = renewFee + refundToClient;
-        ethCollateral[firstStrikeBeacon] -= totalCharge;
-        // Refund this function's gas to the caller
-        ethCollateral[msg.sender] += renewFee;
-        // Fees paid on this request are reset to 0
-        requestToFeePaid[packed.id] = 0;
-        // Client receives refund to ensure they have enough to pay for the next request
-        // Also since the request is taking slower than expected due to a non-submitting beacon,
-        // the non-submitting beacon should pay for the delay.
-        ethDeposit[accounts.client] += refundToClient;
 
-        // Log charge from striked beacon to caller (collateral to collateral)
-        emit ChargeEth(firstStrikeBeacon, msg.sender, renewFee, true, true);
+        // If charging more than the striked beacon has staked, refund the remainder to the client
+        if (totalCharge > ethCollateral[firstStrikeBeacon]) {
+            totalCharge = ethCollateral[firstStrikeBeacon];
+            renewFee = renewFee >= totalCharge ? totalCharge : renewFee;
+            ethCollateral[msg.sender] += renewFee;
+            emit ChargeEth(firstStrikeBeacon, msg.sender, renewFee, true, true);
+            // totalCharge - renewFee is now 0 at its lowest
+            // If collateral is remaining after renewFee, it will be refunded to the client
+            refundToClient = totalCharge - renewFee;
+            if (refundToClient > 0) {
+                ethDeposit[accounts.client] += refundToClient;
+                emit ChargeEth(
+                    firstStrikeBeacon,
+                    accounts.client,
+                    refundToClient,
+                    true,
+                    false
+                );
+            }
+            ethCollateral[firstStrikeBeacon] = 0;
+        } else {
+            ethCollateral[firstStrikeBeacon] -= totalCharge;
+            // Refund this function's gas to the caller
+            ethCollateral[msg.sender] += renewFee;
+            // Fees paid on this request are reset to 0
+            requestToFeePaid[packed.id] = 0;
+            // Client receives refund to ensure they have enough to pay for the next request
+            // Also since the request is taking slower than expected due to a non-submitting beacon,
+            // the non-submitting beacon should pay for the delay.
+            ethDeposit[accounts.client] += refundToClient;
 
-        // Log charge from striked beacon to client (collateral to deposit)
-        emit ChargeEth(
-            firstStrikeBeacon,
-            accounts.client,
-            refundToClient,
-            true,
-            false
-        );
+            // Log charge from striked beacon to caller (collateral to collateral)
+            emit ChargeEth(firstStrikeBeacon, msg.sender, renewFee, true, true);
+
+            // Log charge from striked beacon to client (collateral to deposit)
+            emit ChargeEth(
+                firstStrikeBeacon,
+                accounts.client,
+                refundToClient,
+                true,
+                false
+            );
+        }
 
         // Log Retry
         emit Retry(

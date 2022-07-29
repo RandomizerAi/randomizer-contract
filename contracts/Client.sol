@@ -109,14 +109,12 @@ contract Client is Utils {
                 latestRequestId,
                 blockhash(block.number - 1),
                 block.timestamp,
-                block.difficulty
+                block.difficulty,
+                block.chainid
             )
         );
 
-        address[3] memory selectedBeacons = _randomBeacons(
-            latestRequestId,
-            seed
-        );
+        address[3] memory selectedBeacons = _randomBeacons(seed);
 
         bytes32 requestHash = keccak256(
             abi.encode(

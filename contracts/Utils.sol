@@ -133,14 +133,12 @@ contract Utils is Admin, GasHandler {
     }
 
     /// @dev Gets BEACONS_PER_REQUEST number of random beacons for a request
-    function _randomBeacons(uint128 _request, bytes32 _seed)
+    function _randomBeacons(bytes32 _random)
         internal
         returns (address[3] memory)
     {
         if (beacons.length < 5)
             revert NotEnoughBeaconsAvailable(beacons.length, 5);
-        // Using _request hash so that the beacons are unique for multiple requests within the same block
-        bytes32 random = keccak256(abi.encode(_request, _seed));
 
         // address[] memory cachedBeacons = beacons;
         address[3] memory indices;
@@ -148,13 +146,13 @@ contract Utils is Admin, GasHandler {
         // Select a random beacon _beaconsAmt times and store in selectedBeacons
         uint256 i;
         while (i < 2) {
-            uint256 randomBeaconIndex = (uint256(random) % length) + 1;
+            uint256 randomBeaconIndex = (uint256(_random) % length) + 1;
             address randomBeacon = beacons[randomBeaconIndex];
             bool duplicate;
             if (i > 0) {
                 for (uint256 x; x < i; x++) {
                     if (indices[x] == randomBeacon) {
-                        random = keccak256(abi.encode(random));
+                        _random = keccak256(abi.encode(_random));
                         duplicate = true;
                         break;
                     }
@@ -171,26 +169,24 @@ contract Utils is Admin, GasHandler {
     }
 
     /// @dev Gets a single random beacon
-    function _randomBeacon(bytes32 _seed, address[3] memory _selectedBeacons)
+    function _randomBeacon(bytes32 _random, address[3] memory _selectedBeacons)
         internal
         view
         returns (address beacon)
     {
         if (beacons.length < 5)
             revert NotEnoughBeaconsAvailable(beacons.length, 5);
-        // Using _request hash so that the beacons are unique for multiple requests within the same block
-        bytes32 random = keccak256(abi.encode(_seed));
 
         // address[] memory cachedBeacons = beacons;
         uint256 length = beacons.length - 1;
         // Select a random beacon store in selectedBeacons
         while (true) {
             bool duplicate;
-            uint256 randomBeaconIndex = (uint256(random) % length) + 1;
+            uint256 randomBeaconIndex = (uint256(_random) % length) + 1;
             address randomBeacon = beacons[randomBeaconIndex];
             for (uint256 i; i < 3; i++) {
                 if (_selectedBeacons[i] == randomBeacon) {
-                    random = keccak256(abi.encode(random));
+                    _random = keccak256(abi.encode(_random));
                     duplicate = true;
                     break;
                 }

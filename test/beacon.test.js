@@ -194,4 +194,7 @@ describe("Beacon", function () {
     expect(await soRandom.getBeaconIndex(secondToLastBeacon)).to.equal(secondToLastBeaconIndex);
   });
 
+  it("removes beacon with many pending and then re-registers while keeping pending", async function () {
+  });
+
 });

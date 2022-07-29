@@ -10,6 +10,8 @@ async function main() {
   const flippedAt = Date.now();
   console.log("Request made", flippedAt - beforeFlip);
 
+  console.log(beforeFlip);
+
   testCallback.on("Callback", (event) => {
     console.log(event);
     console.log("Callback", (Date.now() - flippedAt));

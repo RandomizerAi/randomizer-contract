@@ -20,6 +20,12 @@ contract Beacon is Utils {
     error ReentrancyGuard();
     error NotOwnerOrBeacon();
     error BeaconStakedEthTooLow(uint256 staked, uint256 minimum);
+    error DelegatedSubmissionTooEarly(
+        uint256 currentTime,
+        uint256 minTime,
+        uint256 currentBlock,
+        uint256 minBlock
+    );
 
     /// @notice Returns all registered beacon addresses
     function getBeacons() external view returns (address[] memory) {
@@ -53,7 +59,9 @@ contract Beacon is Utils {
         if (beaconIndex[_beacon] != 0) revert BeaconExists();
         if (ethCollateral[_beacon] < minStakeEth)
             revert BeaconStakedEthTooLow(ethCollateral[_beacon], minStakeEth);
-        if (!sBeacon[_beacon].exists) sBeacon[_beacon] = SBeacon(true, 0, 0, 0);
+        // Don't reset beacon pending so that it can pick up where it left off in case it still has pending requests.
+        SBeacon memory tempBeacon = sBeacon[_beacon];
+        sBeacon[_beacon] = SBeacon(true, 0, 0, tempBeacon.pending);
         beaconIndex[_beacon] = beacons.length;
         beacons.push(_beacon);
         emit RegisterBeacon(_beacon);
@@ -163,22 +171,6 @@ contract Beacon is Utils {
         // SRandomRequest storage request = requests[requestId];
         if (packed.data.height == 0) revert RequestNotFound(packed.id);
 
-        uint256 beaconPos;
-        uint256 submissionsCount;
-        bytes12[3] memory reqValues = requestToSignatures[packed.id];
-        for (uint256 i; i < 3; i++) {
-            if (reqValues[i] != bytes12(0)) {
-                submissionsCount++;
-            }
-            if (msg.sender == accounts.beacons[i]) {
-                beaconPos = i + 1;
-            }
-        }
-
-        if (beaconPos == 0) revert BeaconNotSelected();
-
-        if (reqValues[beaconPos - 1] != bytes12(0)) revert ResultExists();
-
         // Verify that the signature provided matches for the reconstructed message
         bytes32 message = keccak256(
             abi.encodePacked(
@@ -189,9 +181,41 @@ contract Beacon is Utils {
             )
         );
 
+        // Recover the beacon address from the signature
+        address beacon = ecrecover(message, packed.v, rsAndSeed.r, rsAndSeed.s);
+
+        // Third parties can only submit on behalf of the beacon after a set amount of time
         if (
-            msg.sender != ecrecover(message, packed.v, rsAndSeed.r, rsAndSeed.s)
-        ) revert SignatureMismatch();
+            msg.sender != beacon &&
+            (block.timestamp < packed.data.timestamp + 5 minutes ||
+                block.number < packed.data.height + 5)
+        )
+            revert DelegatedSubmissionTooEarly(
+                block.timestamp,
+                packed.data.timestamp + 5 minutes,
+                block.number,
+                packed.data.height + 5
+            );
+
+        // if (
+        //     msg.sender != ecrecover(message, packed.v, rsAndSeed.r, rsAndSeed.s)
+        // ) revert SignatureMismatch();
+
+        uint256 beaconPos;
+        uint256 submissionsCount;
+        bytes12[3] memory reqValues = requestToSignatures[packed.id];
+        for (uint256 i; i < 3; i++) {
+            if (reqValues[i] != bytes12(0)) {
+                submissionsCount++;
+            }
+            if (beacon == accounts.beacons[i]) {
+                beaconPos = i + 1;
+            }
+        }
+
+        if (beaconPos == 0) revert BeaconNotSelected();
+
+        if (reqValues[beaconPos - 1] != bytes12(0)) revert ResultExists();
 
         // Every 100 consecutive submissions, strikes are reset to 0
         _updateBeaconSubmissionCount();
@@ -222,6 +246,7 @@ contract Beacon is Utils {
             // Final beacon submission logic (callback & complete)
             bytes32 reqResult;
 
+            /* Commenting out the dynamic submissions aggregation
             // Encode the stored values (signatures) in the order decided in requestRandom()
             for (uint256 i; i < submissionsCount; i++) {
                 if (i > 0) {
@@ -236,6 +261,19 @@ contract Beacon is Utils {
                 abi.encode(
                     reqResult,
                     abi.encode(packed.v, rsAndSeed.r, rsAndSeed.s)
+                )
+            );
+            */
+
+            reqResult = keccak256(
+                abi.encode(
+                    reqValues[0],
+                    reqValues[1],
+                    bytes12(
+                        keccak256(
+                            abi.encode(packed.v, rsAndSeed.r, rsAndSeed.s)
+                        )
+                    )
                 )
             );
 
@@ -273,7 +311,7 @@ contract Beacon is Utils {
     function _callback(
         address _to,
         uint256 _gasLimit,
-        uint256 _id,
+        uint128 _id,
         bytes32 _result
     ) private {
         (bool success, bytes memory callbackTxData) = _to.call{gas: _gasLimit}(
@@ -323,15 +361,16 @@ contract Beacon is Utils {
             bytes32 lastBeaconSeed;
 
             // Encode the stored values (signatures) in the order decided in requestRandom()
-            for (uint256 i; i < 2; i++) {
-                if (i == 0) {
-                    lastBeaconSeed = keccak256(abi.encode(reqValues[i]));
-                } else {
-                    lastBeaconSeed = keccak256(
-                        abi.encode(lastBeaconSeed, reqValues[i])
-                    );
-                }
-            }
+            // for (uint256 i; i < 2; i++) {
+            //     if (i == 0) {
+            //         lastBeaconSeed = keccak256(abi.encode(reqValues[i]));
+            //     } else {
+            //         lastBeaconSeed = keccak256(
+            //             abi.encode(lastBeaconSeed, reqValues[i])
+            //         );
+            //     }
+            // }
+            lastBeaconSeed = keccak256(abi.encode(reqValues[0], reqValues[1]));
 
             // if (request.selectedFinalSigner == address(0)) {
             //     lastBeacon = _randomBeacon(lastBeaconSeed, request.beacons);
