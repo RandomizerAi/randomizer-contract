@@ -23,6 +23,7 @@ contract SoRandom is Client, Beacon {
     /// @dev To be called only once on deployment of SoRandomStatic (in constructor) or SoRandomUpgradeable (in initialize()).
     function init(
         address _developer,
+        address _sequencer,
         uint8 _maxStrikes,
         uint256 _minStakeEth,
         uint256 _expirationBlocks,
@@ -35,6 +36,7 @@ contract SoRandom is Client, Beacon {
     ) internal {
         _transferOwnership(_developer);
         developer = _developer;
+        sequencer = _sequencer;
         maxStrikes = _maxStrikes;
         minStakeEth = _minStakeEth;
         // minToken = _minCollateralToken;

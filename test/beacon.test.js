@@ -66,7 +66,7 @@ describe("Beacon", function () {
 
     signers = await ethers.getSigners();
     const SoRandom = await ethers.getContractFactory("SoRandomUpgradeable");
-    soRandom = await upgrades.deployProxy(SoRandom, [signers[0].address, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]]);
+    soRandom = await upgrades.deployProxy(SoRandom, [signers[0].address, signers[0].address, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]]);
     await soRandom.deployed();
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(soRandom.address);

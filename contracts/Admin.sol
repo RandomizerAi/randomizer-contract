@@ -11,18 +11,15 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 contract Admin is OwnableUpgradeable, Store {
     // Number of beacons per request
     uint256 internal constant BLOCKS_UNTIL_RENEWABLE_ALL = 20;
-    uint256 internal constant SECONDS_UNTIL_RENEWABLE_ALL = 5 minutes;
+    uint256 internal constant SECONDS_UNTIL_RENEWABLE_ALL = 10 minutes;
+    uint256 internal constant BLOCKS_UNTIL_SUBMITTABLE_SEQUENCER = 10;
+    uint256 internal constant SECONDS_UNTIL_SUBMITTABLE_SEQUENCER = 5 minutes;
 
     // Gas offsets for fee charge
     uint256 internal constant SUBMIT_GAS_OFFSET = 90000;
     uint256 internal constant FINAL_SUBMIT_GAS_OFFSET = 65000;
     uint256 internal constant RENEW_GAS_OFFSET = 21000;
 
-    // Contract addresses
-    address public developer;
-
-    // Re-entrancy guard for final beacon submit
-    uint256 internal _status;
     uint256 internal constant _NOT_ENTERED = 1;
     uint256 internal constant _ENTERED = 2;
 
@@ -105,6 +102,20 @@ contract Admin is OwnableUpgradeable, Store {
         bytes32 value,
         bytes txData
     );
+
+    function transferDeveloper(address _developer) external {
+        require(msg.sender == developer, "NotDeveloper");
+        proposedDeveloper = _developer;
+    }
+
+    function acceptDeveloper() external {
+        require(msg.sender == proposedDeveloper, "NotProposedDeveloper");
+        developer = proposedDeveloper;
+    }
+
+    function setSequencer(address _sequencer) external onlyOwner {
+        sequencer = _sequencer;
+    }
 
     function setBeaconFee(uint256 _amount) external onlyOwner {
         beaconFee = _amount;

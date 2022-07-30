@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 contract SoRandomUpgradeableV2 is Initializable, SoRandom {
     function initialize(
         address _developer,
+        address _sequencer,
         uint8 _maxStrikes,
         uint256 _minStakeEth,
         uint256 _expirationBlocks,
@@ -19,6 +20,7 @@ contract SoRandomUpgradeableV2 is Initializable, SoRandom {
     ) public initializer {
         init(
             _developer,
+            _sequencer,
             _maxStrikes,
             _minStakeEth,
             _expirationBlocks,

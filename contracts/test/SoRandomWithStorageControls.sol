@@ -6,6 +6,7 @@ contract SoRandomWithStorageControls is SoRandom {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
         address _developer,
+        address _sequencer,
         uint8 _maxStrikes,
         uint256 _minStakeEth,
         uint256 _expirationBlocks,
@@ -19,6 +20,7 @@ contract SoRandomWithStorageControls is SoRandom {
         __Ownable_init();
         init(
             _developer,
+            _sequencer,
             _maxStrikes,
             _minStakeEth,
             _expirationBlocks,

@@ -14,7 +14,7 @@ async function main() {
   const developer = new ethers.Wallet(process.env.PRIVATE_KEY);
   const SoRandom = await ethers.getContractFactory('SoRandomUpgradeable');
   console.log('Deploying SoRandomUpgradeable...');
-  const soRandom = await upgrades.deployProxy(SoRandom, [developer.address, 3, ethers.utils.parseEther("0.01"), 50, 3600, 1000, 3000000, ethers.utils.parseUnits("20000", "gwei"), signers]);
+  const soRandom = await upgrades.deployProxy(SoRandom, [developer.address, developer.address, 3, ethers.utils.parseEther("0.01"), 50, 3600, 1000, 3000000, ethers.utils.parseUnits("20000", "gwei"), signers]);
   await soRandom.deployed();
   console.log('SoRandomUpgradeable deployed to:', soRandom.address);
 }

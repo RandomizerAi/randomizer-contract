@@ -67,6 +67,14 @@ struct SBeacon {
 }
 
 contract Store {
+    // Re-entrancy guard for final beacon submit
+    uint256 internal _status;
+
+    // Protocol addresses
+    address public developer;
+    address public proposedDeveloper;
+    address public sequencer;
+
     address[] beacons;
     uint256 strikeBurn;
     uint256 minToken;

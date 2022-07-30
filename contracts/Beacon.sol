@@ -20,7 +20,7 @@ contract Beacon is Utils {
     error ReentrancyGuard();
     error NotOwnerOrBeacon();
     error BeaconStakedEthTooLow(uint256 staked, uint256 minimum);
-    error DelegatedSubmissionTooEarly(
+    error SequencerSubmissionTooEarly(
         uint256 currentTime,
         uint256 minTime,
         uint256 currentBlock,
@@ -185,19 +185,6 @@ contract Beacon is Utils {
         address beacon = ecrecover(message, packed.v, rsAndSeed.r, rsAndSeed.s);
         if (beacon == address(0)) revert InvalidSignature();
 
-        // Third parties can only submit on behalf of the beacon after a set amount of time
-        if (
-            msg.sender != beacon &&
-            (block.timestamp < packed.data.timestamp + 5 minutes ||
-                block.number < packed.data.height + 5)
-        )
-            revert DelegatedSubmissionTooEarly(
-                block.timestamp,
-                packed.data.timestamp + 5 minutes,
-                block.number,
-                packed.data.height + 5
-            );
-
         // if (
         //     msg.sender != ecrecover(message, packed.v, rsAndSeed.r, rsAndSeed.s)
         // ) revert InvalidSignature();
@@ -217,6 +204,25 @@ contract Beacon is Utils {
         if (beaconPos == 0) revert BeaconNotSelected();
 
         if (reqValues[beaconPos - 1] != bytes12(0)) revert ResultExists();
+
+        // Check that only beacon and developer can submit the result
+        if (msg.sender != beacon && msg.sender != sequencer)
+            revert InvalidSignature();
+
+        // Sequencer can submit on behalf of the beacon after a set amount of time (given that the beacon has sent it its signature)
+        if (
+            msg.sender != beacon &&
+            (block.timestamp <
+                packed.data.timestamp + SECONDS_UNTIL_SUBMITTABLE_SEQUENCER ||
+                block.number <
+                packed.data.height + BLOCKS_UNTIL_SUBMITTABLE_SEQUENCER)
+        )
+            revert SequencerSubmissionTooEarly(
+                block.timestamp,
+                packed.data.timestamp + SECONDS_UNTIL_SUBMITTABLE_SEQUENCER,
+                block.number,
+                packed.data.height + BLOCKS_UNTIL_SUBMITTABLE_SEQUENCER
+            );
 
         // Every 100 consecutive submissions, strikes are reset to 0
         _updateBeaconSubmissionCount(beacon);
