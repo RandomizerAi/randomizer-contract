@@ -124,7 +124,7 @@ contract SoRandom is Client, Beacon {
             ) {
                 address beaconAddress = reqBeacons[i];
                 SBeacon memory tempBeacon = sBeacon[beaconAddress];
-                tempBeacon.strikes++;
+                if (tempBeacon.exists) tempBeacon.strikes++;
                 tempBeacon.consecutiveSubmissions = 0;
                 if (tempBeacon.pending > 0) tempBeacon.pending--;
                 sBeacon[beaconAddress] = tempBeacon;
@@ -176,7 +176,6 @@ contract SoRandom is Client, Beacon {
                     beaconsToStrike[i],
                     sBeacon[beaconsToStrike[i]].strikes
                 );
-                sBeacon[beaconsToStrike[i]].strikes = 0;
             }
         }
 
