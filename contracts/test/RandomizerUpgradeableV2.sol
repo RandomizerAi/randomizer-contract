@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSL 1.1
-pragma solidity ^0.8.15;
-import "../SoRandom.sol";
+// Upgradeable version of Randomizer for EVM networks that support OpenZeppelin's Upgradeable contract.
+pragma solidity ^0.8.16;
+import "../Randomizer.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract SoRandomWithStorageControls is SoRandom {
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(
+contract RandomizerUpgradeableV2 is Initializable, Randomizer {
+    function initialize(
         address _developer,
         address _sequencer,
         uint8 _maxStrikes,
@@ -16,8 +17,7 @@ contract SoRandomWithStorageControls is SoRandom {
         uint256 _requestMaxGasLimit,
         uint256 _beaconFee,
         address[] memory _beacons
-    ) initializer {
-        __Ownable_init();
+    ) public initializer {
         init(
             _developer,
             _sequencer,
@@ -25,19 +25,17 @@ contract SoRandomWithStorageControls is SoRandom {
             _minStakeEth,
             _expirationBlocks,
             _expirationSeconds,
+            _beaconFee,
             _requestMinGasLimit,
             _requestMaxGasLimit,
-            _beaconFee,
             _beacons
         );
     }
 
-    function _debug_setSBeacon(
-        address beacon,
-        uint8 submissions,
-        uint8 strikes
-    ) external {
-        sBeacon[beacon].consecutiveSubmissions = submissions;
-        sBeacon[beacon].strikes = strikes;
+    function newFunction() public pure returns (string memory) {
+        return "Hello World";
     }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
 }

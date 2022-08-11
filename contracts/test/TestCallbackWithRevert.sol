@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.16;
 
-interface ISoRandom {
+interface IRandomizer {
     function requestRandom(uint256 _callbackGasLimit)
         external
         returns (uint256);
@@ -12,7 +12,7 @@ interface ISoRandom {
 }
 
 contract TestCallbackWithRevert {
-    address public soRandom;
+    address public randomizer;
     bytes32 public result;
     uint256 public id;
     uint256 public resultsCount;
@@ -20,16 +20,16 @@ contract TestCallbackWithRevert {
 
     event Callback(uint256 id, bytes32 value);
 
-    constructor(address _soRandom) {
+    constructor(address _randomizer) {
         id = 1;
-        soRandom = _soRandom;
+        randomizer = _randomizer;
     }
 
-    function soRandomCallback(uint128 _id, bytes32 value) external {
+    function randomizerCallback(uint128 _id, bytes32 value) external {
         revert("Revert");
     }
 
     function makeRequest() external returns (uint256) {
-        return ISoRandom(soRandom).requestRandom(100000);
+        return IRandomizer(randomizer).requestRandom(100000);
     }
 }

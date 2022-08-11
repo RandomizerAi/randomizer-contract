@@ -1,6 +1,6 @@
-# soRandom - Easy & secure randomness for smart contracts
+# Randomizer.AI - Easy & secure randomness for smart contracts
 
-soRandom is a Verifiable Random Function (VRF) protocol that lets contracts easily get randomness e.g. for NFT generation, drop rates, gaming etc. Smart contracts can make external calls to soRandom's `requestRandom()` function to receive callbacks that contain random bytes to their `soRandomCallback(id, value)` function. The protocol uses native ETH for fees.
+(Randomizer.AI)[https://randomizer.ai] is a Verifiable Random Function (VRF) protocol that lets contracts easily get randomness e.g. for NFT generation, drop rates, gaming etc. Smart contracts can make external calls to randomizer's `requestRandom()` function to receive callbacks that contain random bytes to their `randomizerCallback(id, value)` function. The protocol uses native ETH for fees.
 
 ## IMPORTANT: Before getting started
 Set the network using `yarn set-network:{network}`. This will copy over the desired gas price handler for the network.
@@ -17,11 +17,11 @@ Supported gas fee handlers:
 Note that the protocol stores & verifies hashed calldata instead of storing independent variables so as to minimize storage gas fees. 
 
 1. Beacon deposits ETH by attaching ETH in `msg.value` in a `beaconStakeEth(address _beacon)` call. This ETH is staked (can be unstaked at any time) and can be slashed by the protocol when the beacon misses a request.
-2. Devs (or dapp users) deposit ETH on behalf of their smart contract ("client") by adding `msg.value` to a `clientDeposit(address _client)` call. When a client contract calls `soRandom.requestRandom()`, the estimate gas fee + premium is reserved from the deposit and finally charged on completion.
+2. Devs (or dapp users) deposit ETH on behalf of their smart contract ("client") by adding `msg.value` to a `clientDeposit(address _client)` call. When a client contract calls `randomizer.requestRandom()`, the estimate gas fee + premium is reserved from the deposit and finally charged on completion.
 3. Client contract calls `requestRandom(uint256 _callbackGasLimit)` to request a random number. The function returns a uint256 id (which the client contract refer to when it receives a callback with a random value).
 4. 2 beacons are selected in the `requestRandom()` function which sign the existing request data (client address, request id, seed generated from block data) and submit their signature to `submitRandom()`.
 5. When the 2nd beacon submits its signature, the 2 signatures are hashed to generate a seed with which a 3rd (final) beacon is randomly selected. The event `RequestBeacon(uint256 id, RequestEventData request, address beacon)` is emitted.
-5. The final beacon (revealed in the RequestBeacon event) now also submits a signature to `submitRandom()`. The function hashes all 3 signatures and calls the `soRandomCallback(uint256 id, bytes32 value)` function in the client contract. `id` is the request id (previously given to the client contract when it called `requestRandom()`) and `value` is the bytes32 keccak256 hash of the set of 3 signatures. 
+5. The final beacon (revealed in the RequestBeacon event) now also submits a signature to `submitRandom()`. The function hashes all 3 signatures and calls the `randomizerCallback(uint256 id, bytes32 value)` function in the client contract. `id` is the request id (previously given to the client contract when it called `requestRandom()`) and `value` is the bytes32 keccak256 hash of the set of 3 signatures. 
 
 Beacons cannot manipulate the result by changing data as the `requestRandom()` function validates the signature against the request data.
 
@@ -44,13 +44,13 @@ The beacon node server is located in `beacon/start.eth.js`. This application loa
 
 * `clientWithdrawTo(address _to, uint256 _amount)` - Withdraw deposited ETH of `_amount` to the specified `_to` address. Only the client contract that contains the deposit can call this function, so make sure your has a call to this function and it's only callable by an admin address (see example).
 
-*  `requestRandom(uint24 _callbackGasLimit) external returns (uint256 id)` - Called by a contract to request a future function call to its `soRandomCallback(uint256 id, bytes32 value)` function. `_callbackGasLimit` is the gas limit for `soRandomCallback()`.  Returns the id of the request (also returned in soRandomCallback so the client contract can reference it).
+*  `requestRandom(uint24 _callbackGasLimit) external returns (uint256 id)` - Called by a contract to request a future function call to its `randomizerCallback(uint256 id, bytes32 value)` function. `_callbackGasLimit` is the gas limit for `randomizerCallback()`.  Returns the id of the request (also returned in randomizerCallback so the client contract can reference it).
 
 * `getFeeEstimate(uint24 _callbackGasLimit, uint8 _numberOfBeacons) returns (uint256 fee)` - View function to estimate total fee for fulfilling a random request. Contracts can use this to charge the fee to their client.
 
 ### Beacon
 
-* `submitRandom(address[4] calldata _addressData, uint256[9] calldata _uintData, bytes32[3] calldata _rsAndSeed)` - Submit signature data for a random request. This function combines the first 2 signatures into a seed to select a random 3rd beacon. When the 3rd beacon calls this function, it combines all signatures into a bytes32 value and sends it to the requesting client contract's `soRandomCallback()` function, along with the request id.
+* `submitRandom(address[4] calldata _addressData, uint256[9] calldata _uintData, bytes32[3] calldata _rsAndSeed)` - Submit signature data for a random request. This function combines the first 2 signatures into a seed to select a random 3rd beacon. When the 3rd beacon calls this function, it combines all signatures into a bytes32 value and sends it to the requesting client contract's `randomizerCallback()` function, along with the request id.
 
 * `beaconStakeEth(address _beacon) external payable` - Stakes ETH for the beacon. The beacon stake must always be more than the configured `minStakeEth` or they will be removed as a beacon upon a request renewal where they were selected.
 
@@ -64,13 +64,13 @@ The beacon node server is located in `beacon/start.eth.js`. This application loa
 
 ## Example
 
-A simple coinflip contract that uses soRandom to get a seed.
+A simple coinflip contract that uses randomizer to get a seed.
 
-Note that ETH must have been deposited on behalf of the contract in soRandom using soRandom's payable `clientDeposit(address _client)` function. This can easily be done in the soRandom dashboard at https://sorandom.lol.
+Note that ETH must have been deposited on behalf of the contract in randomizer using randomizer's payable `clientDeposit(address _client)` function. This can easily be done in the randomizer dashboard at https://sorandom.lol.
 
 ```solidity
-// soRandom protocol interface
-interface ISoRandom {
+// randomizer protocol interface
+interface IRandomizer {
     function requestRandom(uint24 _callbackGasLimit) external returns (uint256);
 
     function clientWithdrawTo(address _to, uint256 _amount) external;
@@ -90,18 +90,18 @@ contract CoinFlip {
 
     // The coin flip containing the random request
     function flip() external returns (uint256) {
-        // Request a random number from the soRandom contract (50k callback limit)
-        uint256 id = ISoRandom(soRandom).requestRandom(50000);
+        // Request a random number from the randomizer contract (50k callback limit)
+        uint256 id = IRandomizer(randomizer).requestRandom(50000);
         // Store the flip ID and the player address
         flipToAddress[id] = msg.sender;
         // Return the flip ID
         return id;
     }
 
-    // Callback function called by the soRandom contract when the random value is generated
-    function soRandomCallback(uint256 _id, bytes32 _value) external {
-        // Callback can only be called by soRandom
-        require(msg.sender == soRandom, "Caller is not soRandom");
+    // Callback function called by the randomizer contract when the random value is generated
+    function randomizerCallback(uint256 _id, bytes32 _value) external {
+        // Callback can only be called by randomizer
+        require(msg.sender == randomizer, "Caller is not randomizer");
         // Get the player address from the flip ID
         address player = flipToAddress[_id];
         // Convert the random bytes to a number between 0 and 99
@@ -114,10 +114,10 @@ contract CoinFlip {
         }
     }
 
-    // Allows the owner to withdraw their deposited soRandom funds
-    function soRandomWithdraw(uint256 amount) external {
+    // Allows the owner to withdraw their deposited randomizer funds
+    function randomizerWithdraw(uint256 amount) external {
         require(msg.sender == OWNER, "Sender is not owner");
-        ISoRandom(soRandom).clientWithdrawTo(msg.sender, amount);
+        IRandomizer(randomizer).clientWithdrawTo(msg.sender, amount);
     }
 }
 ```

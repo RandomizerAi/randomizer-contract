@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSL 1.1
-// Non-upgradeable version of SoRandom for EVM networks that don't support OpenZeppelin's Upgradeable contract.
+// Upgradeable version of Randomizer for EVM networks that support OpenZeppelin's Upgradeable contract.
+pragma solidity ^0.8.16;
+import "./Randomizer.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-pragma solidity ^0.8.15;
-import "./SoRandom.sol";
-
-contract SoRandomStatic is SoRandom {
-    constructor(
+contract RandomizerUpgradeable is Initializable, Randomizer {
+    function initialize(
         address _developer,
         address _sequencer,
         uint8 _maxStrikes,
@@ -17,7 +17,7 @@ contract SoRandomStatic is SoRandom {
         uint256 _requestMaxGasLimit,
         uint256 _beaconFee,
         address[] memory _beacons
-    ) initializer {
+    ) public initializer {
         __Ownable_init();
         init(
             _developer,
@@ -31,5 +31,10 @@ contract SoRandomStatic is SoRandom {
             _beaconFee,
             _beacons
         );
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
 }

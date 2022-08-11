@@ -17,15 +17,15 @@ describe("Beacon", function () {
     const messageHashBytes = ethers.utils.arrayify(messageHash);
     let selectedFinalBeacon;
     for (const signer of selectedSigners) {
-      // await soRandom.testCharge(testCallback.address, signer.address, 1);
+      // await randomizer.testCharge(testCallback.address, signer.address, 1);
       const flatSig = await signer.signMessage(messageHashBytes);
       const sig = ethers.utils.splitSignature(flatSig);
       const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
       const addressData = [request.client].concat(request.beacons);
       const bytesData = [sig.r, sig.s, request.seed];
-      const tx = await soRandom.connect(signer).submitRandom(addressData, uintData, bytesData);
+      const tx = await randomizer.connect(signer).submitRandom(addressData, uintData, bytesData);
       const res = await tx.wait();
-      const requestEvent = soRandom.interface.parseLog(res.logs[0]);
+      const requestEvent = randomizer.interface.parseLog(res.logs[0]);
 
       // Process RequestBeacon event (from 2nd-to-last submitter)
       if (requestEvent.name == "RequestBeacon") {
@@ -42,7 +42,7 @@ describe("Beacon", function () {
     const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
     const addressData = [request.client].concat(request.beacons);
     const bytesData = [sig.r, sig.s, request.seed];
-    const tx = await soRandom.connect(finalSigner).submitRandom(addressData, uintData, bytesData);
+    const tx = await randomizer.connect(finalSigner).submitRandom(addressData, uintData, bytesData);
     await tx.wait();
 
     const callbackResult = await testCallback.result();
@@ -65,47 +65,47 @@ describe("Beacon", function () {
     await helpers.setCode("0x000000000000000000000000000000000000006C", ArbGas.bytecode);
 
     signers = await ethers.getSigners();
-    const SoRandom = await ethers.getContractFactory("SoRandomUpgradeable");
-    soRandom = await upgrades.deployProxy(SoRandom, [signers[0].address, signers[0].address, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]]);
-    await soRandom.deployed();
+    const Randomizer = await ethers.getContractFactory("RandomizerUpgradeable");
+    randomizer = await upgrades.deployProxy(Randomizer, [signers[0].address, signers[0].address, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]]);
+    await randomizer.deployed();
     const TestCallback = await ethers.getContractFactory("TestCallback");
-    testCallback = await TestCallback.deploy(soRandom.address);
+    testCallback = await TestCallback.deploy(randomizer.address);
   });
 
   it("fail beacon withdraw when it is not sender/owner or has pending requests", async function () {
-    const deposit = await soRandom.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     const req = await testCallback.makeRequest();
     // Get request data
     const res = await req.wait();
-    const request = { ...soRandom.interface.parseLog(res.logs[0]).args.request, id: soRandom.interface.parseLog(res.logs[0]).args.id };
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
     const selectedSigner = signers.filter(signer => request.beacons[0] == signer.address)[0];
-    const beacon = await soRandom.getBeacon(selectedSigner.address);
+    const beacon = await randomizer.getBeacon(selectedSigner.address);
 
     expect(beacon.pending).to.equal(ethers.BigNumber.from(1));
 
-    await expect(soRandom.connect(selectedSigner).beaconUnstakeEth(await soRandom.getBeaconStakeEth(selectedSigner.address))).to.be.revertedWith(`BeaconHasPending(${ethers.BigNumber.from(1)})`);
-    await expect(soRandom.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.be.revertedWith(`BeaconHasPending(${ethers.BigNumber.from(1)})`);
-    await expect(soRandom.connect(signers[7]).unregisterBeacon(selectedSigner.address)).to.be.revertedWith(`NotOwnerOrBeacon`);
+    await expect(randomizer.connect(selectedSigner).beaconUnstakeEth(await randomizer.getBeaconStakeEth(selectedSigner.address))).to.be.revertedWith(`BeaconHasPending(${ethers.BigNumber.from(1)})`);
+    await expect(randomizer.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.be.revertedWith(`BeaconHasPending(${ethers.BigNumber.from(1)})`);
+    await expect(randomizer.connect(signers[7]).unregisterBeacon(selectedSigner.address)).to.be.revertedWith(`NotOwnerOrBeacon`);
     await signAndCallback(request);
 
-    await expect(soRandom.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.not.be.reverted;
-    pending = (await soRandom.getBeacon(selectedSigner.address)).pending.toNumber();
+    await expect(randomizer.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.not.be.reverted;
+    pending = (await randomizer.getBeacon(selectedSigner.address)).pending.toNumber();
     expect(pending).to.equal(0);
   });
 
   it("send full beacon ETH stake to beacon after unregisterBeacon", async function () {
-    await soRandom.connect(signers[1]).beaconStakeEth(signers[1].address, { value: ethers.utils.parseEther("5") });
+    await randomizer.connect(signers[1]).beaconStakeEth(signers[1].address, { value: ethers.utils.parseEther("5") });
     // Get balance of wallet signers[0]
     const oldBalance = await signers[1].getBalance();
-    await soRandom.connect(signers[1]).unregisterBeacon(signers[1].address);
+    await randomizer.connect(signers[1]).unregisterBeacon(signers[1].address);
     const newBalance = await signers[1].getBalance();
     expect(newBalance.gt(oldBalance)).to.be.true;
   });
 
   it("register a new beacon", async function () {
-    await soRandom.beaconStakeEth(signers[7].address, { value: ethers.utils.parseEther("5") });
-    const tx = await soRandom.registerBeacon(signers[7].address);
+    await randomizer.beaconStakeEth(signers[7].address, { value: ethers.utils.parseEther("5") });
+    const tx = await randomizer.registerBeacon(signers[7].address);
     const receipt = await tx.wait();
     // Check if receipt emitted a RegisterBeacon event
     const event = receipt.events.find(e => e.event == "RegisterBeacon");
@@ -114,8 +114,8 @@ describe("Beacon", function () {
   });
 
   it("unregister beacon if unstaking more than minimum stake", async function () {
-    await soRandom.connect(signers[1]).beaconStakeEth(signers[1].address, { value: ethers.utils.parseEther("5") });
-    const unstake = await soRandom.connect(signers[1]).beaconUnstakeEth(ethers.utils.parseEther("5"));
+    await randomizer.connect(signers[1]).beaconStakeEth(signers[1].address, { value: ethers.utils.parseEther("5") });
+    const unstake = await randomizer.connect(signers[1]).beaconUnstakeEth(ethers.utils.parseEther("5"));
     const unstakeReceipt = await unstake.wait();
     const event = unstakeReceipt.events.find(e => e.event == "UnregisterBeacon");
     const event2 = unstakeReceipt.events.find(e => e.event == "WithdrawEth");
@@ -124,13 +124,13 @@ describe("Beacon", function () {
   });
 
   it("revert with FailedToSendEth if beacon unstake more than contract balance", async function () {
-    await soRandom.beaconStakeEth(signers[1].address, { value: ethers.utils.parseEther("5") });
+    await randomizer.beaconStakeEth(signers[1].address, { value: ethers.utils.parseEther("5") });
     await network.provider.send("hardhat_setBalance", [
-      soRandom.address,
+      randomizer.address,
       "0x0"
     ]);
     try {
-      await soRandom.connect(signers[1]).beaconUnstakeEth(ethers.utils.parseEther("5"));
+      await randomizer.connect(signers[1]).beaconUnstakeEth(ethers.utils.parseEther("5"));
       expect(true).to.be.false;
     } catch (e) {
       expect(e).to.match(/FailedToSendEth/);
@@ -138,60 +138,60 @@ describe("Beacon", function () {
   });
 
   it("return all registered beacons with getBeacons and update indices on register", async function () {
-    let beacons = await soRandom.getBeacons();
+    let beacons = await randomizer.getBeacons();
     expect(beacons.length).to.equal(7);
     // beaconIndex[beacons[1]] is 1
-    expect(await soRandom.getBeaconIndex(beacons[1])).to.equal(1);
-    expect(await soRandom.getBeaconIndex(beacons[beacons.length - 1])).to.equal(beacons.length - 1);
-    await soRandom.beaconStakeEth(signers[0].address, { value: ethers.utils.parseEther("5") });
-    await soRandom.registerBeacon(signers[0].address);
-    const newBeacons = await soRandom.getBeacons();
+    expect(await randomizer.getBeaconIndex(beacons[1])).to.equal(1);
+    expect(await randomizer.getBeaconIndex(beacons[beacons.length - 1])).to.equal(beacons.length - 1);
+    await randomizer.beaconStakeEth(signers[0].address, { value: ethers.utils.parseEther("5") });
+    await randomizer.registerBeacon(signers[0].address);
+    const newBeacons = await randomizer.getBeacons();
 
-    // Iterate through beacons and check that the indices match in soRandom.getBeaconIndex(beacon)
+    // Iterate through beacons and check that the indices match in randomizer.getBeaconIndex(beacon)
     for (let i = 0; i < newBeacons.length; i++) {
-      expect(await soRandom.getBeaconIndex(newBeacons[i])).to.equal(i);
+      expect(await randomizer.getBeaconIndex(newBeacons[i])).to.equal(i);
     }
 
     // The previously last beacon is now second-to-last
-    expect(await soRandom.getBeaconIndex(beacons[beacons.length - 1])).to.equal(newBeacons.length - 2);
+    expect(await randomizer.getBeaconIndex(beacons[beacons.length - 1])).to.equal(newBeacons.length - 2);
     beacons = newBeacons;
     expect(beacons.length).to.equal(8);
-    expect(await soRandom.getBeaconIndex(beacons[7])).to.equal(7);
-    expect(await soRandom.getBeaconIndex(signers[0].address)).to.equal(7);
-    await soRandom.unregisterBeacon(signers[6].address);
+    expect(await randomizer.getBeaconIndex(beacons[7])).to.equal(7);
+    expect(await randomizer.getBeaconIndex(signers[0].address)).to.equal(7);
+    await randomizer.unregisterBeacon(signers[6].address);
     // The last beacon's index is now 6
-    expect(await soRandom.getBeaconIndex(newBeacons[7])).to.equal(6);
-    expect(await soRandom.getBeaconIndex(newBeacons[6])).to.equal(0);
-    beacons = await soRandom.getBeacons();
+    expect(await randomizer.getBeaconIndex(newBeacons[7])).to.equal(6);
+    expect(await randomizer.getBeaconIndex(newBeacons[6])).to.equal(0);
+    beacons = await randomizer.getBeacons();
     expect(beacons.length).to.equal(7);
   });
 
   it("throw if beacon is registered without enough stake", async function () {
-    await expect(soRandom.registerBeacon(signers[0].address)).to.be.revertedWith("BeaconStakedEthTooLow(0, 500000000000000000)");
+    await expect(randomizer.registerBeacon(signers[0].address)).to.be.revertedWith("BeaconStakedEthTooLow(0, 500000000000000000)");
   });
 
   it("return all registered beacons with getBeacons and update indices on unregister", async function () {
-    const beacons = await soRandom.getBeacons();
+    const beacons = await randomizer.getBeacons();
     expect(beacons.length).to.equal(7);
     // beaconIndex[beacons[1]] is 1
-    expect(await soRandom.getBeaconIndex(beacons[1])).to.equal(1);
-    const tx = await soRandom.unregisterBeacon(beacons[2]);
+    expect(await randomizer.getBeaconIndex(beacons[1])).to.equal(1);
+    const tx = await randomizer.unregisterBeacon(beacons[2]);
     await tx.wait();
-    const beacons2 = await soRandom.getBeacons();
-    expect(await soRandom.getBeaconIndex(beacons[6])).to.equal(2);
+    const beacons2 = await randomizer.getBeacons();
+    expect(await randomizer.getBeaconIndex(beacons[6])).to.equal(2);
     expect(beacons2.length).to.equal(6);
   });
 
   it("remove the final beacon from the list of beacons", async function () {
-    const beacons = await soRandom.getBeacons();
+    const beacons = await randomizer.getBeacons();
     expect(beacons.length).to.equal(7);
     const secondToLastBeacon = beacons[beacons.length - 2];
-    const secondToLastBeaconIndex = await soRandom.getBeaconIndex(secondToLastBeacon);
-    const tx = await soRandom.unregisterBeacon(beacons[6]);
+    const secondToLastBeaconIndex = await randomizer.getBeaconIndex(secondToLastBeacon);
+    const tx = await randomizer.unregisterBeacon(beacons[6]);
     await tx.wait();
-    const beacons2 = await soRandom.getBeacons();
+    const beacons2 = await randomizer.getBeacons();
     expect(beacons2.length).to.equal(6);
-    expect(await soRandom.getBeaconIndex(secondToLastBeacon)).to.equal(secondToLastBeaconIndex);
+    expect(await randomizer.getBeaconIndex(secondToLastBeacon)).to.equal(secondToLastBeaconIndex);
   });
 
   it("removes beacon with many pending and then re-registers while keeping pending", async function () {

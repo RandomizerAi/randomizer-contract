@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSL 1.1
 
-/// @title SoRandom Client Service
+/// @title Randomizer Client Service
 /// @author Deanpress (hello@dean.press)
-/// @notice SoRandom client contract management functions (deposits/withdrawals and fee estimates)
+/// @notice Randomizer client contract management functions (deposits/withdrawals and fee estimates)
 
 import "./Beacon.sol";
 

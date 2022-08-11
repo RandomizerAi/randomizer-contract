@@ -23,7 +23,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  */
 module.exports = {
   solidity: {
-    version: "0.8.15",
+    version: "0.8.16",
     settings: {
       optimizer: {
         enabled: true,
@@ -58,7 +58,7 @@ module.exports = {
     disambiguatePaths: false,
     runOnCompile: true,
     strict: true,
-    // only: [':SoRandom$'],
+    // only: [':Randomizer$'],
   },
   gasReporter: {
     enabled: true

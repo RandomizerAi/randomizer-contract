@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BSL 1.1
 
-/// @title SoRandom Utils
+/// @title Randomizer Utils
 /// @author Deanpress (hello@dean.press)
-/// @notice Internal utilities used by SoRandom functions
+/// @notice Internal utilities used by Randomizer functions
 
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.16;
 import "./Admin.sol";
 
 // Import the gas handler for the desired network to deploy to

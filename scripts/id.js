@@ -1,10 +1,10 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-  const SoRandom = await ethers.getContractFactory("SoRandomUpgradeable");
-  const soRandom = SoRandom.attach(process.env.CONTRACT_ADDRESS_ARBITRUM);
+  const Randomizer = await ethers.getContractFactory("RandomizerUpgradeable");
+  const randomizer = Randomizer.attach(process.env.CONTRACT_ADDRESS_ARBITRUM);
   console.log("Getting result");
-  console.log(await soRandom.getResult(23));
+  console.log(await randomizer.getResult(23));
 }
 
 main()

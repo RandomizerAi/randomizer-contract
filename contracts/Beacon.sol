@@ -3,7 +3,7 @@
 import "./Utils.sol";
 
 interface IRandomReceiver {
-    function soRandomCallback(uint128 _id, bytes32 value) external;
+    function randomizerCallback(uint128 _id, bytes32 value) external;
 }
 
 /// @title SoRandom Beacon Service
@@ -324,7 +324,7 @@ contract Beacon is Utils {
     ) private {
         (bool success, bytes memory callbackTxData) = _to.call{gas: _gasLimit}(
             abi.encodeWithSelector(
-                IRandomReceiver.soRandomCallback.selector,
+                IRandomReceiver.randomizerCallback.selector,
                 _id,
                 _result
             )

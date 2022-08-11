@@ -21,20 +21,20 @@ describe("Admin", function () {
       ArbGas.bytecode,
     ]);
     signers = await ethers.getSigners();
-    const SoRandom = await ethers.getContractFactory("SoRandomUpgradeable");
-    soRandom = await upgrades.deployProxy(SoRandom, [signers[0].address, signers[0].address, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]]);
-    await soRandom.deployed();
+    const Randomizer = await ethers.getContractFactory("RandomizerUpgradeable");
+    randomizer = await upgrades.deployProxy(Randomizer, [signers[0].address, signers[0].address, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address]]);
+    await randomizer.deployed();
   });
 
   it("be able to set settable variables", async function () {
     try {
-      await soRandom.setBeaconFee(ethers.utils.parseEther("0.1"));
-      await soRandom.setMinStakeEth(ethers.utils.parseEther("0.1"));
-      await soRandom.setExpirationBlocks(30);
-      await soRandom.setExpirationSeconds(30);
-      await soRandom.setMaxStrikes(30);
-      await soRandom.setRequestMinGasLimit(30);
-      await soRandom.setRequestMaxGasLimit(30);
+      await randomizer.setBeaconFee(ethers.utils.parseEther("0.1"));
+      await randomizer.setMinStakeEth(ethers.utils.parseEther("0.1"));
+      await randomizer.setExpirationBlocks(30);
+      await randomizer.setExpirationSeconds(30);
+      await randomizer.setMaxStrikes(30);
+      await randomizer.setRequestMinGasLimit(30);
+      await randomizer.setRequestMaxGasLimit(30);
     } catch (e) {
       expect(true).to.be.false(e);
     }

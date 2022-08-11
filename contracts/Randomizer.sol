@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BSL 1.1
 
 /** 
- @title soRandom
+ @title Randomizer.AI (https://randomizer.ai)
  @author Dean van Dugteren (hello@dean.press)
  @notice A decentralized protocol that sends random values to requesting smart contracts
 **/
 
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.16;
 
 import "./Client.sol";
 
-contract SoRandom is Client, Beacon {
+contract Randomizer is Client, Beacon {
     // Errors exclusive to Beacon.sol
     error NotYetRenewable(
         uint256 timestamp,
@@ -20,7 +20,7 @@ contract SoRandom is Client, Beacon {
     );
 
     /// @notice One-time internal initializer of the contract.
-    /// @dev To be called only once on deployment of SoRandomStatic (in constructor) or SoRandomUpgradeable (in initialize()).
+    /// @dev To be called only once on deployment of RandomizerStatic (in constructor) or RandomizerUpgradeable (in initialize()).
     function init(
         address _developer,
         address _sequencer,

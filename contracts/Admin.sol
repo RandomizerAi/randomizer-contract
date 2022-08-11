@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSL 1.1
 
-/// @title SoRandom Admin Functions
+/// @title Randomizer Admin Functions
 /// @author Deanpress (hello@dean.press)
-/// @notice Administrative functions, variables, and constants used by SoRandom.
-pragma solidity ^0.8.15;
+/// @notice Administrative functions, variables, and constants used by Randomizer.
+pragma solidity ^0.8.16;
 
 import "./Store.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";

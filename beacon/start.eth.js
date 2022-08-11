@@ -8,7 +8,7 @@ const { ethers, Wallet, Contract } = require("ethers");
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS_ARBITRUM;
 const provider = new ethers.providers.JsonRpcProvider(process.env.PROVIDER_ARBITRUM);
 
-const soRandom = new Contract(CONTRACT_ADDRESS, abi, new Wallet(process.env.SIGNER_1, provider));
+const randomizer = new Contract(CONTRACT_ADDRESS, abi, new Wallet(process.env.SIGNER_1, provider));
 
 // Main function, exported separately for testing
 const submitRandom = async function (signer, id, request) {
@@ -17,7 +17,7 @@ const submitRandom = async function (signer, id, request) {
     console.log(`Submit random number for ${id} by ${await signer.getAddress()}`);
 
     // Create contract instance from the relayer signer
-    // const soRandom = new Contract(contractAddress, abi, signer);
+    // const randomizer = new Contract(contractAddress, abi, signer);
     const messageHash = ethers.utils.keccak256(
       ethers.utils.defaultAbiCoder.encode(
         ["address", "uint256", "uint256"],
@@ -36,13 +36,13 @@ const submitRandom = async function (signer, id, request) {
 
     const checkIfSubmitted = async () => {
       try {
-        const result = await soRandom.getResult(id);
+        const result = await randomizer.getResult(id);
         if (result == "0x0000000000000000000000000000000000000000000000000000000000000000") {
-          const reqSigs = await soRandom.getRequestSignatures(id);
+          const reqSigs = await randomizer.getRequestSignatures(id);
           const indexOfBeacon = request.beacons.indexOf(address);
           if (reqSigs[indexOfBeacon] == "0x000000000000000000000000") {
             console.log("Not yet submitted");
-            await soRandom.connect(signer).submitRandom(addressData, uintData, bytesData);
+            await randomizer.connect(signer).submitRandom(addressData, uintData, bytesData);
           } else {
             console.log("Already submitted");
             clearInterval(interval);
@@ -92,12 +92,12 @@ const init = async () => {
 
   // Add event listener for signer
   try {
-    handlePastRequests(soRandom);
+    handlePastRequests(randomizer);
   } catch (e) {
     console.log(e);
   }
 
-  soRandom.on("Request", async (id, request) => {
+  randomizer.on("Request", async (id, request) => {
     try {
       console.log("new request");
       for (const signer of signers) {
@@ -111,7 +111,7 @@ const init = async () => {
     }
   });
 
-  soRandom.on("RequestBeacon", async (id, request, beacon) => {
+  randomizer.on("RequestBeacon", async (id, request, beacon) => {
     console.log("REQUEST BEACON", id, beacon);
     try {
       for (const signer of signers) {
@@ -124,11 +124,11 @@ const init = async () => {
     }
   });
 
-  soRandom.on("Retry", async (id, request) => {
+  randomizer.on("Retry", async (id, request) => {
     try {
       for (const signer of signers) {
         const address = await signer.getAddress();
-        const signatures = await soRandom.getRequestSignatures(id);
+        const signatures = await randomizer.getRequestSignatures(id);
         if (signatures[Array(request.beacons).indexOf(address) == "0x000000000000000000000000"] >= 0) {
           await submitRandom(signer, id, request);
         }
@@ -148,9 +148,9 @@ const handlePastRequests = async () => {
     console.log(block);
 
     if (block) {
-      const allRequests = await soRandom.queryFilter(soRandom.filters.Request(), block - 90, block);
-      const allRequestBeacons = await soRandom.queryFilter(soRandom.filters.RequestBeacon(), block - 90, block);
-      const allRetries = await soRandom.queryFilter(soRandom.filters.Retry(), block - 90, block);
+      const allRequests = await randomizer.queryFilter(randomizer.filters.Request(), block - 90, block);
+      const allRequestBeacons = await randomizer.queryFilter(randomizer.filters.RequestBeacon(), block - 90, block);
+      const allRetries = await randomizer.queryFilter(randomizer.filters.Retry(), block - 90, block);
 
       for (const event of allRequests) {
         const res = event.args;
@@ -188,7 +188,7 @@ const handlePastRequests = async () => {
         const res = event.args;
         for (const signer of signers) {
           const address = await signer.getAddress();
-          const signatures = await soRandom.getRequestSignatures(res.id);
+          const signatures = await randomizer.getRequestSignatures(res.id);
           if (signatures[Array(res.request.beacons).indexOf(address) == "0x000000000000000000000000"] >= 0) {
             await submitRandom(signer, res.id, res.request);
           }
