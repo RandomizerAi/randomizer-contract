@@ -23,8 +23,6 @@ contract Admin is OwnableUpgradeable, Store {
     uint256 internal constant _NOT_ENTERED = 1;
     uint256 internal constant _ENTERED = 2;
 
-    // Constructor variables
-
     /// @notice Emits an event with the final random value
     /// @param id request id
     /// @param result result value
@@ -70,14 +68,6 @@ contract Admin is OwnableUpgradeable, Store {
     /// @param request request event data (id, ethReserved, beaconFee, height, timestamp, expirationSeconds, expirationBlocks, callbackGasLimit, client, beacons, lastBeaconSeed)
     event Request(uint128 indexed id, SRequestEventData request);
 
-    // uint128 request,
-    // uint256 ethReserved,
-    // uint256 beaconFee,
-    // uint256 height,
-    // uint256 timestamp,
-    // uint256 expirationSeconds,
-    // uint256 expirationBlocks,
-
     /// @notice Emits when final beacon is selected by second-to-last submitter
     /// @param request request event data (id, ethReserved, beaconFee, height, timestamp, expirationSeconds, expirationBlocks, callbackGasLimit, client, beacons, lastBeaconSeed)
     /// @param beacon address of the beacon added
@@ -86,7 +76,6 @@ contract Admin is OwnableUpgradeable, Store {
         SRequestEventData request,
         address beacon
     );
-
     event Strike(
         address indexed beacon,
         address indexed striker,
@@ -95,7 +84,6 @@ contract Admin is OwnableUpgradeable, Store {
         uint256 amount,
         uint256 slashedTokens
     );
-
     event CallbackFailed(
         address indexed client,
         uint128 indexed id,
@@ -103,29 +91,77 @@ contract Admin is OwnableUpgradeable, Store {
         bytes txData
     );
 
-    function transferDeveloper(address _developer) external {
-        require(msg.sender == developer, "NotDeveloper");
-        proposedDeveloper = _developer;
+    // Admin events
+    event ProposeTransferDeveloper(address proposedDeveloper);
+    event AcceptTransferDeveloper(address lastDeveloper, address newDeveloper);
+    event CancelTransferDeveloper(address proposedDeveloper);
+    event UpdateConfigUint(
+        string indexed key,
+        uint256 oldValue,
+        uint256 newValue
+    );
+    event UpdateConfigString(
+        string indexed key,
+        string oldValue,
+        string newValue
+    );
+    event UpdateConfigAddress(
+        string indexed key,
+        address oldValue,
+        address newValue
+    );
+
+    error SenderNotDeveloper();
+    error SenderNotProposedDeveloper();
+    error SenderNotDeveloperOrProposed();
+
+    /// @notice The developer can propose a new address to be the developer.
+    function transferDeveloper(address _proposedDeveloper) external {
+        if (msg.sender != developer) revert SenderNotDeveloper();
+
+        emit ProposeTransferDeveloper(_proposedDeveloper);
+        proposedDeveloper = _proposedDeveloper;
     }
 
-    function acceptDeveloper() external {
-        require(msg.sender == proposedDeveloper, "NotProposedDeveloper");
-        developer = proposedDeveloper;
+    function acceptDeveloper(address _proposedDeveloper) external {
+        if (
+            msg.sender != proposedDeveloper &&
+            proposedDeveloper != _proposedDeveloper
+        ) revert SenderNotProposedDeveloper();
+
+        emit AcceptTransferDeveloper(developer, _proposedDeveloper);
+        developer = _proposedDeveloper;
+    }
+
+    function cancelTransferDeveloper() external {
+        if (msg.sender != developer && msg.sender != proposedDeveloper)
+            revert SenderNotDeveloperOrProposed();
+
+        emit CancelTransferDeveloper(proposedDeveloper);
+        proposedDeveloper = address(0);
     }
 
     function setSequencer(address _sequencer) external onlyOwner {
+        emit UpdateConfigAddress("sequencer", sequencer, _sequencer);
         sequencer = _sequencer;
     }
 
     function setBeaconFee(uint256 _amount) external onlyOwner {
+        emit UpdateConfigUint("beaconFee", beaconFee, _amount);
         beaconFee = _amount;
     }
 
     function setMinStakeEth(uint256 _amount) external onlyOwner {
+        emit UpdateConfigUint("minStakeEth", minStakeEth, _amount);
         minStakeEth = _amount;
     }
 
     function setExpirationBlocks(uint256 _expirationBlocks) external onlyOwner {
+        emit UpdateConfigUint(
+            "expirationBlocks",
+            expirationBlocks,
+            _expirationBlocks
+        );
         expirationBlocks = _expirationBlocks;
     }
 
@@ -133,18 +169,34 @@ contract Admin is OwnableUpgradeable, Store {
         external
         onlyOwner
     {
+        emit UpdateConfigUint(
+            "expirationSeconds",
+            expirationSeconds,
+            _expirationSeconds
+        );
         expirationSeconds = _expirationSeconds;
     }
 
     function setMaxStrikes(uint8 _maxStrikes) external onlyOwner {
+        emit UpdateConfigUint("maxStrikes", maxStrikes, _maxStrikes);
         maxStrikes = _maxStrikes;
     }
 
     function setRequestMinGasLimit(uint256 _amount) external onlyOwner {
+        emit UpdateConfigUint(
+            "requestMinGasLimit",
+            requestMinGasLimit,
+            _amount
+        );
         requestMinGasLimit = _amount;
     }
 
     function setRequestMaxGasLimit(uint256 _amount) external onlyOwner {
+        emit UpdateConfigUint(
+            "requestMaxGasLimit",
+            requestMaxGasLimit,
+            _amount
+        );
         requestMaxGasLimit = _amount;
     }
 }

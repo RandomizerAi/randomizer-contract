@@ -13,7 +13,7 @@ import "./GasHandler.sol";
 contract Utils is Admin, GasHandler {
     // Errors used by Utils, Beacon, and Client
     error RequestDataMismatch(bytes32 givenHash, bytes32 expectedHash);
-    error RequestNotFound(uint256 id);
+    error RequestNotFound(uint128 id);
     error BeaconNotFound();
     error FailedToSendEth(address to, uint256 amount);
     error NotEnoughBeaconsAvailable(

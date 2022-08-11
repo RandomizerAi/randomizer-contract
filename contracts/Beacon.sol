@@ -3,7 +3,7 @@
 import "./Utils.sol";
 
 interface IRandomReceiver {
-    function soRandomCallback(uint256 _id, bytes32 value) external;
+    function soRandomCallback(uint128 _id, bytes32 value) external;
 }
 
 /// @title SoRandom Beacon Service
@@ -26,6 +26,7 @@ contract Beacon is Utils {
         uint256 currentBlock,
         uint256 minBlock
     );
+    error SenderNotBeaconOrSequencer();
 
     /// @notice Returns all registered beacon addresses
     function getBeacons() external view returns (address[] memory) {
@@ -205,9 +206,9 @@ contract Beacon is Utils {
 
         if (reqValues[beaconPos - 1] != bytes12(0)) revert ResultExists();
 
-        // Check that only beacon and developer can submit the result
+        // Check that only beacon and sequencer can submit the result
         if (msg.sender != beacon && msg.sender != sequencer)
-            revert InvalidSignature();
+            revert SenderNotBeaconOrSequencer();
 
         // Sequencer can submit on behalf of the beacon after a set amount of time (given that the beacon has sent it its signature)
         if (

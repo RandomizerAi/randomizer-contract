@@ -45,8 +45,9 @@ module.exports = {
       accounts: [process.env.PRIVATE_KEY]
     },
     ganache: {
-      url: "HTTP://127.0.0.1:7545",
-      accounts: [process.env.PRIVATE_KEY]
+      url: "http://127.0.0.1:7545",
+      accounts: [process.env.PRIVATE_KEY],
+      chainId: 1337
     },
     hardhat: {
       chainId: 1337

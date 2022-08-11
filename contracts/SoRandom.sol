@@ -85,7 +85,7 @@ contract SoRandom is Client, Beacon {
         uint256 _expirationSeconds;
 
         // For the first 5 minutes and 20 blocks, the first successful submitter of this request can renew it exclusively
-        // Afterwards it's open to everyone
+        // Afterwards it's open to everyone to renew
         if (_getFirstSubmitter(packed.id, accounts.beacons) == msg.sender) {
             _expirationBlocks =
                 packed.data.height +

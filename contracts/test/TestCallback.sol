@@ -25,7 +25,7 @@ contract TestCallback {
         soRandom = _soRandom;
     }
 
-    function soRandomCallback(uint256 _id, bytes32 value) external {
+    function soRandomCallback(uint128 _id, bytes32 value) external {
         require(msg.sender == soRandom);
         result = value;
         id = _id;
