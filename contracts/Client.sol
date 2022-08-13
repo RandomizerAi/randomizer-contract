@@ -16,7 +16,7 @@ contract Client is Utils {
     );
     error EthDepositTooLow(uint256 availableAmount, uint256 requiredAmount);
 
-    uint256 internal constant SUBMIT_GAS_ESTIMATE = 201000;
+    uint256 internal constant SUBMIT_GAS_ESTIMATE = 190000;
 
     /// @notice Gets the ETH balance of the client contract (used for paying for requests)
     function clientBalanceOf(address _client) public view returns (uint256) {
@@ -52,22 +52,18 @@ contract Client is Utils {
 
     /// @notice Gets fee estimate for full request fulfillment
     /// @dev If your users pay for a random request, use this to calculate how much ETH a user should add to your payable function.
-    function getFeeEstimate(uint256 _callbackGasLimit, uint8 _numberOfBeacons)
+    function getFeeEstimate(uint256 _callbackGasLimit)
         public
         view
         returns (uint256)
     {
         return
-            (((SUBMIT_GAS_ESTIMATE * _numberOfBeacons) + _callbackGasLimit) * // gas used
-                _getGasPrice()) +
+            (((SUBMIT_GAS_ESTIMATE * 3) + _callbackGasLimit) * _getGasPrice()) + // gas used
             beaconFee + // dev fee
-            (beaconFee * _numberOfBeacons); // All beacon premium fees;
+            (beaconFee * 3); // All beacon premium fees;
     }
 
-    function requestRandom(uint256 _callbackGasLimit)
-        external
-        returns (uint128 id)
-    {
+    function request(uint256 _callbackGasLimit) external returns (uint128 id) {
         // uint8 _numberOfBeacons = 3;
         // require(
         //     _numberOfBeacons > 1 && _numberOfBeacons <= 10,

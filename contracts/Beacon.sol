@@ -255,7 +255,7 @@ contract Beacon is Utils {
             bytes32 reqResult;
 
             /* Commenting out the dynamic submissions aggregation
-            // Encode the stored values (signatures) in the order decided in requestRandom()
+            // Encode the stored values (signatures) in the order decided in request()
             for (uint256 i; i < submissionsCount; i++) {
                 if (i > 0) {
                     reqResult = keccak256(abi.encode(reqResult, reqValues[i]));
@@ -368,7 +368,7 @@ contract Beacon is Utils {
         if (submissionsCount == 1) {
             bytes32 lastBeaconSeed;
 
-            // Encode the stored values (signatures) in the order decided in requestRandom()
+            // Encode the stored values (signatures) in the order decided in request()
             // for (uint256 i; i < 2; i++) {
             //     if (i == 0) {
             //         lastBeaconSeed = keccak256(abi.encode(reqValues[i]));

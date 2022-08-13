@@ -95,14 +95,14 @@ describe("Request & Submit", function () {
     expect(request.beacons.length).to.equal(3);
   });
 
-  it("revert on requestRandom with gas limit out of bounds", async function () {
+  it("revert on request with gas limit out of bounds", async function () {
     const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     await expect(testCallback.makeRequestWithGasTooLow()).to.be.revertedWith("CallbackGasLimitOOB(1, 50000, 2000000)");
     await expect(testCallback.makeRequestWithGasTooHigh()).to.be.revertedWith("CallbackGasLimitOOB(999999999, 50000, 2000000)");
   });
 
-  it("revert on requestRandom with insufficient funds", async function () {
+  it("revert on request with insufficient funds", async function () {
     try {
       await testCallback.makeRequest();
       expect(true).to.be.false("", "have reverted")
