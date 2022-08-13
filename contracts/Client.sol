@@ -86,7 +86,7 @@ contract Client is Utils {
             );
 
         // Requester must have enough to cover gas for each beacon + the callback gas limit
-        uint256 estimateFee = getFeeEstimate(_callbackGasLimit, 3);
+        uint256 estimateFee = getFeeEstimate(_callbackGasLimit);
 
         if (estimateFee > (ethDeposit[msg.sender] - ethReserved[msg.sender]))
             revert EthDepositTooLow(
