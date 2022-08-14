@@ -141,7 +141,8 @@ contract Admin is OwnableUpgradeable, Store {
         proposedDeveloper = address(0);
     }
 
-    function setSequencer(address _sequencer) external onlyOwner {
+    function setSequencer(address _sequencer) external {
+        if (msg.sender != developer) revert SenderNotDeveloper();
         emit UpdateConfigAddress("sequencer", sequencer, _sequencer);
         sequencer = _sequencer;
     }

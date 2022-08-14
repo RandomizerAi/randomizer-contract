@@ -14,7 +14,11 @@ contract Client is Utils {
         uint256 minLimit,
         uint256 maxLimit
     );
-    error EthDepositTooLow(uint256 availableAmount, uint256 requiredAmount);
+    error EthDepositTooLow(
+        uint256 deposited,
+        uint256 reserved,
+        uint256 requiredAmount
+    );
 
     uint256 internal constant SUBMIT_GAS_ESTIMATE = 190000;
 
@@ -59,8 +63,7 @@ contract Client is Utils {
     {
         return
             (((SUBMIT_GAS_ESTIMATE * 3) + _callbackGasLimit) * _getGasPrice()) + // gas used
-            beaconFee + // dev fee
-            (beaconFee * 3); // All beacon premium fees;
+            (beaconFee * 4); // 3 beacon premium fees, 1 dev fee;
     }
 
     function request(uint256 _callbackGasLimit) external returns (uint128 id) {
@@ -88,9 +91,13 @@ contract Client is Utils {
         // Requester must have enough to cover gas for each beacon + the callback gas limit
         uint256 estimateFee = getFeeEstimate(_callbackGasLimit);
 
-        if (estimateFee > (ethDeposit[msg.sender] - ethReserved[msg.sender]))
+        if (
+            ethDeposit[msg.sender] < ethReserved[msg.sender] ||
+            estimateFee > (ethDeposit[msg.sender] - ethReserved[msg.sender])
+        )
             revert EthDepositTooLow(
-                ethDeposit[msg.sender] - ethReserved[msg.sender],
+                ethDeposit[msg.sender],
+                ethReserved[msg.sender],
                 estimateFee
             );
 
