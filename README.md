@@ -1,6 +1,6 @@
 # Randomizer.AI - Easy & secure randomness for smart contracts
 
-(Randomizer.AI)[https://randomizer.ai] is a Verifiable Random Function (VRF) protocol that lets contracts easily get randomness e.g. for NFT generation, drop rates, gaming etc. Smart contracts can make external calls to randomizer's `request()` function to receive callbacks that contain random bytes to their `randomizerCallback(id, value)` function. The protocol uses native ETH for fees.
+[Randomizer.AI](https://randomizer.ai) is a Verifiable Random Function (VRF) protocol that lets contracts easily get randomness e.g. for NFT generation, drop rates, gaming etc. Smart contracts can make external calls to randomizer's `request()` function to receive callbacks that contain random bytes to their `randomizerCallback(id, value)` function. The protocol uses native ETH for fees.
 
 ## IMPORTANT: Before getting started
 Set the network using `yarn set-network:{network}`. This will copy over the desired gas price handler for the network.
