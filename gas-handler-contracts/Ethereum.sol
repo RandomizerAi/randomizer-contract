@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL 1.1
-^pragma solidity 0.8.0;
+pragma solidity ^0.8.16;
 
 contract GasHandler {
     //  TOTAL_SUBMIT_GAS_ESTIMATE is the submitResult() gas estimate * 3
@@ -11,8 +11,7 @@ contract GasHandler {
     uint256 internal constant RENEW_GAS_OFFSET = 21000;
 
     function _getGasPrice() internal view returns (uint256) {
-        uint256 maxFee = block.basefee +
-            (block.basefee / 4);
+        uint256 maxFee = block.basefee + (block.basefee / 4);
         uint256 gasPrice = tx.gasprice < maxFee ? tx.gasprice : maxFee;
         return gasPrice;
     }
