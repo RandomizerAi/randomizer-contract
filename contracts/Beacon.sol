@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: BSL 1.1
 
+/// @title SoRandom Beacon Service
+/// @author Deanpress (https://github.com/deanpress)
+/// @notice Beacon management functions (registration, staking, submitting random values etc)
+
+pragma solidity ^0.8.16;
+
 import "./Utils.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 interface IRandomReceiver {
     function randomizerCallback(uint128 _id, bytes32 value) external;
 }
 
-/// @title SoRandom Beacon Service
-/// @author Deanpress (hello@dean.press)
-/// @notice Beacon management functions (registration, staking, submitting random values etc)
 contract Beacon is Utils {
     // Errors exclusive to Beacon.sol
     error BeaconExists();
@@ -16,7 +20,6 @@ contract Beacon is Utils {
     error BeaconHasPending(uint256 pending);
     error NotABeacon();
     error ResultExists();
-    error InvalidSignature();
     error ReentrancyGuard();
     error NotOwnerOrBeacon();
     error BeaconStakedEthTooLow(uint256 staked, uint256 minimum);
@@ -183,12 +186,12 @@ contract Beacon is Utils {
         );
 
         // Recover the beacon address from the signature
-        address beacon = ecrecover(message, packed.v, rsAndSeed.r, rsAndSeed.s);
-        if (beacon == address(0)) revert InvalidSignature();
-
-        // if (
-        //     msg.sender != ecrecover(message, packed.v, rsAndSeed.r, rsAndSeed.s)
-        // ) revert InvalidSignature();
+        address beacon = ECDSA.recover(
+            message,
+            packed.v,
+            rsAndSeed.r,
+            rsAndSeed.s
+        );
 
         uint256 beaconPos;
         uint256 submissionsCount;
