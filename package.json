@@ -1,5 +1,5 @@
 {
-  "name": "sorandom",
+  "name": "randomizer-contract",
   "scripts": {
     "set-network:arbitrum": "cp ./gas-handler-contracts/Arbitrum.sol ./contracts/GasHandler.sol",
     "set-network:zksync": "cp ./gas-handler-contracts/Generic.sol ./contracts/GasHandler.sol",
@@ -24,6 +24,7 @@
     "zksync-web3": "^0.7.9"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.5.0"
+    "@openzeppelin/contracts": "^4.5.0",
+    "vrf-ts-256": "^1.0.0"
   }
 }

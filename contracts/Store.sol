@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSL 1.1
 
 /// @title SoRandom State
-/// @author Deanpress (hello@dean.press)
+/// @author Deanpress (https://github.com/deanpress)
 /// @notice Contains state variables and structs used by SoRandom
 
 pragma solidity ^0.8.15;
@@ -89,22 +89,36 @@ contract Store {
     uint128 public latestRequestId;
     uint8 maxStrikes;
     uint128[] pendingRequestIds;
-    mapping(uint256 => bytes32) results;
+    mapping(uint256 => bytes32) internal results;
 
     // Deposits
-    mapping(address => uint256) ethDeposit;
-    mapping(address => uint256) ethReserved;
+    mapping(address => uint256) internal ethDeposit;
+    mapping(address => uint256) internal ethReserved;
     // Beacon Stores
-    mapping(address => uint256) beaconIndex;
-    mapping(address => SBeacon) sBeacon;
+    mapping(address => uint256) internal beaconIndex;
+    mapping(address => SBeacon) internal sBeacon;
 
     // Random Stores
-    mapping(uint128 => bytes32) requestToHash;
-    mapping(uint128 => bytes12[3]) requestToSignatures;
-    mapping(uint128 => address) requestToFinalBeacon;
-    mapping(uint128 => uint256) requestToFeePaid;
+    mapping(uint128 => bytes32) internal requestToHash;
+    mapping(uint128 => bytes12[3]) internal requestToSignatures;
+    mapping(uint128 => address) internal requestToFinalBeacon;
+    mapping(uint128 => uint256) internal requestToFeePaid;
 
     // Collateral
-    mapping(address => uint256) ethCollateral;
-    mapping(address => uint256) tokenCollateral;
+    mapping(address => uint256) internal ethCollateral;
+    mapping(address => uint256) internal tokenCollateral;
+
+    // Gas offsets
+    struct SGasEstimates {
+        uint256 totalSubmit;
+        uint256 submitOffset;
+        uint256 finalSubmitOffset;
+        uint256 renewOffset;
+    }
+    SGasEstimates public gasEstimates;
+
+    /*     uint256 internal gasEstimates.totalSubmit;
+    uint256 internal gasEstimates.submitOffset;;
+    uint256 internal gasEstimates.finalSubmitOffset;;
+    uint256 internal gasEstimates.renewOffset;; */
 }

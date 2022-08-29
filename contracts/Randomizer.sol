@@ -2,7 +2,7 @@
 
 /** 
  @title Randomizer.AI (https://randomizer.ai)
- @author Dean van Dugteren (hello@dean.press)
+ @author Dean van Dugteren (https://github.com/deanpress)
  @notice A decentralized protocol that sends random values to requesting smart contracts
 **/
 
@@ -32,7 +32,8 @@ contract Randomizer is Client, Beacon {
         uint256 _requestMinGasLimit,
         uint256 _requestMaxGasLimit,
         uint256 _beaconFee,
-        address[] memory _beacons
+        address[] memory _beacons,
+        uint256[] memory _gasEstimates
     ) internal {
         _transferOwnership(_developer);
         developer = _developer;
@@ -54,6 +55,12 @@ contract Randomizer is Client, Beacon {
         requestMinGasLimit = _requestMinGasLimit;
         requestMaxGasLimit = _requestMaxGasLimit;
         _status = _NOT_ENTERED;
+        gasEstimates = SGasEstimates(
+            _gasEstimates[0],
+            _gasEstimates[1],
+            _gasEstimates[2],
+            _gasEstimates[3]
+        );
     }
 
     function getResult(uint128 _request) public view returns (bytes32) {
@@ -70,7 +77,7 @@ contract Randomizer is Client, Beacon {
         bytes32 _seed
     ) external {
         // 20k gas offset for balance updates after fee calculation
-        uint256 gasAtStart = gasleft() + RENEW_GAS_OFFSET;
+        uint256 gasAtStart = gasleft() + gasEstimates.renewOffset;
         SAccounts memory accounts = _resolveAddressCalldata(_addressData);
         SPackedRenewData memory packed = _resolveRenewUintData(_uintData);
 

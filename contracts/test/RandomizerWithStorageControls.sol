@@ -15,7 +15,8 @@ contract RandomizerWithStorageControls is Randomizer {
         uint256 _requestMinGasLimit,
         uint256 _requestMaxGasLimit,
         uint256 _beaconFee,
-        address[] memory _beacons
+        address[] memory _beacons,
+        uint256[] memory _gasEstimates
     ) initializer {
         __Ownable_init();
         init(
@@ -28,7 +29,8 @@ contract RandomizerWithStorageControls is Randomizer {
             _requestMinGasLimit,
             _requestMaxGasLimit,
             _beaconFee,
-            _beacons
+            _beacons,
+            _gasEstimates
         );
     }
 

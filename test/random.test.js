@@ -72,7 +72,7 @@ describe("Request & Submit", function () {
     ]);
     signers = await ethers.getSigners();
     const Randomizer = await ethers.getContractFactory("RandomizerWithStorageControls");
-    randomizer = await Randomizer.deploy(ethers.constants.AddressZero, ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address]);
+    randomizer = await Randomizer.deploy(ethers.constants.AddressZero, ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], [570000, 90000, 65000, 21000]);
     await randomizer.deployed();
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(randomizer.address);

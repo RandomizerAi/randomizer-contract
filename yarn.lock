@@ -5223,6 +5223,11 @@ isurl@^1.0.0-alpha5:
     has-to-string-tag-x "^1.2.0"
     is-object "^1.0.1"
 
+js-sha256@^0.9.0:
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/js-sha256/-/js-sha256-0.9.0.tgz#0b89ac166583e91ef9123644bd3c5334ce9d0966"
+  integrity sha512-sga3MHh9sgQN2+pJ9VYZ+1LPwXOxuBJBA5nrR5/ofPfuiJBE2hnjsaN8se8JznOmGLN2p49Pe5U/ttafcs/apA==
+
 js-sha3@0.5.7, js-sha3@^0.5.7:
   version "0.5.7"
   resolved "https://registry.yarnpkg.com/js-sha3/-/js-sha3-0.5.7.tgz#0d4ffd8002d5333aabaf4a23eed2f6374c9f28e7"
@@ -8660,6 +8665,16 @@ verror@1.10.0:
     assert-plus "^1.0.0"
     core-util-is "1.0.2"
     extsprintf "^1.2.0"
+
+vrf-ts-256@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/vrf-ts-256/-/vrf-ts-256-1.0.0.tgz#0533e6f73149ba5bedf845573bcab92a2fec081b"
+  integrity sha512-POu5rKK+Otn1R9ska5nOFEYR0dBCyA74Hls6IJ6uVccGo57UtgDwTnx/1K4A10UC/ZH9B5ROYL79msT0WZCgdA==
+  dependencies:
+    bn.js "^5.1.3"
+    elliptic "^6.5.4"
+    js-sha256 "^0.9.0"
+    minimalistic-crypto-utils "^1.0.1"
 
 web3-bzz@1.2.11:
   version "1.2.11"

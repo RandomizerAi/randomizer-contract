@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSL 1.1
 
 /// @title Randomizer Client Service
-/// @author Deanpress (hello@dean.press)
+/// @author Deanpress (https://github.com/deanpress)
 /// @notice Randomizer client contract management functions (deposits/withdrawals and fee estimates)
+
+pragma solidity ^0.8.16;
 
 import "./Beacon.sol";
 
@@ -19,8 +21,6 @@ contract Client is Utils {
         uint256 reserved,
         uint256 requiredAmount
     );
-
-    uint256 internal constant SUBMIT_GAS_ESTIMATE = 190000;
 
     /// @notice Gets the ETH balance of the client contract (used for paying for requests)
     function clientBalanceOf(address _client) public view returns (uint256) {
@@ -62,8 +62,8 @@ contract Client is Utils {
         returns (uint256)
     {
         return
-            (((SUBMIT_GAS_ESTIMATE * 3) + _callbackGasLimit) * _getGasPrice()) + // gas used
-            (beaconFee * 4); // 3 beacon premium fees, 1 dev fee;
+            ((gasEstimates.totalSubmit + _callbackGasLimit) * _getGasPrice()) +
+            (beaconFee * 4); // gas used // 3 beacon premium fees, 1 dev fee;
     }
 
     function request(uint256 _callbackGasLimit) external returns (uint128 id) {
@@ -109,6 +109,7 @@ contract Client is Utils {
 
         bytes32 seed = keccak256(
             abi.encode(
+                address(this),
                 latestRequestId,
                 blockhash(block.number - 1),
                 block.timestamp,

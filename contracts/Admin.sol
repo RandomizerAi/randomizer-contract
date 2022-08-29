@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSL 1.1
 
 /// @title Randomizer Admin Functions
-/// @author Deanpress (hello@dean.press)
+/// @author Deanpress (https://github.com/deanpress)
 /// @notice Administrative functions, variables, and constants used by Randomizer.
 pragma solidity ^0.8.16;
 
@@ -10,15 +10,12 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract Admin is OwnableUpgradeable, Store {
     // Number of beacons per request
+
+    // TODO: make these store values
     uint256 internal constant BLOCKS_UNTIL_RENEWABLE_ALL = 20;
     uint256 internal constant SECONDS_UNTIL_RENEWABLE_ALL = 10 minutes;
     uint256 internal constant BLOCKS_UNTIL_SUBMITTABLE_SEQUENCER = 10;
     uint256 internal constant SECONDS_UNTIL_SUBMITTABLE_SEQUENCER = 5 minutes;
-
-    // Gas offsets for fee charge
-    uint256 internal constant SUBMIT_GAS_OFFSET = 90000;
-    uint256 internal constant FINAL_SUBMIT_GAS_OFFSET = 65000;
-    uint256 internal constant RENEW_GAS_OFFSET = 21000;
 
     uint256 internal constant _NOT_ENTERED = 1;
     uint256 internal constant _ENTERED = 2;
@@ -116,11 +113,11 @@ contract Admin is OwnableUpgradeable, Store {
     error SenderNotDeveloperOrProposed();
 
     /// @notice The developer can propose a new address to be the developer.
-    function transferDeveloper(address _proposedDeveloper) external {
+    function proposeDeveloper(address _proposedDeveloper) external {
         if (msg.sender != developer) revert SenderNotDeveloper();
 
-        emit ProposeTransferDeveloper(_proposedDeveloper);
         proposedDeveloper = _proposedDeveloper;
+        emit ProposeTransferDeveloper(_proposedDeveloper);
     }
 
     function acceptDeveloper(address _proposedDeveloper) external {
@@ -129,75 +126,111 @@ contract Admin is OwnableUpgradeable, Store {
             proposedDeveloper != _proposedDeveloper
         ) revert SenderNotProposedDeveloper();
 
-        emit AcceptTransferDeveloper(developer, _proposedDeveloper);
         developer = _proposedDeveloper;
+        emit AcceptTransferDeveloper(developer, _proposedDeveloper);
     }
 
-    function cancelTransferDeveloper() external {
+    function cancelProposeDeveloper() external {
         if (msg.sender != developer && msg.sender != proposedDeveloper)
             revert SenderNotDeveloperOrProposed();
 
-        emit CancelTransferDeveloper(proposedDeveloper);
         proposedDeveloper = address(0);
+        emit CancelTransferDeveloper(proposedDeveloper);
     }
 
     function setSequencer(address _sequencer) external {
         if (msg.sender != developer) revert SenderNotDeveloper();
-        emit UpdateConfigAddress("sequencer", sequencer, _sequencer);
         sequencer = _sequencer;
+        emit UpdateConfigAddress("sequencer", sequencer, _sequencer);
     }
 
     function setBeaconFee(uint256 _amount) external onlyOwner {
-        emit UpdateConfigUint("beaconFee", beaconFee, _amount);
         beaconFee = _amount;
+        emit UpdateConfigUint("beaconFee", beaconFee, _amount);
     }
 
     function setMinStakeEth(uint256 _amount) external onlyOwner {
-        emit UpdateConfigUint("minStakeEth", minStakeEth, _amount);
         minStakeEth = _amount;
+        emit UpdateConfigUint("minStakeEth", minStakeEth, _amount);
     }
 
     function setExpirationBlocks(uint256 _expirationBlocks) external onlyOwner {
+        expirationBlocks = _expirationBlocks;
         emit UpdateConfigUint(
             "expirationBlocks",
             expirationBlocks,
             _expirationBlocks
         );
-        expirationBlocks = _expirationBlocks;
     }
 
     function setExpirationSeconds(uint256 _expirationSeconds)
         external
         onlyOwner
     {
+        expirationSeconds = _expirationSeconds;
         emit UpdateConfigUint(
             "expirationSeconds",
             expirationSeconds,
             _expirationSeconds
         );
-        expirationSeconds = _expirationSeconds;
     }
 
     function setMaxStrikes(uint8 _maxStrikes) external onlyOwner {
-        emit UpdateConfigUint("maxStrikes", maxStrikes, _maxStrikes);
         maxStrikes = _maxStrikes;
+        emit UpdateConfigUint("maxStrikes", maxStrikes, _maxStrikes);
     }
 
     function setRequestMinGasLimit(uint256 _amount) external onlyOwner {
+        requestMinGasLimit = _amount;
         emit UpdateConfigUint(
             "requestMinGasLimit",
             requestMinGasLimit,
             _amount
         );
-        requestMinGasLimit = _amount;
     }
 
     function setRequestMaxGasLimit(uint256 _amount) external onlyOwner {
+        requestMaxGasLimit = _amount;
         emit UpdateConfigUint(
             "requestMaxGasLimit",
             requestMaxGasLimit,
             _amount
         );
-        requestMaxGasLimit = _amount;
+    }
+
+    function setGasEstTotalSubmit(uint256 _amount) external onlyOwner {
+        gasEstimates.totalSubmit = _amount;
+        emit UpdateConfigUint(
+            "gasEstimates.totalSubmit",
+            requestMaxGasLimit,
+            _amount
+        );
+    }
+
+    function setGasFinalSubmitOffset(uint256 _amount) external onlyOwner {
+        gasEstimates.finalSubmitOffset = _amount;
+        emit UpdateConfigUint(
+            "gasEstimates.finalSubmitOffset;",
+            requestMaxGasLimit,
+            _amount
+        );
+    }
+
+    function setGasSubmitOffset(uint256 _amount) external onlyOwner {
+        gasEstimates.submitOffset = _amount;
+        emit UpdateConfigUint(
+            "gasEstimates.submitOffset",
+            requestMaxGasLimit,
+            _amount
+        );
+    }
+
+    function setGasRenewOffset(uint256 _amount) external onlyOwner {
+        gasEstimates.renewOffset = _amount;
+        emit UpdateConfigUint(
+            "gasEstimates.renewOffset",
+            requestMaxGasLimit,
+            _amount
+        );
     }
 }

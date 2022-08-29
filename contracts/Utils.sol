@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSL 1.1
 
 /// @title Randomizer Utils
-/// @author Deanpress (hello@dean.press)
+/// @author Deanpress (https://github.com/deanpress)
 /// @notice Internal utilities used by Randomizer functions
 
 pragma solidity ^0.8.16;
@@ -140,10 +140,9 @@ contract Utils is Admin, GasHandler {
         if (beacons.length < 5)
             revert NotEnoughBeaconsAvailable(beacons.length, 5);
 
-        // address[] memory cachedBeacons = beacons;
         address[3] memory indices;
         uint256 length = beacons.length - 1;
-        // Select a random beacon _beaconsAmt times and store in selectedBeacons
+        // Select a random beacon 2 times and store in selectedBeacons
         uint256 i;
         while (i < 2) {
             uint256 randomBeaconIndex = (uint256(_random) % length) + 1;

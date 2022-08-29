@@ -16,7 +16,8 @@ contract RandomizerUpgradeableV2 is Initializable, Randomizer {
         uint256 _requestMinGasLimit,
         uint256 _requestMaxGasLimit,
         uint256 _beaconFee,
-        address[] memory _beacons
+        address[] memory _beacons,
+        uint256[] memory _gasEstimates
     ) public initializer {
         init(
             _developer,
@@ -28,7 +29,8 @@ contract RandomizerUpgradeableV2 is Initializable, Randomizer {
             _beaconFee,
             _requestMinGasLimit,
             _requestMaxGasLimit,
-            _beacons
+            _beacons,
+            _gasEstimates
         );
     }
 

@@ -7,7 +7,7 @@
 pragma solidity ^0.8.16;
 
 import "./Utils.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 
 interface IRandomReceiver {
     function randomizerCallback(uint128 _id, bytes32 value) external;
@@ -186,7 +186,7 @@ contract Beacon is Utils {
         );
 
         // Recover the beacon address from the signature
-        address beacon = ECDSA.recover(
+        address beacon = ECDSAUpgradeable.recover(
             message,
             packed.v,
             rsAndSeed.r,
@@ -307,8 +307,10 @@ contract Beacon is Utils {
             _chargeClient(accounts.client, developer, packed.data.beaconFee);
 
             // Beacon fee
-            uint256 fee = ((gasAtStart - gasleft() + FINAL_SUBMIT_GAS_OFFSET) *
-                _getGasPrice()) + packed.data.beaconFee;
+            uint256 fee = ((gasAtStart -
+                gasleft() +
+                gasEstimates.finalSubmitOffset) * _getGasPrice()) +
+                packed.data.beaconFee;
             _chargeClient(accounts.client, msg.sender, fee);
 
             requestToFeePaid[packed.id] += fee + packed.data.beaconFee; // total fee + dev beaconFee
@@ -425,7 +427,7 @@ contract Beacon is Utils {
         }
 
         // 62k offset for charge
-        uint256 fee = ((gasAtStart - gasleft() + SUBMIT_GAS_OFFSET) *
+        uint256 fee = ((gasAtStart - gasleft() + gasEstimates.submitOffset) *
             _getGasPrice()) + beaconFee;
         requestToFeePaid[packed.id] += fee;
         _chargeClient(accounts.client, msg.sender, fee);
