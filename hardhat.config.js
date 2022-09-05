@@ -27,8 +27,8 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 999,
-      },
+        runs: 500,
+      }
     }
   },
   networks: {
@@ -50,7 +50,8 @@ module.exports = {
       chainId: 1337
     },
     hardhat: {
-      chainId: 1337
+      chainId: 1337,
+      allowUnlimitedContractSize: true
     }
   },
   contractSizer: {
@@ -58,6 +59,7 @@ module.exports = {
     disambiguatePaths: false,
     runOnCompile: true,
     strict: true,
+    except: ['RandomizerUpgradeable']
     // only: [':Randomizer$'],
   },
   gasReporter: {

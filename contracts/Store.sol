@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSL 1.1
 
-/// @title SoRandom State
+/// @title Randomizer State
 /// @author Deanpress (https://github.com/deanpress)
 /// @notice Contains state variables and structs used by SoRandom
 
@@ -11,15 +11,26 @@ pragma solidity ^0.8.15;
 struct SPackedSubmitData {
     uint128 id;
     uint8 v;
-    SRandomCallData data;
+    SRandomUintData data;
+    SFastVerifyData vrf;
+}
+
+// publicKey: [pubKey-x, pubKey-y]
+// proof: [gamma-x, gamma-y, c, s]
+// uPoint: [uPointX, uPointY]
+// vComponents: [sHX, sHY, cGammaX, cGammaY]
+struct SFastVerifyData {
+    uint256[4] proof;
+    uint256[2] uPoint;
+    uint256[4] vComponents;
 }
 
 struct SPackedRenewData {
     uint128 id;
-    SRandomCallData data;
+    SRandomUintData data;
 }
 
-struct SRandomCallData {
+struct SRandomUintData {
     uint256 ethReserved;
     uint256 beaconFee;
     uint256 height;
@@ -32,7 +43,6 @@ struct SRandomCallData {
 struct SPackedRSSeed {
     bytes32 r;
     bytes32 s;
-    bytes32 seed;
 }
 
 struct SRequestEventData {
@@ -60,10 +70,29 @@ struct FlatSignature {
 }
 
 struct SBeacon {
+    uint256[2] publicKey;
     bool exists;
     uint8 strikes;
     uint8 consecutiveSubmissions;
     uint64 pending;
+}
+
+// Gas offsets
+struct SGasEstimates {
+    uint256 totalSubmit;
+    uint256 submitOffset;
+    uint256 finalSubmitOffset;
+    uint256 renewOffset;
+}
+
+interface IVRF {
+    function fastVerify(
+        uint256[2] memory publicKey,
+        uint256[4] memory proof,
+        bytes memory message,
+        uint256[2] memory uPoint,
+        uint256[4] memory vComponents
+    ) external pure returns (bool);
 }
 
 contract Store {
@@ -71,20 +100,18 @@ contract Store {
     uint256 internal _status;
 
     // Protocol addresses
+    IVRF public vrf;
     address public developer;
     address public proposedDeveloper;
     address public sequencer;
 
     address[] beacons;
-    uint256 strikeBurn;
-    uint256 minToken;
     uint256 public minStakeEth;
     uint256 public expirationBlocks;
     uint256 public expirationSeconds;
     uint256 public requestMinGasLimit;
     uint256 public requestMaxGasLimit;
 
-    // Fees
     uint256 public beaconFee;
     uint128 public latestRequestId;
     uint8 maxStrikes;
@@ -101,24 +128,18 @@ contract Store {
     // Random Stores
     mapping(uint128 => bytes32) internal requestToHash;
     mapping(uint128 => bytes12[3]) internal requestToSignatures;
-    mapping(uint128 => address) internal requestToFinalBeacon;
     mapping(uint128 => uint256) internal requestToFeePaid;
 
     // Collateral
     mapping(address => uint256) internal ethCollateral;
-    mapping(address => uint256) internal tokenCollateral;
 
-    // Gas offsets
-    struct SGasEstimates {
-        uint256 totalSubmit;
-        uint256 submitOffset;
-        uint256 finalSubmitOffset;
-        uint256 renewOffset;
-    }
+    // Optimistic request data
+    mapping(uint128 => uint256[2]) public optRequestTimeData;
+
     SGasEstimates public gasEstimates;
 
     /*     uint256 internal gasEstimates.totalSubmit;
-    uint256 internal gasEstimates.submitOffset;;
-    uint256 internal gasEstimates.finalSubmitOffset;;
-    uint256 internal gasEstimates.renewOffset;; */
+    uint256 internal gasEstimates.submitOffset;
+    uint256 internal gasEstimates.finalSubmitOffset;
+    uint256 internal gasEstimates.renewOffset; */
 }

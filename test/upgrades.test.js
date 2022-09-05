@@ -12,8 +12,9 @@ describe("Upgrades", function () {
     const signers = await ethers.getSigners();
     const Randomizer = await ethers.getContractFactory('RandomizerUpgradeable');
     const RandomizerV2 = await ethers.getContractFactory("RandomizerUpgradeableV2");
-
-    const randomizer = await upgrades.deployProxy(Randomizer, [signers[0].address, signers[0].address, 3, ethers.utils.parseUnits("0.1"), 50, 3600, 50000, 2000000, ethers.utils.parseUnits("20000", "gwei"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], [570000, 90000, 65000, 21000]]);
+    const VRF = await ethers.getContractFactory("VRF");
+    const vrf = await VRF.deploy();
+    const randomizer = await upgrades.deployProxy(Randomizer, [[vrf.address, signers[0].address, signers[0].address], 3, ethers.utils.parseUnits("0.1"), 50, 3600, 50000, 2000000, ethers.utils.parseUnits("20000", "gwei"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], [570000, 90000, 65000, 21000]]);
 
     // It should not yet have newFunction()
     try {
@@ -38,7 +39,9 @@ describe("Upgrades", function () {
     const signers = await ethers.getSigners();
     const Randomizer = await ethers.getContractFactory('RandomizerUpgradeableV2');
     const RandomizerV2 = await ethers.getContractFactory("RandomizerUpgradeable");
-    const randomizer = await upgrades.deployProxy(Randomizer, [signers[0].address, signers[0].address, 3, ethers.utils.parseUnits("0.1"), 50, 3600, 50000, 2000000, ethers.utils.parseUnits("20000", "gwei"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], [570000, 90000, 65000, 21000]]);
+    const VRF = await ethers.getContractFactory("VRF");
+    const vrf = await VRF.deploy();
+    const randomizer = await upgrades.deployProxy(Randomizer, [[vrf.address, signers[0].address, signers[0].address], 3, ethers.utils.parseUnits("0.1"), 50, 3600, 50000, 2000000, ethers.utils.parseUnits("20000", "gwei"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], [570000, 90000, 65000, 21000]]);
 
     // It should have newFunction()
     try {
@@ -61,8 +64,9 @@ describe("Upgrades", function () {
     const signers = await ethers.getSigners();
     const Randomizer = await ethers.getContractFactory('RandomizerUpgradeable');
     const RandomizerV2 = await ethers.getContractFactory("RandomizerUpgradeableV2");
-
-    const randomizer = await upgrades.deployProxy(Randomizer, [ethers.constants.AddressZero, ethers.constants.AddressZero, 3, ethers.utils.parseUnits("0.1"), 50, 3600, 50000, 2000000, ethers.utils.parseUnits("20000", "gwei"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], [570000, 90000, 65000, 21000]]);
+    const VRF = await ethers.getContractFactory("VRF");
+    const vrf = await VRF.deploy();
+    const randomizer = await upgrades.deployProxy(Randomizer, [[vrf.address, ethers.constants.AddressZero, ethers.constants.AddressZero], 3, ethers.utils.parseUnits("0.1"), 50, 3600, 50000, 2000000, ethers.utils.parseUnits("20000", "gwei"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], [570000, 90000, 65000, 21000]]);
     const TestCallback = await ethers.getContractFactory("TestCallback");
     const testCallback = await TestCallback.deploy(randomizer.address);
     const upgraded = await upgrades.upgradeProxy(randomizer.address, RandomizerV2);

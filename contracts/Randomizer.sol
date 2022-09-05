@@ -22,8 +22,8 @@ contract Randomizer is Client, Beacon {
     /// @notice One-time internal initializer of the contract.
     /// @dev To be called only once on deployment of RandomizerStatic (in constructor) or RandomizerUpgradeable (in initialize()).
     function init(
-        address _developer,
-        address _sequencer,
+        // VRF, Developer, Sequencer
+        address[3] memory _addresses,
         uint8 _maxStrikes,
         uint256 _minStakeEth,
         uint256 _expirationBlocks,
@@ -33,11 +33,17 @@ contract Randomizer is Client, Beacon {
         uint256 _requestMaxGasLimit,
         uint256 _beaconFee,
         address[] memory _beacons,
+        uint256[] memory _beaconPublicKeys,
         uint256[] memory _gasEstimates
     ) internal {
-        _transferOwnership(_developer);
-        developer = _developer;
-        sequencer = _sequencer;
+        require(
+            _beaconPublicKeys.length == _beacons.length * 2,
+            "Beacons length must equal beaconPublicKeys length * 2"
+        );
+        vrf = IVRF(_addresses[0]);
+        _transferOwnership(_addresses[1]);
+        developer = _addresses[1];
+        sequencer = _addresses[2];
         maxStrikes = _maxStrikes;
         minStakeEth = _minStakeEth;
         // minToken = _minCollateralToken;
@@ -50,7 +56,16 @@ contract Randomizer is Client, Beacon {
         for (uint256 i; i < length; i++) {
             beaconIndex[_beacons[i]] = beacons.length;
             beacons.push(_beacons[i]);
-            sBeacon[_beacons[i]] = SBeacon(true, 0, 0, 0);
+            sBeacon[_beacons[i]] = SBeacon(
+                [
+                    _beaconPublicKeys[i == 0 ? 0 : i + 1],
+                    _beaconPublicKeys[i == 0 ? 1 : i + 2]
+                ],
+                true,
+                0,
+                0,
+                0
+            );
         }
         requestMinGasLimit = _requestMinGasLimit;
         requestMaxGasLimit = _requestMaxGasLimit;
@@ -83,7 +98,12 @@ contract Randomizer is Client, Beacon {
 
         if (packed.data.height == 0) revert RequestNotFound(packed.id);
 
-        bytes32 generatedHash = _getRequestRenewHash(accounts, packed, _seed);
+        bytes32 generatedHash = _getRequestRenewHash(
+            accounts,
+            packed,
+            _seed,
+            false
+        );
 
         if (requestToHash[packed.id] != generatedHash)
             revert RequestDataMismatch(generatedHash, requestToHash[packed.id]);
@@ -192,7 +212,8 @@ contract Randomizer is Client, Beacon {
         requestToHash[packed.id] = _getRequestRenewHash(
             accounts,
             packed,
-            _seed
+            _seed,
+            false
         );
 
         SRequestEventData memory eventData = SRequestEventData(

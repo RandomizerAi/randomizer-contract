@@ -196,7 +196,7 @@ contract Utils is Admin, GasHandler {
         }
     }
 
-    function _resolveUintData(uint256[9] calldata _data)
+    function _resolveUintData(uint256[21] calldata _data)
         internal
         pure
         returns (SPackedSubmitData memory)
@@ -204,9 +204,8 @@ contract Utils is Admin, GasHandler {
         return
             SPackedSubmitData(
                 uint128(_data[0]),
-                // v
-                uint8(_data[8]),
-                SRandomCallData(
+                uint8(_data[20]),
+                SRandomUintData(
                     _data[1],
                     _data[2],
                     _data[3],
@@ -214,7 +213,29 @@ contract Utils is Admin, GasHandler {
                     _data[5],
                     _data[6],
                     _data[7]
+                ),
+                SFastVerifyData(
+                    [_data[8], _data[9], _data[10], _data[11]],
+                    [_data[12], _data[13]],
+                    [_data[14], _data[15], _data[16], _data[17]]
                 )
+            );
+    }
+
+    function _resolveOptimisticUintData(uint256[7] calldata _data)
+        internal
+        pure
+        returns (SRandomUintData memory)
+    {
+        return
+            SRandomUintData(
+                _data[0],
+                _data[1],
+                _data[2],
+                _data[3],
+                _data[4],
+                _data[5],
+                _data[6]
             );
     }
 
@@ -226,7 +247,7 @@ contract Utils is Admin, GasHandler {
         return
             SPackedRenewData(
                 uint128(_data[0]),
-                SRandomCallData(
+                SRandomUintData(
                     _data[1],
                     _data[2],
                     _data[3],
@@ -238,12 +259,12 @@ contract Utils is Admin, GasHandler {
             );
     }
 
-    function _resolveBytesCalldata(bytes32[3] calldata _data)
+    function _resolveBytesCalldata(bytes32[2] calldata _data)
         internal
         pure
         returns (SPackedRSSeed memory)
     {
-        return SPackedRSSeed(_data[0], _data[1], _data[2]);
+        return SPackedRSSeed(_data[0], _data[1]);
     }
 
     function _resolveAddressCalldata(address[4] calldata _data)
@@ -255,24 +276,25 @@ contract Utils is Admin, GasHandler {
     }
 
     function _getRequestHash(
+        uint128 id,
         SAccounts memory accounts,
-        SPackedSubmitData memory packed,
-        bytes32 seed
+        SRandomUintData memory data,
+        bytes32 seed,
+        bool optimistic
     ) internal pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
-                    packed.id,
+                    id,
+                    seed,
                     accounts.client,
                     accounts.beacons,
-                    seed,
-                    packed.data.ethReserved,
-                    packed.data.beaconFee,
-                    packed.data.height,
-                    packed.data.timestamp,
-                    packed.data.expirationSeconds,
-                    packed.data.expirationBlocks,
-                    packed.data.callbackGasLimit
+                    data.ethReserved,
+                    data.beaconFee,
+                    data.expirationSeconds,
+                    data.expirationBlocks,
+                    data.callbackGasLimit,
+                    optimistic
                 )
             );
     }
@@ -280,7 +302,8 @@ contract Utils is Admin, GasHandler {
     function _getRequestRenewHash(
         SAccounts memory accounts,
         SPackedRenewData memory packed,
-        bytes32 seed
+        bytes32 seed,
+        bool optimistic
     ) internal pure returns (bytes32) {
         return
             keccak256(
@@ -295,7 +318,8 @@ contract Utils is Admin, GasHandler {
                     packed.data.timestamp,
                     packed.data.expirationSeconds,
                     packed.data.expirationBlocks,
-                    packed.data.callbackGasLimit
+                    packed.data.callbackGasLimit,
+                    optimistic
                 )
             );
     }
@@ -307,5 +331,41 @@ contract Utils is Admin, GasHandler {
         } else {
             revert FailedToSendEth(_to, _amount);
         }
+    }
+
+    /// @dev Computes the VRF hash output as result of the digest of a ciphersuite-dependent prefix
+    /// concatenated with the gamma point
+    /// @param _gammaX The x-coordinate of the gamma EC point
+    /// @param _gammaY The y-coordinate of the gamma EC point
+    /// @return The VRF hash ouput as shas256 digest
+    function gammaToHash(uint256 _gammaX, uint256 _gammaY)
+        public
+        pure
+        returns (bytes32)
+    {
+        bytes memory c = abi.encodePacked(
+            // Cipher suite code (SECP256K1-SHA256-TAI is 0xFE)
+            uint8(0xFE),
+            // 0x03
+            uint8(0x03),
+            // Compressed Gamma Point
+            _encodePoint(_gammaX, _gammaY)
+        );
+
+        return sha256(c);
+    }
+
+    /// @dev Encode an EC point to bytes
+    /// @param _x The coordinate `x` of the point
+    /// @param _y The coordinate `y` of the point
+    /// @return The point coordinates as bytes
+    function _encodePoint(uint256 _x, uint256 _y)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        uint8 prefix = uint8(2 + (_y % 2));
+
+        return abi.encodePacked(prefix, _x);
     }
 }

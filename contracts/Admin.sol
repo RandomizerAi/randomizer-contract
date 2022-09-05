@@ -63,7 +63,11 @@ contract Admin is OwnableUpgradeable, Store {
 
     /// @notice Emits an event that contains all data needed for a beacon to submit a random number.
     /// @param request request event data (id, ethReserved, beaconFee, height, timestamp, expirationSeconds, expirationBlocks, callbackGasLimit, client, beacons, lastBeaconSeed)
-    event Request(uint128 indexed id, SRequestEventData request);
+    event Request(
+        uint128 indexed id,
+        SRequestEventData request,
+        bool optimistic
+    );
 
     /// @notice Emits when final beacon is selected by second-to-last submitter
     /// @param request request event data (id, ethReserved, beaconFee, height, timestamp, expirationSeconds, expirationBlocks, callbackGasLimit, client, beacons, lastBeaconSeed)

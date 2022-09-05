@@ -5,8 +5,7 @@ import "../Randomizer.sol";
 contract RandomizerWithStorageControls is Randomizer {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
-        address _developer,
-        address _sequencer,
+        address[3] memory _addresses,
         uint8 _maxStrikes,
         uint256 _minStakeEth,
         uint256 _expirationBlocks,
@@ -16,12 +15,12 @@ contract RandomizerWithStorageControls is Randomizer {
         uint256 _requestMaxGasLimit,
         uint256 _beaconFee,
         address[] memory _beacons,
+        uint256[] memory _beaconPublicKeys,
         uint256[] memory _gasEstimates
     ) initializer {
         __Ownable_init();
         init(
-            _developer,
-            _sequencer,
+            _addresses,
             _maxStrikes,
             _minStakeEth,
             _expirationBlocks,
@@ -30,6 +29,7 @@ contract RandomizerWithStorageControls is Randomizer {
             _requestMaxGasLimit,
             _beaconFee,
             _beacons,
+            _beaconPublicKeys,
             _gasEstimates
         );
     }

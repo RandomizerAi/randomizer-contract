@@ -1,5 +1,8 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
+const vrfHelper = require("./helpers.js");
+const ecvrf = require('vrf-ts-256')
+
 // const hre = require("hardhat");
 
 describe("Request & Submit", function () {
@@ -39,7 +42,6 @@ describe("Request & Submit", function () {
       }
     }
 
-
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
     const flatSig = await finalSigner.signMessage(messageHashBytes);
     const sig = ethers.utils.splitSignature(flatSig);
@@ -53,6 +55,8 @@ describe("Request & Submit", function () {
   let signers;
   let randomizer;
   let testCallback;
+  let vrf;
+
   beforeEach(async function () {
     await network.provider.request({
       method: "hardhat_reset",
@@ -71,8 +75,17 @@ describe("Request & Submit", function () {
       ArbGas.bytecode,
     ]);
     signers = await ethers.getSigners();
+    const VRF = await ethers.getContractFactory("VRF");
+    vrf = await VRF.deploy();
     const Randomizer = await ethers.getContractFactory("RandomizerWithStorageControls");
-    randomizer = await Randomizer.deploy(ethers.constants.AddressZero, ethers.constants.AddressZero, 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], [570000, 90000, 65000, 21000]);
+    let ecKeys = [];
+    let i = 0;
+    while (i < 6) {
+      const keys = vrfHelper.getVrfPublicKeys(await signers[i].getAddress());
+      ecKeys = ecKeys.concat(keys);
+      i++;
+    }
+    randomizer = await Randomizer.deploy([vrf.address, ethers.constants.AddressZero, ethers.constants.AddressZero], 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000]);
     await randomizer.deployed();
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(randomizer.address);
@@ -239,9 +252,12 @@ describe("Request & Submit", function () {
   });
 
   it("accept random submissions from beacons and finally callback", async function () {
+    let step = 1;
+    console.log(step++);
     // const tx = await signers[4].sendTransaction({ to: subscriber.address, value: ethers.utils.parseEther("1") });
     const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
+    console.log(step++);
 
     const req = await testCallback.makeRequest();
     const res = await req.wait();
@@ -255,41 +271,60 @@ describe("Request & Submit", function () {
 
     // const gasPrice = ethers.BigNumber.from(await hre.network.provider.request({ method: "eth_gasPrice", params: [] })).toString();
 
-    const messageHash = ethers.utils.keccak256(
-      ethers.utils.defaultAbiCoder.encode(
-        ["address", "uint256", "bytes32"],
-        [request.client, 1, request.seed]
-      )
-    );
-
-
     const selectedBeacons = request.beacons;
     expect(selectedBeacons[2]).to.equal(ethers.constants.AddressZero);
 
     const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
-    const messageHashBytes = ethers.utils.arrayify(messageHash);
 
     let selectedFinalBeacon;
 
     const localSignatures = [];
-    for (const signer of selectedSigners) {
-      // await randomizer.testCharge(testCallback.address, signer.address, 1);
-      const flatSig = await signer.signMessage(messageHashBytes);
-      const sig = ethers.utils.splitSignature(flatSig);
-      const uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
-      const addressData = [request.client].concat(request.beacons);
-      const bytesData = [sig.r, sig.s, request.seed];
-      const tx = await randomizer.connect(signer).submitRandom(addressData, uintData, bytesData);
-      const res = await tx.wait();
-      const requestEvent = randomizer.interface.parseLog(res.logs[0]);
+    const message = ethers.utils.arrayify(request.seed);
 
-      const requestHash = ethers.utils.keccak256(
+    for (const signer of selectedSigners) {
+      // Generate vrf proof
+      // const message = ethers.utils.toUtf8Bytes('73616d706c65');
+      const proof = vrfHelper.prove(signer.address, message);
+      const publicKeys = vrfHelper.getVrfPublicKeys(signer.address);
+      const params = await vrf.computeFastVerifyParams(
+        publicKeys,
+        proof,
+        message
+      );
+      console.log("LOCAL", message);
+      const verify = await vrf.fastVerify(publicKeys, proof, message, params[0], params[1]);
+      console.log("VERIFY", verify);
+      // expect(verify).to.be.true;
+
+      const proofHash = await randomizer.gammaToHash(proof[0], proof[1]);
+      console.log("ENCODING");
+      const messageHash = ethers.utils.keccak256(
         ethers.utils.defaultAbiCoder.encode(
-          ["uint8", "bytes32", "bytes32"],
-          [sig.v, sig.r, sig.s]
+          ["address", "uint256", "bytes32"],
+          [request.client, 1, proofHash]
         )
       );
+      console.log("ENCODED");
 
+
+      console.log("getting message hash");
+      // await randomizer.testCharge(testCallback.address, signer.address, 1);
+      let messageHashBytes = ethers.utils.arrayify(messageHash);
+
+      const flatSig = await signer.signMessage(messageHashBytes);
+      const sig = ethers.utils.splitSignature(flatSig);
+
+
+      let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
+      uintData = uintData.concat(publicKeys, proof, params[0], params[1], sig.v);
+      const addressData = [request.client].concat(request.beacons);
+      const bytesData = [sig.r, sig.s];
+      console.log("submitting");
+      const tx = await randomizer.connect(signer).submitRandom(addressData, uintData, bytesData, message);
+      console.log("submitted");
+      const res = await tx.wait();
+      const requestEvent = randomizer.interface.parseLog(res.logs[0]);
+      const requestHash = proofHash;
       const requestHashBytes = ethers.utils.arrayify(requestHash);
       const requestHashHex = ethers.utils.hexlify(requestHashBytes);
       const requestHashBytes12 = ethers.utils.hexDataSlice(requestHashHex, 0, 12);
@@ -298,7 +333,10 @@ describe("Request & Submit", function () {
       expect(requestSignatures.includes(requestHash12)).to.be.true;
       const index = request.beacons.indexOf(signer.address);
       localSignatures[index] = requestHash12;
+
+
       if (requestEvent.name == "RequestBeacon") {
+        console.log("LAST BEACON REQUESTED");
         // Check that the beacon is the one we expect
         const allBeacons = await randomizer.getBeacons();
         let seed = ethers.utils.keccak256(
@@ -321,7 +359,9 @@ describe("Request & Submit", function () {
             return randomBeacon;
           }
         }
+        console.log("GETTING LAST BEACON");
         const randomBeacon = getRandomBeacon(seed);
+        console.log("LAST BEACON SELECTED");
         selectedFinalBeacon = requestEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         expect(selectedFinalBeacon).to.equal(randomBeacon);
@@ -333,33 +373,41 @@ describe("Request & Submit", function () {
     // const selectedFinalBeacon = await randomizer.getFinalBeacon(1);
     // expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
+
+    const publicKeys = vrfHelper.getVrfPublicKeys(finalSigner.address);
+    const proof = vrfHelper.prove(finalSigner.address, message);
+    const proofHash = await randomizer.gammaToHash(proof[0], proof[1]);
+    const params = await vrf.computeFastVerifyParams(
+      publicKeys,
+      proof,
+      message
+    );
+    const messageHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ["address", "uint256", "bytes32"],
+        [request.client, 1, proofHash]
+      )
+    );
+    messageHashBytes = ethers.utils.arrayify(messageHash);
     const flatSig = await finalSigner.signMessage(messageHashBytes);
     const sig = ethers.utils.splitSignature(flatSig);
-    const uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
+    let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
+    uintData = uintData.concat(publicKeys, proof, params[0], params[1], sig.v);
     const addressData = [request.client].concat(request.beacons);
-    const bytesData = [sig.r, sig.s, request.seed];
+    const bytesData = [sig.r, sig.s];
 
-    const requestSignatures = await randomizer.getRequestSignatures(1);
+    // const requestSignatures = await randomizer.getRequestSignatures(1);
 
-    const tx = await randomizer.connect(finalSigner).submitRandom(addressData, uintData, bytesData);
+    const tx = await randomizer.connect(finalSigner).submitRandom(addressData, uintData, bytesData, message);
     await tx.wait();
 
     const callbackResult = await testCallback.result();
 
-
-    const requestHash = ethers.utils.keccak256(
-      ethers.utils.defaultAbiCoder.encode(
-        ["uint8", "bytes32", "bytes32"],
-        [sig.v, sig.r, sig.s]
-      )
-    );
-
+    const requestHash = proofHash;
     const requestHashBytes = ethers.utils.arrayify(requestHash);
     const requestHashHex = ethers.utils.hexlify(requestHashBytes);
     const requestHashBytes12 = ethers.utils.hexDataSlice(requestHashHex, 0, 12);
     const hash = ethers.utils.hexlify(requestHashBytes12);
-
-
 
 
     const result = ethers.utils.keccak256(

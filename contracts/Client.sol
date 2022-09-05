@@ -66,18 +66,23 @@ contract Client is Utils {
             (beaconFee * 4); // gas used // 3 beacon premium fees, 1 dev fee;
     }
 
-    function request(uint256 _callbackGasLimit) external returns (uint128 id) {
-        // uint8 _numberOfBeacons = 3;
-        // require(
-        //     _numberOfBeacons > 1 && _numberOfBeacons <= 10,
-        //     "INVALID_NUM_BEACONS"
-        // );
+    /// @notice Requests a random value with on-chain VRF validation
+    function request(uint256 callbackGasLimit) external returns (uint128 id) {
+        return _request(callbackGasLimit, false);
+    }
 
-        // require(
-        //     _finalSigner == address(0) || beaconIndex[_finalSigner] > 0,
-        //     "FINALSIGNER_NOT_A_BEACON"
-        // );
+    /// @notice Low gas request() alternative that processes the VRF proofs off-chain, with beacons acting as multisig validators
+    function request(uint256 callbackGasLimit, bool optimistic)
+        external
+        returns (uint128 id)
+    {
+        return _request(callbackGasLimit, optimistic);
+    }
 
+    function _request(uint256 _callbackGasLimit, bool _optimistic)
+        private
+        returns (uint128 id)
+    {
         if (
             _callbackGasLimit < requestMinGasLimit ||
             _callbackGasLimit > requestMaxGasLimit
@@ -107,6 +112,7 @@ contract Client is Utils {
 
         pendingRequestIds.push(latestRequestId);
 
+        // Don't use encodePacked here because it could cause duplicate hashes with different values
         bytes32 seed = keccak256(
             abi.encode(
                 address(this),
@@ -118,21 +124,21 @@ contract Client is Utils {
             )
         );
 
-        address[3] memory selectedBeacons = _randomBeacons(seed);
+        address[3] memory selectedBeacons = _randomBeacons(bytes32(seed));
 
+        // No need to hash block data since it exists within the seed
         bytes32 requestHash = keccak256(
             abi.encode(
                 latestRequestId,
+                seed,
                 msg.sender,
                 selectedBeacons,
-                seed,
                 estimateFee,
                 beaconFee,
-                block.number,
-                block.timestamp,
                 expirationSeconds,
                 expirationBlocks,
-                _callbackGasLimit
+                _callbackGasLimit,
+                _optimistic
                 // new bytes12[](BEACONS_PER_REQUEST)
             )
         );
@@ -156,7 +162,8 @@ contract Client is Utils {
                 msg.sender,
                 selectedBeacons,
                 seed
-            )
+            ),
+            _optimistic
         );
 
         return latestRequestId;
