@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract RandomizerUpgradeableV2 is Initializable, Randomizer {
     function initialize(
-        address[3] memory _addresses,
+        address[2] memory _addresses,
         uint8 _maxStrikes,
         uint256 _minStakeEth,
         uint256 _expirationBlocks,

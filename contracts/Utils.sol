@@ -259,4 +259,31 @@ contract Utils is Admin, GasHandler {
     ) internal pure returns (SAccounts memory, SPackedSubmitData memory) {
         return (_resolveAddressCalldata(_accounts), _resolveUintData(_data));
     }
+
+    function _encodePoint(uint256 _x, uint256 _y)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        uint8 prefix = uint8(2 + (_y % 2));
+
+        return abi.encodePacked(prefix, _x);
+    }
+
+    function gammaToHash(uint256 _gammaX, uint256 _gammaY)
+        public
+        pure
+        returns (bytes32)
+    {
+        bytes memory c = abi.encodePacked(
+            // Cipher suite code (SECP256K1-SHA256-TAI is 0xFE)
+            uint8(0xFE),
+            // 0x03
+            uint8(0x03),
+            // Compressed Gamma Point
+            _encodePoint(_gammaX, _gammaY)
+        );
+
+        return sha256(c);
+    }
 }

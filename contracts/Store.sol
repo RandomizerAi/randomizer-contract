@@ -87,27 +87,16 @@ struct SGasEstimates {
     uint256 completeOptimistic;
 }
 
-interface IVRF {
-    function fastVerify(
-        uint256[2] memory publicKey,
-        uint256[4] memory proof,
-        bytes memory message,
-        uint256[2] memory uPoint,
-        uint256[4] memory vComponents
-    ) external pure returns (bool);
-}
-
 contract Store {
     // Re-entrancy guard for final beacon submit
     uint256 internal _status;
 
     // Protocol addresses
-    IVRF public vrf;
     address public developer;
     address internal proposedDeveloper;
     address public sequencer;
 
-    address[] beacons;
+    address[] internal beacons;
     uint256 public minStakeEth;
     uint256 public expirationBlocks;
     uint256 public expirationSeconds;

@@ -19,11 +19,13 @@ contract Randomizer is Client, Beacon {
         uint256 expirationHeight
     );
 
+    error CantRenewDuringChallengeWindow();
+
     /// @notice One-time internal initializer of the contract.
     /// @dev To be called only once on deployment of RandomizerStatic (in constructor) or RandomizerUpgradeable (in initialize()).
     function init(
         // VRF, Developer, Sequencer
-        address[3] memory _addresses,
+        address[2] memory _addresses,
         uint8 _maxStrikes,
         uint256 _minStakeEth,
         uint256 _expirationBlocks,
@@ -40,10 +42,9 @@ contract Randomizer is Client, Beacon {
             _beaconPublicKeys.length == _beacons.length * 2,
             "BEACON_LENGTH"
         );
-        vrf = IVRF(_addresses[0]);
         _transferOwnership(_addresses[1]);
-        developer = _addresses[1];
-        sequencer = _addresses[2];
+        developer = _addresses[0];
+        sequencer = _addresses[1];
         maxStrikes = _maxStrikes;
         minStakeEth = _minStakeEth;
         // minToken = _minCollateralToken;
@@ -58,8 +59,8 @@ contract Randomizer is Client, Beacon {
             beacons.push(_beacons[i]);
             sBeacon[_beacons[i]] = SBeacon(
                 [
-                    _beaconPublicKeys[i == 0 ? 0 : i + 1],
-                    _beaconPublicKeys[i == 0 ? 1 : i + 2]
+                    _beaconPublicKeys[i * 2],
+                    _beaconPublicKeys[i == 0 ? 1 : i * 2 + 1]
                 ],
                 true,
                 0,
@@ -104,6 +105,11 @@ contract Randomizer is Client, Beacon {
             _seed,
             _optimistic
         );
+
+        if (_optimistic) {
+            if (optRequestChallengeWindow[packed.id][0] != 0)
+                revert CantRenewDuringChallengeWindow();
+        }
 
         if (requestToHash[packed.id] != generatedHash)
             revert RequestDataMismatch(generatedHash, requestToHash[packed.id]);

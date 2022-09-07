@@ -7,8 +7,7 @@
 pragma solidity ^0.8.16;
 
 import "./Utils.sol";
-
-import "hardhat/console.sol";
+import "./lib/VRF.sol";
 
 interface IRandomReceiver {
     function randomizerCallback(uint128 _id, bytes32 value) external;
@@ -35,7 +34,7 @@ contract Beacon is Utils {
     error SenderNotBeaconOrSequencer();
     error NotChallengeable();
 
-    /// @notice Returns all registered beacon addresses
+    /// @notice Returns a list of active beacon addresses
     function getBeacons() external view returns (address[] memory) {
         return beacons;
     }
@@ -247,7 +246,7 @@ contract Beacon is Utils {
             SFastVerifyData memory vrfData = requestToProofs[packed.id][i];
             // Run VRF Secp256k1 fastVerify method
             if (
-                !vrf.fastVerify(
+                !VRF.fastVerify(
                     sBeacon[accounts.beacons[i]].publicKey,
                     vrfData.proof,
                     abi.encodePacked(seed),
@@ -309,7 +308,9 @@ contract Beacon is Utils {
             _optimisticCanComplete(challengeWindow, 4);
         }
 
-        bytes32 result = keccak256(abi.encode(requestToVrfHashes[packed.id]));
+        bytes32 result = keccak256(
+            abi.encodePacked(requestToVrfHashes[packed.id])
+        );
 
         _callback(
             accounts.client,
@@ -355,7 +356,8 @@ contract Beacon is Utils {
         uint256 beaconPos;
         uint256 submissionsCount;
         bytes32[3] memory reqValues = requestToVrfHashes[packed.id];
-        for (uint256 i; i < 2; i++) {
+
+        for (uint256 i; i < 3; i++) {
             if (reqValues[i] != bytes32(0)) {
                 submissionsCount++;
             }
@@ -369,7 +371,7 @@ contract Beacon is Utils {
 
         if (!optimistic) {
             if (
-                !vrf.fastVerify(
+                !VRF.fastVerify(
                     sBeacon[beacon].publicKey,
                     packed.vrf.proof,
                     abi.encodePacked(seed),
@@ -381,10 +383,10 @@ contract Beacon is Utils {
             requestToProofs[packed.id][beaconPos - 1] = packed.vrf;
         }
 
-        bytes32 vrfHash = keccak256(abi.encodePacked(packed.vrf.proof));
+        bytes32 vrfHash = gammaToHash(packed.vrf.proof[0], packed.vrf.proof[1]);
 
         requestToVrfHashes[packed.id][beaconPos - 1] = vrfHash;
-
+        reqValues[beaconPos - 1] = vrfHash;
         // Every 100 consecutive submissions, strikes are reset to 0
         _updateBeaconSubmissionCount(beacon);
 
@@ -439,7 +441,9 @@ contract Beacon is Utils {
         // Final beacon submission logic (callback & complete)
         bytes32 reqResult;
 
-        reqResult = keccak256(abi.encode(reqValues[0], reqValues[1], vrfHash));
+        reqResult = keccak256(
+            abi.encodePacked(reqValues[0], reqValues[1], vrfHash)
+        );
 
         // Callback to requesting contract
         _callback(
@@ -560,7 +564,9 @@ contract Beacon is Utils {
         if (submissionsCount == 1) {
             bytes32 lastBeaconSeed;
 
-            lastBeaconSeed = keccak256(abi.encode(reqValues[0], reqValues[1]));
+            lastBeaconSeed = keccak256(
+                abi.encodePacked(reqValues[0], reqValues[1])
+            );
 
             address randomBeacon = _randomBeacon(
                 lastBeaconSeed,

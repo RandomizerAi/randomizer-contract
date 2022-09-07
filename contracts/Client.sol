@@ -122,7 +122,7 @@ contract Client is Utils {
             )
         );
 
-        address[3] memory selectedBeacons = _randomBeacons(bytes32(seed));
+        address[3] memory selectedBeacons = _randomBeacons(seed);
 
         // No need to hash block data since it exists within the seed
         bytes32 requestHash = keccak256(
