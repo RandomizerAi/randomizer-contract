@@ -37,9 +37,7 @@ contract Admin is OwnableUpgradeable, Store {
     );
 
     event BeaconStakeEth(address indexed beacon, uint256 amount);
-    event BeaconUnstake(address indexed beacon, uint256 amount);
     event ClientDeposit(address indexed client, uint256 amount);
-    event ClientWithdraw(address indexed client, uint256 amount);
     event ClientWithdrawTo(
         address indexed client,
         address indexed to,
@@ -63,11 +61,7 @@ contract Admin is OwnableUpgradeable, Store {
 
     /// @notice Emits an event that contains all data needed for a beacon to submit a random number.
     /// @param request request event data (id, ethReserved, beaconFee, height, timestamp, expirationSeconds, expirationBlocks, callbackGasLimit, client, beacons, lastBeaconSeed)
-    event Request(
-        uint128 indexed id,
-        SRequestEventData request,
-        bool optimistic
-    );
+    event Request(uint128 indexed id, SRequestEventData request);
 
     /// @notice Emits when final beacon is selected by second-to-last submitter
     /// @param request request event data (id, ethReserved, beaconFee, height, timestamp, expirationSeconds, expirationBlocks, callbackGasLimit, client, beacons, lastBeaconSeed)
@@ -91,6 +85,11 @@ contract Admin is OwnableUpgradeable, Store {
         bytes32 value,
         bytes txData
     );
+    event OptimisticReady(
+        uint128 indexed id,
+        uint256 completeTime,
+        uint256 completeHeight
+    );
 
     // Admin events
     event ProposeTransferDeveloper(address proposedDeveloper);
@@ -111,6 +110,7 @@ contract Admin is OwnableUpgradeable, Store {
         address oldValue,
         address newValue
     );
+    event UpdateConfigGasEstimates(uint256[6] from, uint256[6] to);
 
     error SenderNotDeveloper();
     error SenderNotProposedDeveloper();
@@ -120,8 +120,8 @@ contract Admin is OwnableUpgradeable, Store {
     function proposeDeveloper(address _proposedDeveloper) external {
         if (msg.sender != developer) revert SenderNotDeveloper();
 
-        proposedDeveloper = _proposedDeveloper;
         emit ProposeTransferDeveloper(_proposedDeveloper);
+        proposedDeveloper = _proposedDeveloper;
     }
 
     function acceptDeveloper(address _proposedDeveloper) external {
@@ -130,58 +130,59 @@ contract Admin is OwnableUpgradeable, Store {
             proposedDeveloper != _proposedDeveloper
         ) revert SenderNotProposedDeveloper();
 
-        developer = _proposedDeveloper;
         emit AcceptTransferDeveloper(developer, _proposedDeveloper);
+        developer = _proposedDeveloper;
     }
 
     function cancelProposeDeveloper() external {
         if (msg.sender != developer && msg.sender != proposedDeveloper)
             revert SenderNotDeveloperOrProposed();
 
-        proposedDeveloper = address(0);
         emit CancelTransferDeveloper(proposedDeveloper);
+        proposedDeveloper = address(0);
     }
 
     function setSequencer(address _sequencer) external {
         if (msg.sender != developer) revert SenderNotDeveloper();
-        sequencer = _sequencer;
+
         emit UpdateConfigAddress("sequencer", sequencer, _sequencer);
+        sequencer = _sequencer;
     }
 
     function setBeaconFee(uint256 _amount) external onlyOwner {
-        beaconFee = _amount;
         emit UpdateConfigUint("beaconFee", beaconFee, _amount);
+        beaconFee = _amount;
     }
 
     function setMinStakeEth(uint256 _amount) external onlyOwner {
-        minStakeEth = _amount;
         emit UpdateConfigUint("minStakeEth", minStakeEth, _amount);
+        minStakeEth = _amount;
     }
 
     function setExpirationBlocks(uint256 _expirationBlocks) external onlyOwner {
-        expirationBlocks = _expirationBlocks;
         emit UpdateConfigUint(
             "expirationBlocks",
             expirationBlocks,
             _expirationBlocks
         );
+        expirationBlocks = _expirationBlocks;
     }
 
     function setExpirationSeconds(uint256 _expirationSeconds)
         external
         onlyOwner
     {
-        expirationSeconds = _expirationSeconds;
         emit UpdateConfigUint(
             "expirationSeconds",
             expirationSeconds,
             _expirationSeconds
         );
+        expirationSeconds = _expirationSeconds;
     }
 
     function setMaxStrikes(uint8 _maxStrikes) external onlyOwner {
-        maxStrikes = _maxStrikes;
         emit UpdateConfigUint("maxStrikes", maxStrikes, _maxStrikes);
+        maxStrikes = _maxStrikes;
     }
 
     function setRequestMinGasLimit(uint256 _amount) external onlyOwner {
@@ -202,39 +203,26 @@ contract Admin is OwnableUpgradeable, Store {
         );
     }
 
-    function setGasEstTotalSubmit(uint256 _amount) external onlyOwner {
-        gasEstimates.totalSubmit = _amount;
-        emit UpdateConfigUint(
-            "gasEstimates.totalSubmit",
-            requestMaxGasLimit,
-            _amount
+    function setGasEstimates(uint256[6] calldata _amounts) external onlyOwner {
+        emit UpdateConfigGasEstimates(
+            [
+                gasEstimates.totalSubmit,
+                gasEstimates.submit,
+                gasEstimates.finalSubmit,
+                gasEstimates.renew,
+                gasEstimates.processOptimistic,
+                gasEstimates.completeOptimistic
+            ],
+            _amounts
         );
-    }
 
-    function setGasFinalSubmitOffset(uint256 _amount) external onlyOwner {
-        gasEstimates.finalSubmitOffset = _amount;
-        emit UpdateConfigUint(
-            "gasEstimates.finalSubmitOffset;",
-            requestMaxGasLimit,
-            _amount
-        );
-    }
-
-    function setGasSubmitOffset(uint256 _amount) external onlyOwner {
-        gasEstimates.submitOffset = _amount;
-        emit UpdateConfigUint(
-            "gasEstimates.submitOffset",
-            requestMaxGasLimit,
-            _amount
-        );
-    }
-
-    function setGasRenewOffset(uint256 _amount) external onlyOwner {
-        gasEstimates.renewOffset = _amount;
-        emit UpdateConfigUint(
-            "gasEstimates.renewOffset",
-            requestMaxGasLimit,
-            _amount
+        gasEstimates = SGasEstimates(
+            _amounts[0],
+            _amounts[1],
+            _amounts[2],
+            _amounts[3],
+            _amounts[4],
+            _amounts[5]
         );
     }
 }

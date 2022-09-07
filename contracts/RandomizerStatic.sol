@@ -18,8 +18,7 @@ contract RandomizerStatic is Randomizer {
         address[] memory _beacons,
         uint256[] memory _beaconPublicKeys,
         uint256[] memory _gasEstimates
-    ) initializer {
-        __Ownable_init();
+    ) {
         init(
             _addresses,
             _maxStrikes,

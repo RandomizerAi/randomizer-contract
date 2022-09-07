@@ -38,7 +38,7 @@ contract Randomizer is Client, Beacon {
     ) internal {
         require(
             _beaconPublicKeys.length == _beacons.length * 2,
-            "Beacons length must equal beaconPublicKeys length * 2"
+            "BEACON_LENGTH"
         );
         vrf = IVRF(_addresses[0]);
         _transferOwnership(_addresses[1]);
@@ -74,7 +74,9 @@ contract Randomizer is Client, Beacon {
             _gasEstimates[0],
             _gasEstimates[1],
             _gasEstimates[2],
-            _gasEstimates[3]
+            _gasEstimates[3],
+            _gasEstimates[4],
+            _gasEstimates[5]
         );
     }
 
@@ -82,27 +84,25 @@ contract Randomizer is Client, Beacon {
         return results[_request];
     }
 
-    function getPendingRequestIds() external view returns (uint128[] memory) {
-        return pendingRequestIds;
-    }
-
     function renewRequest(
         address[4] calldata _addressData,
         uint256[8] calldata _uintData,
-        bytes32 _seed
+        bytes32 _seed,
+        bool _optimistic
     ) external {
         // 20k gas offset for balance updates after fee calculation
-        uint256 gasAtStart = gasleft() + gasEstimates.renewOffset;
+        uint256 gasAtStart = gasleft() + gasEstimates.renew;
         SAccounts memory accounts = _resolveAddressCalldata(_addressData);
         SPackedRenewData memory packed = _resolveRenewUintData(_uintData);
 
         if (packed.data.height == 0) revert RequestNotFound(packed.id);
 
-        bytes32 generatedHash = _getRequestRenewHash(
+        bytes32 generatedHash = _getRequestHash(
+            packed.id,
             accounts,
-            packed,
+            packed.data,
             _seed,
-            false
+            _optimistic
         );
 
         if (requestToHash[packed.id] != generatedHash)
@@ -146,7 +146,7 @@ contract Randomizer is Client, Beacon {
         address[3] memory reqBeacons = accounts.beacons;
         for (uint256 i; i < 3; i++) {
             if (
-                requestToSignatures[packed.id][i] == bytes12(0) &&
+                requestToVrfHashes[packed.id][i] == bytes32(0) &&
                 reqBeacons[i] != address(0)
             ) {
                 address beaconAddress = reqBeacons[i];
@@ -172,7 +172,7 @@ contract Randomizer is Client, Beacon {
         accounts.beacons = _replaceNonSubmitters(
             packed.id,
             accounts.beacons,
-            requestToSignatures[packed.id]
+            requestToVrfHashes[packed.id]
         );
 
         // Refund fees paid by client paid by non-submitting beacon
@@ -209,11 +209,12 @@ contract Randomizer is Client, Beacon {
         packed.data.height = block.number;
         packed.data.timestamp = block.timestamp;
 
-        requestToHash[packed.id] = _getRequestRenewHash(
+        requestToHash[packed.id] = _getRequestHash(
+            packed.id,
             accounts,
-            packed,
+            packed.data,
             _seed,
-            false
+            _optimistic
         );
 
         SRequestEventData memory eventData = SRequestEventData(
@@ -226,7 +227,8 @@ contract Randomizer is Client, Beacon {
             packed.data.callbackGasLimit,
             accounts.client,
             accounts.beacons,
-            _seed
+            _seed,
+            _optimistic
         );
 
         // The paying non-submitter might fall below collateral here. It will be removed on next strike if it doesn't add collateral.

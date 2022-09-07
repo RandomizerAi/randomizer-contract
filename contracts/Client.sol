@@ -110,8 +110,6 @@ contract Client is Utils {
 
         latestRequestId++;
 
-        pendingRequestIds.push(latestRequestId);
-
         // Don't use encodePacked here because it could cause duplicate hashes with different values
         bytes32 seed = keccak256(
             abi.encode(
@@ -135,6 +133,7 @@ contract Client is Utils {
                 selectedBeacons,
                 estimateFee,
                 beaconFee,
+                [block.number, block.timestamp],
                 expirationSeconds,
                 expirationBlocks,
                 _callbackGasLimit,
@@ -161,9 +160,9 @@ contract Client is Utils {
                 _callbackGasLimit,
                 msg.sender,
                 selectedBeacons,
-                seed
-            ),
-            _optimistic
+                seed,
+                _optimistic
+            )
         );
 
         return latestRequestId;

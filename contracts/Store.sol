@@ -4,13 +4,12 @@
 /// @author Deanpress (https://github.com/deanpress)
 /// @notice Contains state variables and structs used by SoRandom
 
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.16;
 
 /// @notice SRandomRequest holds the data needed to fulfill a request
 
 struct SPackedSubmitData {
     uint128 id;
-    uint8 v;
     SRandomUintData data;
     SFastVerifyData vrf;
 }
@@ -56,6 +55,7 @@ struct SRequestEventData {
     address client;
     address[3] beacons;
     bytes32 seed;
+    bool optimistic;
 }
 
 struct SAccounts {
@@ -80,9 +80,11 @@ struct SBeacon {
 // Gas offsets
 struct SGasEstimates {
     uint256 totalSubmit;
-    uint256 submitOffset;
-    uint256 finalSubmitOffset;
-    uint256 renewOffset;
+    uint256 submit;
+    uint256 finalSubmit;
+    uint256 renew;
+    uint256 processOptimistic;
+    uint256 completeOptimistic;
 }
 
 interface IVRF {
@@ -102,20 +104,19 @@ contract Store {
     // Protocol addresses
     IVRF public vrf;
     address public developer;
-    address public proposedDeveloper;
+    address internal proposedDeveloper;
     address public sequencer;
 
     address[] beacons;
     uint256 public minStakeEth;
     uint256 public expirationBlocks;
     uint256 public expirationSeconds;
-    uint256 public requestMinGasLimit;
-    uint256 public requestMaxGasLimit;
+    uint256 internal requestMinGasLimit;
+    uint256 internal requestMaxGasLimit;
 
-    uint256 public beaconFee;
+    uint256 internal beaconFee;
     uint128 public latestRequestId;
-    uint8 maxStrikes;
-    uint128[] pendingRequestIds;
+    uint8 internal maxStrikes;
     mapping(uint256 => bytes32) internal results;
 
     // Deposits
@@ -127,19 +128,15 @@ contract Store {
 
     // Random Stores
     mapping(uint128 => bytes32) internal requestToHash;
-    mapping(uint128 => bytes12[3]) internal requestToSignatures;
+    mapping(uint128 => bytes32[3]) internal requestToVrfHashes;
+    mapping(uint128 => SFastVerifyData[3]) internal requestToProofs;
     mapping(uint128 => uint256) internal requestToFeePaid;
 
     // Collateral
     mapping(address => uint256) internal ethCollateral;
 
     // Optimistic request data
-    mapping(uint128 => uint256[2]) public optRequestTimeData;
+    mapping(uint128 => uint256[2]) internal optRequestChallengeWindow;
 
     SGasEstimates public gasEstimates;
-
-    /*     uint256 internal gasEstimates.totalSubmit;
-    uint256 internal gasEstimates.submitOffset;
-    uint256 internal gasEstimates.finalSubmitOffset;
-    uint256 internal gasEstimates.renewOffset; */
 }
