@@ -2,6 +2,19 @@ const ecvrf = require('vrf-ts-256')
 const elliptic = require('elliptic');
 const EC = new elliptic.ec('secp256k1');
 
+let vrfContract;
+let randomizer;
+const init = (vrfLibContract, randomizerContract) => {
+  vrfContract = vrfLibContract;
+  randomizer = randomizerContract;
+}
+
+const _checkVrfConfigured = () => {
+  if (!vrfContract) {
+    throw new Error('VRF contract not configured');
+  }
+}
+
 const genKeys = (privateKey) => {
   const keypair = EC.keyFromPrivate(privateKey);
   const secret_key = keypair.getPrivate('hex');
@@ -28,8 +41,39 @@ const prove = (privateKey, message) => {
   return [proof.decoded.gammaX.toString(), proof.decoded.gammaY.toString(), proof.decoded.c.toString(), proof.decoded.s.toString()];
 }
 
+const getVrfData = async (privateKey, seed) => {
+  _checkVrfConfigured();
+  const message = ethers.utils.arrayify(seed);
+  const proof = prove(privateKey, message);
+  const publicKeys = getVrfPublicKeys(privateKey);
+  const params = await vrfContract.computeFastVerifyParams(
+    publicKeys,
+    proof,
+    message
+  );
+
+  return { publicKeys, proof, params };
+};
+
+const parseRequest = (receipt) => {
+  return { ...randomizer.interface.parseLog(receipt.logs[0]).args.request, id: randomizer.interface.parseLog(receipt.logs[0]).args.id };
+}
+
+const getSubmitData = async (privateKey, request) => {
+  const vrf = await getVrfData(privateKey, request.seed);
+  let uints = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
+  uints = uints.concat(vrf.proof, vrf.params[0], vrf.params[1]);
+  const addresses = [request.client].concat(request.beacons);
+
+  return { addresses, uints };
+}
+
 // Export functions
 module.exports = {
+  init,
   getVrfPublicKeys,
-  prove
+  prove,
+  getVrfData,
+  getSubmitData,
+  parseRequest
 }

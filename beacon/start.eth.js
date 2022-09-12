@@ -40,7 +40,7 @@ const submitRandom = async function (signer, id, request) {
         if (result == "0x0000000000000000000000000000000000000000000000000000000000000000") {
           const reqSigs = await randomizer.getRequestSignatures(id);
           const indexOfBeacon = request.beacons.indexOf(address);
-          if (reqSigs[indexOfBeacon] == "0x000000000000000000000000") {
+          if (reqSigs[indexOfBeacon] == "0x0000000000000000000000000000000000000000000000000000000000000000") {
             console.log("Not yet submitted");
             await randomizer.connect(signer).submitRandom(addressData, uintData, bytesData);
           } else {
@@ -129,7 +129,7 @@ const init = async () => {
       for (const signer of signers) {
         const address = await signer.getAddress();
         const signatures = await randomizer.getRequestSignatures(id);
-        if (signatures[Array(request.beacons).indexOf(address) == "0x000000000000000000000000"] >= 0) {
+        if (signatures[Array(request.beacons).indexOf(address) == "0x0000000000000000000000000000000000000000000000000000000000000000"] >= 0) {
           await submitRandom(signer, id, request);
         }
       }
@@ -189,7 +189,7 @@ const handlePastRequests = async () => {
         for (const signer of signers) {
           const address = await signer.getAddress();
           const signatures = await randomizer.getRequestSignatures(res.id);
-          if (signatures[Array(res.request.beacons).indexOf(address) == "0x000000000000000000000000"] >= 0) {
+          if (signatures[Array(res.request.beacons).indexOf(address) == "0x0000000000000000000000000000000000000000000000000000000000000000"] >= 0) {
             await submitRandom(signer, res.id, res.request);
           }
         }

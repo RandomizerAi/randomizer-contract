@@ -302,15 +302,16 @@ contract Beacon is Utils {
                     break;
                 }
             }
-        }
-
-        if (!isBeaconOrSequencer) {
-            _optimisticCanComplete(challengeWindow, 4);
+            if (!isBeaconOrSequencer) {
+                _optimisticCanComplete(challengeWindow, 4);
+            }
         }
 
         bytes32 result = keccak256(
             abi.encodePacked(requestToVrfHashes[packed.id])
         );
+
+        results[packed.id] = result;
 
         _callback(
             accounts.client,
@@ -318,6 +319,8 @@ contract Beacon is Utils {
             packed.id,
             result
         );
+
+        ethReserved[accounts.client] -= packed.data.ethReserved;
 
         delete requestToVrfHashes[packed.id];
         delete optRequestChallengeWindow[packed.id];
@@ -439,9 +442,9 @@ contract Beacon is Utils {
         _status = _ENTERED;
 
         // Final beacon submission logic (callback & complete)
-        bytes32 reqResult;
+        bytes32 result;
 
-        reqResult = keccak256(
+        result = keccak256(
             abi.encodePacked(reqValues[0], reqValues[1], vrfHash)
         );
 
@@ -450,12 +453,12 @@ contract Beacon is Utils {
             accounts.client,
             packed.data.callbackGasLimit,
             packed.id,
-            reqResult
+            result
         );
         ethReserved[accounts.client] -= packed.data.ethReserved;
 
-        results[packed.id] = reqResult;
-        emit Result(packed.id, reqResult);
+        results[packed.id] = result;
+        emit Result(packed.id, result);
 
         // Dev fee
         _chargeClient(accounts.client, developer, beaconFee);
@@ -485,6 +488,8 @@ contract Beacon is Utils {
         uint256 gasAtStart,
         uint256 _beaconFee
     ) private {
+        if (_status == _ENTERED) revert ReentrancyGuard();
+        _status = _ENTERED;
         // Final beacon submission logic (callback & complete)
 
         // bytes12 beaconSubmissionValue = bytes12(vrfHash);
@@ -520,6 +525,7 @@ contract Beacon is Utils {
         // total fee + dev beaconFee
         // delete requestToHash[packed.id];
         // delete requestToVrfHashes[packed.id];
+        _status = _NOT_ENTERED;
     }
 
     function _callback(
@@ -577,12 +583,16 @@ contract Beacon is Utils {
 
             accounts.beacons[2] = randomBeacon;
 
+            // Set new height and timestamp so there's a submission window before renewable for third beacon
+            packed.data.height = block.number;
+            packed.data.timestamp = block.timestamp;
+
             requestToHash[packed.id] = _getRequestHash(
                 packed.id,
                 accounts,
                 packed.data,
                 seed,
-                false
+                optimistic
             );
 
             emit RequestBeacon(

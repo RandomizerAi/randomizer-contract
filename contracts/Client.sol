@@ -124,7 +124,6 @@ contract Client is Utils {
 
         address[3] memory selectedBeacons = _randomBeacons(seed);
 
-        // No need to hash block data since it exists within the seed
         bytes32 requestHash = keccak256(
             abi.encode(
                 latestRequestId,
@@ -138,7 +137,6 @@ contract Client is Utils {
                 expirationBlocks,
                 _callbackGasLimit,
                 _optimistic
-                // new bytes12[](BEACONS_PER_REQUEST)
             )
         );
 

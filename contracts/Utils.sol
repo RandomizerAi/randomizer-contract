@@ -22,8 +22,8 @@ contract Utils is Admin, GasHandler {
     );
     error NotYetCompletableBySender(
         uint256 currentHeight,
-        uint256 currentTimestamp,
         uint256 completableHeight,
+        uint256 currentTimestamp,
         uint256 completableTimestamp
     );
 
@@ -160,8 +160,8 @@ contract Utils is Admin, GasHandler {
         )
             revert NotYetCompletableBySender(
                 block.number,
-                block.timestamp,
                 completeHeight,
+                block.timestamp,
                 completeTimestamp
             );
     }

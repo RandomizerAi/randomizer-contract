@@ -149,6 +149,7 @@ contract Randomizer is Client, Beacon {
             );
 
         address[] memory beaconsToStrike = new address[](3);
+        uint8 beaconsToStrikeLen = 0;
         address[3] memory reqBeacons = accounts.beacons;
         for (uint256 i; i < 3; i++) {
             if (
@@ -162,17 +163,15 @@ contract Randomizer is Client, Beacon {
                 if (tempBeacon.pending > 0) tempBeacon.pending--;
                 sBeacon[beaconAddress] = tempBeacon;
                 beaconsToStrike[i] = beaconAddress;
+                beaconsToStrikeLen++;
             }
         }
 
         // Checks if enough beacons are available to replace with
-        if (
-            beacons.length < 5 ||
-            beaconsToStrike.length * 2 > beacons.length - 1
-        )
+        if (beacons.length < 5 || beaconsToStrikeLen * 2 > beacons.length - 1)
             revert NotEnoughBeaconsAvailable(
                 beacons.length,
-                beacons.length < 5 ? 5 : beaconsToStrike.length * 2
+                beacons.length < 5 ? 5 : beaconsToStrikeLen * 2
             );
 
         accounts.beacons = _replaceNonSubmitters(
