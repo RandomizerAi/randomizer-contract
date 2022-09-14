@@ -111,57 +111,17 @@ contract Client is Utils {
         latestRequestId++;
 
         // Don't use encodePacked here because it could cause duplicate hashes with different values
-        bytes32 seed = keccak256(
-            abi.encode(
-                address(this),
-                latestRequestId,
-                blockhash(block.number - 1),
-                block.timestamp,
-                block.difficulty,
-                block.chainid
-            )
-        );
+        SRandomUintData memory data = SRandomUintData({
+            ethReserved: estimateFee,
+            beaconFee: beaconFee,
+            height: block.number,
+            timestamp: block.timestamp,
+            expirationSeconds: expirationSeconds,
+            expirationBlocks: expirationBlocks,
+            callbackGasLimit: _callbackGasLimit
+        });
 
-        address[3] memory selectedBeacons = _randomBeacons(seed);
-
-        bytes32 requestHash = keccak256(
-            abi.encode(
-                latestRequestId,
-                seed,
-                msg.sender,
-                selectedBeacons,
-                estimateFee,
-                beaconFee,
-                [block.number, block.timestamp],
-                expirationSeconds,
-                expirationBlocks,
-                _callbackGasLimit,
-                _optimistic
-            )
-        );
-
-        requestToHash[latestRequestId] = requestHash;
-
-        // address[] memory eventBeacons = new address[](2);
-        // eventBeacons[0] = selectedBeacons[0];
-        // eventBeacons[1] = selectedBeacons[1];
-
-        emit Request(
-            latestRequestId,
-            SRequestEventData(
-                estimateFee,
-                beaconFee,
-                block.number,
-                block.timestamp,
-                expirationSeconds,
-                expirationBlocks,
-                _callbackGasLimit,
-                msg.sender,
-                selectedBeacons,
-                seed,
-                _optimistic
-            )
-        );
+        _generateRequest(latestRequestId, msg.sender, data, _optimistic);
 
         return latestRequestId;
     }

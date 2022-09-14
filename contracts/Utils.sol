@@ -10,6 +10,10 @@ import "./lib/Internals.sol";
 // Import the gas handler for the desired network to deploy to
 import "./GasHandler.sol";
 
+interface IRandomReceiver {
+    function randomizerCallback(uint128 _id, bytes32 value) external;
+}
+
 contract Utils is Admin, GasHandler {
     // Errors used by Utils, Beacon, and Client
     error RequestDataMismatch(bytes32 givenHash, bytes32 expectedHash);
@@ -147,25 +151,6 @@ contract Utils is Admin, GasHandler {
         }
     }
 
-    function _optimisticCanComplete(
-        uint256[2] memory challengeWindow,
-        uint256 multiplier
-    ) internal view {
-        uint256 completeHeight = challengeWindow[0] +
-            (expirationBlocks * multiplier);
-        uint256 completeTimestamp = challengeWindow[1] +
-            (multiplier * 5 minutes);
-        if (
-            block.number < completeHeight || block.timestamp < completeTimestamp
-        )
-            revert NotYetCompletableBySender(
-                block.number,
-                completeHeight,
-                block.timestamp,
-                completeTimestamp
-            );
-    }
-
     function _resolveUintData(uint256[18] calldata _data)
         internal
         pure
@@ -258,6 +243,91 @@ contract Utils is Admin, GasHandler {
         uint256[18] calldata _data
     ) internal pure returns (SAccounts memory, SPackedSubmitData memory) {
         return (_resolveAddressCalldata(_accounts), _resolveUintData(_data));
+    }
+
+    function _generateRequest(
+        uint128 id,
+        address client,
+        SRandomUintData memory data,
+        bool optimistic
+    ) internal {
+        bytes32 seed = keccak256(
+            abi.encode(
+                address(this),
+                id,
+                blockhash(block.number - 1),
+                block.timestamp,
+                block.difficulty,
+                block.chainid
+            )
+        );
+
+        address[3] memory selectedBeacons = _randomBeacons(seed);
+
+        SAccounts memory accounts = SAccounts(client, selectedBeacons);
+
+        bytes32 generatedHash = _getRequestHash(
+            id,
+            accounts,
+            data,
+            seed,
+            optimistic
+        );
+
+        requestToHash[id] = generatedHash;
+
+        // Emit event with new request data
+
+        emit Request(
+            id,
+            SRequestEventData(
+                data.ethReserved,
+                data.beaconFee,
+                block.number,
+                block.timestamp,
+                data.expirationSeconds,
+                data.expirationBlocks,
+                data.callbackGasLimit,
+                accounts.client,
+                accounts.beacons,
+                seed,
+                optimistic
+            )
+        );
+    }
+
+    function _processResult(
+        uint128 id,
+        address client,
+        bytes32[3] memory hashes,
+        uint256 callbackGasLimit,
+        uint256 _ethReserved
+    ) internal {
+        bytes32 result = keccak256(abi.encodePacked(hashes));
+
+        // Callback to requesting contract
+        _callback(client, callbackGasLimit, id, result);
+        ethReserved[client] -= _ethReserved;
+
+        results[id] = result;
+        emit Result(id, result);
+    }
+
+    function _callback(
+        address _to,
+        uint256 _gasLimit,
+        uint128 _id,
+        bytes32 _result
+    ) private {
+        (bool success, bytes memory callbackTxData) = _to.call{gas: _gasLimit}(
+            abi.encodeWithSelector(
+                IRandomReceiver.randomizerCallback.selector,
+                _id,
+                _result
+            )
+        );
+
+        if (!success) emit CallbackFailed(_to, _id, _result, callbackTxData);
     }
 
     function _encodePoint(uint256 _x, uint256 _y)

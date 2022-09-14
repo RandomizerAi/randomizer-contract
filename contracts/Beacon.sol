@@ -9,10 +9,6 @@ pragma solidity ^0.8.16;
 import "./Utils.sol";
 import "./lib/VRF.sol";
 
-interface IRandomReceiver {
-    function randomizerCallback(uint128 _id, bytes32 value) external;
-}
-
 contract Beacon is Utils {
     // Errors exclusive to Beacon.sol
     error BeaconExists();
@@ -128,21 +124,6 @@ contract Beacon is Utils {
         }
     }
 
-    // /// @notice Completes all pending requests and then unregisters the beacon
-    // function completeAndUnregister(
-    //     uint128[] calldata _requests,
-    //     bytes32[] memory r,
-    //     bytes32[] memory s,
-    //     uint8[] memory v
-    // ) external {
-    //     if (_requests.length > 0) {
-    //         for (uint256 i; i < _requests.length; i++) {
-    //             submitRandom(_requests[i], r[i], s[i], v[i]);
-    //         }
-    //     }
-    //     unregisterBeacon(msg.sender);
-    // }
-
     /// @notice Submit the random value of a beacon for a request on behalf of a beacon using signatures
     // uint256[21] data:
     // 0 requestId
@@ -158,7 +139,8 @@ contract Beacon is Utils {
         address[4] calldata _addressData,
         uint256[18] calldata _uintData,
         bytes32[3] calldata _rsAndSeed,
-        uint8 _v
+        uint8 _v,
+        uint256 beaconPos
     ) public {
         uint256 gasAtStart = gasleft();
 
@@ -166,7 +148,6 @@ contract Beacon is Utils {
             SAccounts memory accounts,
             SPackedSubmitData memory packed
         ) = _getAccountsAndPackedData(_addressData, _uintData);
-        bytes32 seed = _rsAndSeed[2];
 
         address beacon = ecrecover(
             keccak256(
@@ -187,7 +168,15 @@ contract Beacon is Utils {
             _rsAndSeed[1]
         );
 
-        _submissionStep(beacon, seed, gasAtStart, packed, accounts, false);
+        _submissionStep(
+            beacon,
+            beaconPos,
+            _rsAndSeed[2],
+            gasAtStart,
+            packed,
+            accounts,
+            false
+        );
     }
 
     // Override that uses msg.sender instead of address based on signature
@@ -195,7 +184,8 @@ contract Beacon is Utils {
         address[4] calldata _addressData,
         uint256[18] calldata _uintData,
         bytes32 seed,
-        bool optimistic
+        bool optimistic,
+        uint256 beaconPos
     ) public {
         uint256 gasAtStart = gasleft();
 
@@ -207,6 +197,7 @@ contract Beacon is Utils {
         // Run VRF Secp256k1 fastVerify method
         _submissionStep(
             msg.sender,
+            beaconPos,
             seed,
             gasAtStart,
             packed,
@@ -215,20 +206,18 @@ contract Beacon is Utils {
         );
     }
 
-    /// @notice Low gas alternative that processes the the proofs off-chain with beacons acting as multisig validators
-    /// There's a short dispute period that any beacon can call to challenge the submitted VRF proofs when they're incorrect
-    /// This function can only be called if the request was made with requestOptimistic()
-
-    // TODO: Function to open dispute for an optimistic request. The selected beacons need to submit their values manually which are then verified on-chain by the VRF.
-    // Only the submissions from the vrfBeacons are verified, which are not necessarily the originally selected beacons (as beacon reselection is off-chain in case of non-submitters).
-    // If the VRF fails, the first wrong beacon pays for all transaction made fees so far, and the request is renewed.
-    // If the VRF succeeds and matches the optimistic submission, the disputer pays for all transaction fees made so far, they're removed as a beacon, and the request is completed.
-    // Disputes can only be opened by beacons.
+    /// @notice Challenges a VRF submission. If the challenge is successful, manipulating beacon stakes go to the challenger and a new request is made.
     function challenge(
         address[4] calldata _addressData,
         uint256[18] calldata _uintData,
-        bytes32 seed
+        bytes32 seed,
+        SFastVerifyData[3] memory _vrfData
     ) external {
+        // Request is challengeable until the request is completed by a complete() call
+
+        if (optRequestChallengeWindow[uint128(_uintData[0])][0] == 0)
+            revert NotChallengeable();
+
         (
             SAccounts memory accounts,
             SPackedSubmitData memory packed
@@ -236,42 +225,67 @@ contract Beacon is Utils {
 
         _validateRequestData(packed.id, seed, accounts, packed.data, true);
 
-        // Request is challengeable until the request is completed by a complete() call
-        if (optRequestChallengeWindow[packed.id][0] == 0)
-            revert NotChallengeable();
-
         // Iterate through requestToProofs and VRF fastVerify each
-        bool vrfFailed;
-        for (uint256 i; i < 3; i++) {
-            SFastVerifyData memory vrfData = requestToProofs[packed.id][i];
-            // Run VRF Secp256k1 fastVerify method
+
+        uint256[2][3] memory publicKeys;
+        uint256[3] memory collaterals;
+
+        for (uint256 i = 0; i < 3; i++) {
+            // Check that encoded vrfData matches the hash stores in proof
             if (
-                !VRF.fastVerify(
-                    sBeacon[accounts.beacons[i]].publicKey,
-                    vrfData.proof,
-                    abi.encodePacked(seed),
-                    vrfData.uPoint,
-                    vrfData.vComponents
-                )
-            ) {
-                vrfFailed = true;
-                // Stakes of manipulating beacons should go to the challenger
-                ethCollateral[msg.sender] += ethCollateral[accounts.beacons[i]];
-                ethCollateral[accounts.beacons[i]] = 0;
-                _removeBeacon(accounts.beacons[i]);
+                keccak256(abi.encode(_vrfData[i])) !=
+                requestToProofs[packed.id][i]
+            ) revert("VRFDataMismatch");
+
+            publicKeys[i] = [
+                sBeacon[accounts.beacons[i]].publicKey[0],
+                sBeacon[accounts.beacons[i]].publicKey[1]
+            ];
+            collaterals[i] = ethCollateral[accounts.beacons[i]];
+        }
+
+        Internals.ChallengeReturnData memory cd = Internals._challenge(
+            packed.id,
+            seed,
+            _vrfData,
+            Internals.ChallengeCallVars({
+                publicKeys: publicKeys,
+                feePaid: requestToFeePaid[packed.id],
+                clientDeposit: ethDeposit[accounts.client],
+                collaterals: collaterals,
+                beacons: accounts.beacons,
+                client: accounts.client
+            }),
+            address(VRF)
+        );
+
+        // Iterate through beaconsToRemove and remove them
+        // Don't need to emit an event because Internals already emits BeaconInvalidVRF
+
+        for (uint256 i = 0; i < cd.beaconsToRemove.length; i++) {
+            if (cd.beaconsToRemove[i] != address(0)) {
+                ethCollateral[cd.beaconsToRemove[i]] = 0;
+                _removeBeacon(cd.beaconsToRemove[i]);
             }
         }
 
-        if (vrfFailed) {
-            // TODO: Renew request and emit event for removed beacons
+        requestToFeePaid[packed.id] = cd.newRequestToFee;
+        ethDeposit[accounts.client] = cd.newClientDeposit;
+        ethCollateral[msg.sender] += cd.ethToSender;
 
+        if (cd.vrfFailed) {
+            // Delete the old request and generate a new one with the same parameters (except for new seed, beacons, and block data)
             delete optRequestChallengeWindow[packed.id];
+            delete requestToProofs[packed.id];
+            delete requestToVrfHashes[packed.id];
+
+            _generateRequest(packed.id, accounts.client, packed.data, true);
         } else {
             revert("NoInvalidProofs");
         }
     }
 
-    // TODO: Function to complete optimistic random submission after the dispute period is over and no disputes were made.
+    /// @notice Complete an optimistic random submission after the challenge window is over.
     function completeOptimistic(
         address[4] calldata _addressData,
         uint256[18] calldata _uintData,
@@ -285,42 +299,24 @@ contract Beacon is Utils {
         ) = _getAccountsAndPackedData(_addressData, _uintData);
         _validateRequestData(packed.id, seed, accounts, packed.data, true);
 
-        uint256[2] memory challengeWindow = optRequestChallengeWindow[
-            packed.id
-        ];
-
         // Require that this function can only be called by the first beacon in the first 5 minutes of the challenge window, then by the second beacon in the next 5 minutes, and so on.
-        bool isBeaconOrSequencer;
-        if (msg.sender == sequencer) {
-            _optimisticCanComplete(challengeWindow, 3);
-            isBeaconOrSequencer = true;
-        } else {
-            for (uint256 i; i < 3; i++) {
-                if (accounts.beacons[i] == msg.sender) {
-                    _optimisticCanComplete(challengeWindow, i);
-                    isBeaconOrSequencer = true;
-                    break;
-                }
-            }
-            if (!isBeaconOrSequencer) {
-                _optimisticCanComplete(challengeWindow, 4);
-            }
-        }
-
-        bytes32 result = keccak256(
-            abi.encodePacked(requestToVrfHashes[packed.id])
+        Internals._optimisticCanComplete(
+            Internals.SCanCompleteData({
+                expirationSeconds: packed.data.expirationSeconds,
+                expirationBlocks: packed.data.expirationBlocks,
+                challengeWindow: optRequestChallengeWindow[packed.id],
+                beacons: accounts.beacons,
+                sequencer: sequencer
+            })
         );
 
-        results[packed.id] = result;
-
-        _callback(
-            accounts.client,
-            packed.data.callbackGasLimit,
+        _processResult(
             packed.id,
-            result
+            accounts.client,
+            requestToVrfHashes[packed.id],
+            packed.data.callbackGasLimit,
+            packed.data.ethReserved
         );
-
-        ethReserved[accounts.client] -= packed.data.ethReserved;
 
         delete requestToVrfHashes[packed.id];
         delete optRequestChallengeWindow[packed.id];
@@ -336,12 +332,11 @@ contract Beacon is Utils {
             packed.data.beaconFee;
         requestToFeePaid[packed.id] += fee;
         _chargeClient(accounts.client, msg.sender, fee);
-
-        // TODO: Emit Result event
     }
 
     function _submissionStep(
         address beacon,
+        uint256 beaconPos,
         bytes32 seed,
         uint256 gasAtStart,
         SPackedSubmitData memory packed,
@@ -356,7 +351,6 @@ contract Beacon is Utils {
             optimistic
         );
 
-        uint256 beaconPos;
         uint256 submissionsCount;
         bytes32[3] memory reqValues = requestToVrfHashes[packed.id];
 
@@ -364,13 +358,16 @@ contract Beacon is Utils {
             if (reqValues[i] != bytes32(0)) {
                 submissionsCount++;
             }
-            if (beacon == accounts.beacons[i]) {
-                beaconPos = i + 1;
-            }
         }
 
         // Check if beacon or sequencer can submit the result
-        _checkCanSubmit(beacon, beaconPos, reqValues, packed.data);
+        _checkCanSubmit(
+            beacon,
+            accounts.beacons,
+            beaconPos,
+            reqValues,
+            packed.data
+        );
 
         if (!optimistic) {
             if (
@@ -383,7 +380,9 @@ contract Beacon is Utils {
                 )
             ) revert VRFProofInvalid();
         } else {
-            requestToProofs[packed.id][beaconPos - 1] = packed.vrf;
+            requestToProofs[packed.id][beaconPos - 1] = keccak256(
+                abi.encode(packed.vrf)
+            );
         }
 
         bytes32 vrfHash = gammaToHash(packed.vrf.proof[0], packed.vrf.proof[1]);
@@ -442,23 +441,13 @@ contract Beacon is Utils {
         _status = _ENTERED;
 
         // Final beacon submission logic (callback & complete)
-        bytes32 result;
-
-        result = keccak256(
-            abi.encodePacked(reqValues[0], reqValues[1], vrfHash)
-        );
-
-        // Callback to requesting contract
-        _callback(
-            accounts.client,
-            packed.data.callbackGasLimit,
+        _processResult(
             packed.id,
-            result
+            accounts.client,
+            [reqValues[0], reqValues[1], vrfHash],
+            packed.data.callbackGasLimit,
+            packed.data.ethReserved
         );
-        ethReserved[accounts.client] -= packed.data.ethReserved;
-
-        results[packed.id] = result;
-        emit Result(packed.id, result);
 
         // Dev fee
         _chargeClient(accounts.client, developer, beaconFee);
@@ -492,23 +481,12 @@ contract Beacon is Utils {
         _status = _ENTERED;
         // Final beacon submission logic (callback & complete)
 
-        // bytes12 beaconSubmissionValue = bytes12(vrfHash);
-        // requestToVrfHashes[packed.id][2] = beaconSubmissionValue;
-
         // Set challenge window time
         uint256[2] memory challengeWindow = [
             block.number + expirationBlocks,
             block.timestamp + expirationSeconds
         ];
         optRequestChallengeWindow[id] = challengeWindow;
-
-        // ethReserved[accounts.client] -= packed.data.ethReserved;
-
-        // results[packed.id] = reqResult;
-        // emit Result(packed.id, reqResult);
-
-        // Dev fee
-        // _chargeClient(accounts.client, developer, beaconFee);
 
         // Beacon fee
         uint256 submitFee = _handleSubmitFeeCharge(
@@ -520,29 +498,9 @@ contract Beacon is Utils {
 
         requestToFeePaid[id] += submitFee + beaconFee;
 
-        // TODO: Emit OptimisticSubmitted event
         emit OptimisticReady(id, challengeWindow[0], challengeWindow[1]);
-        // total fee + dev beaconFee
-        // delete requestToHash[packed.id];
-        // delete requestToVrfHashes[packed.id];
+
         _status = _NOT_ENTERED;
-    }
-
-    function _callback(
-        address _to,
-        uint256 _gasLimit,
-        uint128 _id,
-        bytes32 _result
-    ) private {
-        (bool success, bytes memory callbackTxData) = _to.call{gas: _gasLimit}(
-            abi.encodeWithSelector(
-                IRandomReceiver.randomizerCallback.selector,
-                _id,
-                _result
-            )
-        );
-
-        if (!success) emit CallbackFailed(_to, _id, _result, callbackTxData);
     }
 
     function _updateBeaconSubmissionCount(address _beacon) private {
@@ -650,11 +608,13 @@ contract Beacon is Utils {
 
     function _checkCanSubmit(
         address beacon,
+        address[3] memory beacons,
         uint256 beaconPos,
         bytes32[3] memory reqValues,
         SRandomUintData memory data
     ) private view {
-        if (beaconPos == 0) revert BeaconNotSelected();
+        if (beacons[beaconPos - 1] != msg.sender && msg.sender != sequencer)
+            revert BeaconNotSelected();
 
         if (reqValues[beaconPos - 1] != bytes32(0)) revert ResultExists();
 
@@ -662,17 +622,20 @@ contract Beacon is Utils {
         if (msg.sender != beacon && msg.sender != sequencer)
             revert SenderNotBeaconOrSequencer();
 
+        uint256 sequencerSubmitTime = data.timestamp +
+            (data.expirationSeconds / 2);
+        uint256 sequencerSubmitBlock = data.height +
+            (data.expirationBlocks / 2);
         if (
             msg.sender != beacon &&
-            (block.timestamp <
-                data.timestamp + SECONDS_UNTIL_SUBMITTABLE_SEQUENCER ||
-                block.number < data.height + BLOCKS_UNTIL_SUBMITTABLE_SEQUENCER)
+            (block.timestamp < sequencerSubmitTime ||
+                block.number < sequencerSubmitBlock)
         )
             revert SequencerSubmissionTooEarly(
                 block.timestamp,
-                data.timestamp + SECONDS_UNTIL_SUBMITTABLE_SEQUENCER,
+                sequencerSubmitTime,
                 block.number,
-                data.height + BLOCKS_UNTIL_SUBMITTABLE_SEQUENCER
+                sequencerSubmitBlock
             );
     }
 

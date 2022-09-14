@@ -9,14 +9,6 @@ import "./Store.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract Admin is OwnableUpgradeable, Store {
-    // Number of beacons per request
-
-    // TODO: make these store values
-    uint256 internal constant BLOCKS_UNTIL_RENEWABLE_ALL = 20;
-    uint256 internal constant SECONDS_UNTIL_RENEWABLE_ALL = 10 minutes;
-    uint256 internal constant BLOCKS_UNTIL_SUBMITTABLE_SEQUENCER = 10;
-    uint256 internal constant SECONDS_UNTIL_SUBMITTABLE_SEQUENCER = 5 minutes;
-
     uint256 internal constant _NOT_ENTERED = 1;
     uint256 internal constant _ENTERED = 2;
 
@@ -58,6 +50,15 @@ contract Admin is OwnableUpgradeable, Store {
     event RegisterBeacon(address indexed beacon);
     event UnregisterBeacon(address indexed beacon, uint256 strikes);
     event RemoveBeacon(address indexed beacon, uint8 strikes);
+    event BeaconInvalidVRF(
+        address indexed beacon,
+        uint128 indexed request,
+        uint256[2] publicKey,
+        uint256[4] proof,
+        bytes32 seed,
+        uint256[2] uPoint,
+        uint256[4] vComponents
+    );
 
     /// @notice Emits an event that contains all data needed for a beacon to submit a random number.
     /// @param request request event data (id, ethReserved, beaconFee, height, timestamp, expirationSeconds, expirationBlocks, callbackGasLimit, client, beacons, lastBeaconSeed)
@@ -69,12 +70,12 @@ contract Admin is OwnableUpgradeable, Store {
     event RequestBeacon(
         uint128 indexed id,
         SRequestEventData request,
-        address beacon
+        address indexed beacon
     );
     event Strike(
         address indexed beacon,
         address indexed striker,
-        address client,
+        address indexed client,
         uint128 id,
         uint256 amount,
         uint256 slashedTokens

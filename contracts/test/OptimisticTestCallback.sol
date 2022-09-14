@@ -30,13 +30,10 @@ contract OptimisticTestCallback {
         result = value;
         id = _id;
         emit Callback(_id, value);
-        // uint256 refund = IRandomizer(randomizer).requestToFeePaid(_id);
     }
 
     function randomizerWithdraw(uint256 _amount) external {
         IRandomizer(randomizer).clientWithdrawTo(msg.sender, _amount);
-        // uint256 refund = IRandomizer(randomizer).requestToFeePaid(_id);
-        // console.log("Refund", refund);
     }
 
     function makeRequest() external returns (uint256) {

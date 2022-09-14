@@ -93,6 +93,12 @@ contract Randomizer is Client, Beacon {
     ) external {
         // 20k gas offset for balance updates after fee calculation
         uint256 gasAtStart = gasleft() + gasEstimates.renew;
+
+        if (_optimistic) {
+            if (optRequestChallengeWindow[uint128(_uintData[0])][0] != 0)
+                revert CantRenewDuringChallengeWindow();
+        }
+
         SAccounts memory accounts = _resolveAddressCalldata(_addressData);
         SPackedRenewData memory packed = _resolveRenewUintData(_uintData);
 
@@ -105,20 +111,15 @@ contract Randomizer is Client, Beacon {
             _seed,
             _optimistic
         );
-
-        if (_optimistic) {
-            if (optRequestChallengeWindow[packed.id][0] != 0)
-                revert CantRenewDuringChallengeWindow();
-        }
-
         if (requestToHash[packed.id] != generatedHash)
             revert RequestDataMismatch(generatedHash, requestToHash[packed.id]);
 
         uint256 _expirationBlocks;
         uint256 _expirationSeconds;
 
-        // For the first 5 minutes and 20 blocks, the first successful submitter of this request can renew it exclusively
-        // Afterwards it's open to everyone to renew
+        // For the first expiration period, the first successful submitter of this request can renew it exclusively
+        // After half an expiration period it's open to the sequencer
+        // After another half expiration period, it's open to everyone to renew
         if (_getFirstSubmitter(packed.id, accounts.beacons) == msg.sender) {
             _expirationBlocks =
                 packed.data.height +
@@ -126,15 +127,22 @@ contract Randomizer is Client, Beacon {
             _expirationSeconds =
                 packed.data.timestamp +
                 packed.data.expirationSeconds;
-        } else {
+        } else if (msg.sender == sequencer) {
             _expirationBlocks =
                 packed.data.height +
                 packed.data.expirationBlocks +
-                BLOCKS_UNTIL_RENEWABLE_ALL;
+                (packed.data.expirationBlocks / 2);
             _expirationSeconds =
                 packed.data.timestamp +
-                packed.data.expirationSeconds +
-                SECONDS_UNTIL_RENEWABLE_ALL;
+                packed.data.expirationBlocks +
+                (packed.data.expirationSeconds / 2);
+        } else {
+            _expirationBlocks =
+                packed.data.height +
+                (packed.data.expirationBlocks * 2);
+            _expirationSeconds =
+                packed.data.timestamp +
+                (packed.data.expirationSeconds * 2);
         }
 
         if (
@@ -227,8 +235,8 @@ contract Randomizer is Client, Beacon {
             packed.data.beaconFee,
             packed.data.height,
             packed.data.timestamp,
-            expirationSeconds,
-            expirationBlocks,
+            packed.data.expirationBlocks,
+            packed.data.expirationSeconds,
             packed.data.callbackGasLimit,
             accounts.client,
             accounts.beacons,
