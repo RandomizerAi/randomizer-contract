@@ -63,7 +63,7 @@ contract Client is Utils {
     {
         return
             ((gasEstimates.totalSubmit + _callbackGasLimit) * _getGasPrice()) +
-            (beaconFee * 4); // gas used // 3 beacon premium fees, 1 dev fee;
+            (configUints[CKEY_BEACON_FEE] * 4); //  3 beacon premium fees, 1 dev fee;
     }
 
     /// @notice Requests a random value with on-chain VRF validation
@@ -83,6 +83,8 @@ contract Client is Utils {
         private
         returns (uint128 id)
     {
+        uint256 requestMinGasLimit = configUints[CKEY_REQUEST_MIN_GAS_LIMIT];
+        uint256 requestMaxGasLimit = configUints[CKEY_REQUEST_MAX_GAS_LIMIT];
         if (
             _callbackGasLimit < requestMinGasLimit ||
             _callbackGasLimit > requestMaxGasLimit
@@ -113,11 +115,11 @@ contract Client is Utils {
         // Don't use encodePacked here because it could cause duplicate hashes with different values
         SRandomUintData memory data = SRandomUintData({
             ethReserved: estimateFee,
-            beaconFee: beaconFee,
+            beaconFee: configUints[CKEY_BEACON_FEE],
             height: block.number,
             timestamp: block.timestamp,
-            expirationSeconds: expirationSeconds,
-            expirationBlocks: expirationBlocks,
+            expirationSeconds: configUints[CKEY_EXPIRATION_SECONDS],
+            expirationBlocks: configUints[CKEY_EXPIRATION_BLOCKS],
             callbackGasLimit: _callbackGasLimit
         });
 

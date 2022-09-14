@@ -97,20 +97,11 @@ contract Admin is OwnableUpgradeable, Store {
     event AcceptTransferDeveloper(address lastDeveloper, address newDeveloper);
     event CancelTransferDeveloper(address proposedDeveloper);
     event UpdateConfigUint(
-        string indexed key,
+        uint256 indexed key,
         uint256 oldValue,
         uint256 newValue
     );
-    event UpdateConfigString(
-        string indexed key,
-        string oldValue,
-        string newValue
-    );
-    event UpdateConfigAddress(
-        string indexed key,
-        address oldValue,
-        address newValue
-    );
+    event UpdateSequencer(address oldSequencer, address newSequencer);
     event UpdateConfigGasEstimates(uint256[6] from, uint256[6] to);
 
     error SenderNotDeveloper();
@@ -146,62 +137,14 @@ contract Admin is OwnableUpgradeable, Store {
     function setSequencer(address _sequencer) external {
         if (msg.sender != developer) revert SenderNotDeveloper();
 
-        emit UpdateConfigAddress("sequencer", sequencer, _sequencer);
+        emit UpdateSequencer(sequencer, _sequencer);
         sequencer = _sequencer;
     }
 
-    function setBeaconFee(uint256 _amount) external onlyOwner {
-        emit UpdateConfigUint("beaconFee", beaconFee, _amount);
-        beaconFee = _amount;
-    }
-
-    function setMinStakeEth(uint256 _amount) external onlyOwner {
-        emit UpdateConfigUint("minStakeEth", minStakeEth, _amount);
-        minStakeEth = _amount;
-    }
-
-    function setExpirationBlocks(uint256 _expirationBlocks) external onlyOwner {
-        emit UpdateConfigUint(
-            "expirationBlocks",
-            expirationBlocks,
-            _expirationBlocks
-        );
-        expirationBlocks = _expirationBlocks;
-    }
-
-    function setExpirationSeconds(uint256 _expirationSeconds)
-        external
-        onlyOwner
-    {
-        emit UpdateConfigUint(
-            "expirationSeconds",
-            expirationSeconds,
-            _expirationSeconds
-        );
-        expirationSeconds = _expirationSeconds;
-    }
-
-    function setMaxStrikes(uint8 _maxStrikes) external onlyOwner {
-        emit UpdateConfigUint("maxStrikes", maxStrikes, _maxStrikes);
-        maxStrikes = _maxStrikes;
-    }
-
-    function setRequestMinGasLimit(uint256 _amount) external onlyOwner {
-        requestMinGasLimit = _amount;
-        emit UpdateConfigUint(
-            "requestMinGasLimit",
-            requestMinGasLimit,
-            _amount
-        );
-    }
-
-    function setRequestMaxGasLimit(uint256 _amount) external onlyOwner {
-        requestMaxGasLimit = _amount;
-        emit UpdateConfigUint(
-            "requestMaxGasLimit",
-            requestMaxGasLimit,
-            _amount
-        );
+    function setConfigUint(uint256 key, uint256 _value) external onlyOwner {
+        uint256 old = configUints[key];
+        configUints[key] = _value;
+        emit UpdateConfigUint(key, old, _value);
     }
 
     function setGasEstimates(uint256[6] calldata _amounts) external onlyOwner {

@@ -62,6 +62,7 @@ contract Beacon is Utils {
         address _beacon,
         uint256[2] calldata _vrfPublicKeyData
     ) external onlyOwner {
+        uint256 minStakeEth = configUints[CKEY_MIN_STAKE_ETH];
         if (beaconIndex[_beacon] != 0) revert BeaconExists();
         if (ethCollateral[_beacon] < minStakeEth)
             revert BeaconStakedEthTooLow(ethCollateral[_beacon], minStakeEth);
@@ -88,7 +89,7 @@ contract Beacon is Utils {
     function beaconUnstakeEth(uint256 _amount) external {
         ethCollateral[msg.sender] -= _amount;
         if (
-            ethCollateral[msg.sender] < minStakeEth &&
+            ethCollateral[msg.sender] < configUints[CKEY_MIN_STAKE_ETH] &&
             beaconIndex[msg.sender] != 0
         ) {
             if (sBeacon[msg.sender].pending != 0)
@@ -380,15 +381,15 @@ contract Beacon is Utils {
                 )
             ) revert VRFProofInvalid();
         } else {
-            requestToProofs[packed.id][beaconPos - 1] = keccak256(
+            requestToProofs[packed.id][beaconPos] = keccak256(
                 abi.encode(packed.vrf)
             );
         }
 
         bytes32 vrfHash = gammaToHash(packed.vrf.proof[0], packed.vrf.proof[1]);
 
-        requestToVrfHashes[packed.id][beaconPos - 1] = vrfHash;
-        reqValues[beaconPos - 1] = vrfHash;
+        requestToVrfHashes[packed.id][beaconPos] = vrfHash;
+        reqValues[beaconPos] = vrfHash;
         // Every 100 consecutive submissions, strikes are reset to 0
         _updateBeaconSubmissionCount(beacon);
 
@@ -450,7 +451,7 @@ contract Beacon is Utils {
         );
 
         // Dev fee
-        _chargeClient(accounts.client, developer, beaconFee);
+        _chargeClient(accounts.client, developer, packed.data.beaconFee);
 
         // Beacon fee
         uint256 submitFee = _handleSubmitFeeCharge(
@@ -460,7 +461,7 @@ contract Beacon is Utils {
             accounts.client
         );
 
-        requestToFeePaid[packed.id] += submitFee + beaconFee;
+        requestToFeePaid[packed.id] += submitFee + packed.data.beaconFee;
 
         // total fee + dev beaconFee
         // delete requests[packed.id];
@@ -483,8 +484,8 @@ contract Beacon is Utils {
 
         // Set challenge window time
         uint256[2] memory challengeWindow = [
-            block.number + expirationBlocks,
-            block.timestamp + expirationSeconds
+            block.number + configUints[CKEY_EXPIRATION_BLOCKS],
+            block.timestamp + configUints[CKEY_EXPIRATION_SECONDS]
         ];
         optRequestChallengeWindow[id] = challengeWindow;
 
@@ -496,7 +497,7 @@ contract Beacon is Utils {
             client
         );
 
-        requestToFeePaid[id] += submitFee + beaconFee;
+        requestToFeePaid[id] += submitFee + _beaconFee;
 
         emit OptimisticReady(id, challengeWindow[0], challengeWindow[1]);
 
@@ -613,10 +614,10 @@ contract Beacon is Utils {
         bytes32[3] memory reqValues,
         SRandomUintData memory data
     ) private view {
-        if (beacons[beaconPos - 1] != msg.sender && msg.sender != sequencer)
+        if (beacons[beaconPos] != msg.sender && msg.sender != sequencer)
             revert BeaconNotSelected();
 
-        if (reqValues[beaconPos - 1] != bytes32(0)) revert ResultExists();
+        if (reqValues[beaconPos] != bytes32(0)) revert ResultExists();
 
         // Check that only beacon and sequencer can submit the result
         if (msg.sender != beacon && msg.sender != sequencer)

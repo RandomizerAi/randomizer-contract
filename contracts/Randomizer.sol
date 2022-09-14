@@ -24,16 +24,9 @@ contract Randomizer is Client, Beacon {
     /// @notice One-time internal initializer of the contract.
     /// @dev To be called only once on deployment of RandomizerStatic (in constructor) or RandomizerUpgradeable (in initialize()).
     function init(
-        // VRF, Developer, Sequencer
+        // Developer, Sequencer
         address[2] memory _addresses,
-        uint8 _maxStrikes,
-        uint256 _minStakeEth,
-        uint256 _expirationBlocks,
-        uint256 _expirationSeconds,
-        // uint256 _minCollateralToken,
-        uint256 _requestMinGasLimit,
-        uint256 _requestMaxGasLimit,
-        uint256 _beaconFee,
+        uint256[7] memory _configUints,
         address[] memory _beacons,
         uint256[] memory _beaconPublicKeys,
         uint256[] memory _gasEstimates
@@ -42,15 +35,14 @@ contract Randomizer is Client, Beacon {
             _beaconPublicKeys.length == _beacons.length * 2,
             "BEACON_LENGTH"
         );
-        _transferOwnership(_addresses[1]);
+        _transferOwnership(_addresses[0]);
         developer = _addresses[0];
         sequencer = _addresses[1];
-        maxStrikes = _maxStrikes;
-        minStakeEth = _minStakeEth;
-        // minToken = _minCollateralToken;
-        expirationBlocks = _expirationBlocks;
-        expirationSeconds = _expirationSeconds;
-        beaconFee = _beaconFee;
+
+        for (uint256 i = 0; i < 7; i++) {
+            configUints[i] = _configUints[i];
+        }
+
         // Beacon.add(store, address(0));
         beacons.push(address(0));
         uint256 length = _beacons.length;
@@ -68,8 +60,7 @@ contract Randomizer is Client, Beacon {
                 0
             );
         }
-        requestMinGasLimit = _requestMinGasLimit;
-        requestMaxGasLimit = _requestMaxGasLimit;
+
         _status = _NOT_ENTERED;
         gasEstimates = SGasEstimates(
             _gasEstimates[0],
@@ -206,9 +197,10 @@ contract Randomizer is Client, Beacon {
             // The strikes are reset to 0 since it shouldn't be slashed at every following request
             if (
                 sBeacon[beaconsToStrike[i]].exists &&
-                (ethCollateral[beaconsToStrike[i]] < minStakeEth ||
+                (ethCollateral[beaconsToStrike[i]] <
+                    configUints[CKEY_MIN_STAKE_ETH] ||
                     // tokenCollateral[beaconsToStrike[i]] < minToken ||
-                    strikeBeacon.strikes > maxStrikes)
+                    strikeBeacon.strikes > configUints[CKEY_MAX_STRIKES])
             ) {
                 // Remove beacon from beacons
                 _removeBeacon(beaconsToStrike[i]);
@@ -246,7 +238,7 @@ contract Randomizer is Client, Beacon {
 
         // The paying non-submitter might fall below collateral here. It will be removed on next strike if it doesn't add collateral.
         uint256 renewFee = ((gasAtStart - gasleft()) * _getGasPrice()) +
-            beaconFee;
+            packed.data.beaconFee;
 
         uint256 refundToClient = requestToFeePaid[packed.id];
         uint256 totalCharge = renewFee + refundToClient;

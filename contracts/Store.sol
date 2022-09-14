@@ -8,6 +8,15 @@ import "./lib/Structs.sol";
 pragma solidity ^0.8.16;
 
 contract Store {
+    // Config keys for configUints
+    uint256 constant CKEY_MIN_STAKE_ETH = 0;
+    uint256 constant CKEY_EXPIRATION_BLOCKS = 1;
+    uint256 constant CKEY_EXPIRATION_SECONDS = 2;
+    uint256 constant CKEY_REQUEST_MIN_GAS_LIMIT = 3;
+    uint256 constant CKEY_REQUEST_MAX_GAS_LIMIT = 4;
+    uint256 constant CKEY_BEACON_FEE = 5;
+    uint256 constant CKEY_MAX_STRIKES = 6;
+
     // Re-entrancy guard for final beacon submit
     uint256 internal _status;
 
@@ -17,15 +26,19 @@ contract Store {
     address public sequencer;
 
     address[] internal beacons;
-    uint256 public minStakeEth;
-    uint256 public expirationBlocks;
-    uint256 public expirationSeconds;
-    uint256 internal requestMinGasLimit;
-    uint256 internal requestMaxGasLimit;
 
-    uint256 internal beaconFee;
+    // uint256 public minStakeEth;
+    // uint256 public expirationBlocks;
+    // uint256 public expirationSeconds;
+    // uint256 internal requestMinGasLimit;
+    // uint256 internal requestMaxGasLimit;
+    // uint256 internal beaconFee;
+    // uint256 internal maxStrikes;
+
+    // Reserve config uint space for additional future config variables
+    uint256[64] internal configUints;
+
     uint128 public latestRequestId;
-    uint8 internal maxStrikes;
     mapping(uint256 => bytes32) internal results;
 
     // Deposits
