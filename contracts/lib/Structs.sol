@@ -35,11 +35,6 @@ struct SRandomUintData {
     uint256 callbackGasLimit;
 }
 
-struct SPackedRSSeed {
-    bytes32 r;
-    bytes32 s;
-}
-
 struct SRequestEventData {
     uint256 ethReserved;
     uint256 beaconFee;
@@ -59,26 +54,10 @@ struct SAccounts {
     address[3] beacons;
 }
 
-struct FlatSignature {
-    bytes32[] r;
-    bytes32[] s;
-    uint8[] v;
-}
-
 struct SBeacon {
     uint256[2] publicKey;
     bool exists;
     uint8 strikes;
     uint8 consecutiveSubmissions;
     uint64 pending;
-}
-
-// Gas offsets
-struct SGasEstimates {
-    uint256 totalSubmit;
-    uint256 submit;
-    uint256 finalSubmit;
-    uint256 renew;
-    uint256 processOptimistic;
-    uint256 completeOptimistic;
 }

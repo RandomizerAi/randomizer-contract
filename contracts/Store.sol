@@ -27,16 +27,24 @@ contract Store {
 
     address[] internal beacons;
 
-    // uint256 public minStakeEth;
-    // uint256 public expirationBlocks;
-    // uint256 public expirationSeconds;
-    // uint256 internal requestMinGasLimit;
-    // uint256 internal requestMaxGasLimit;
-    // uint256 internal beaconFee;
-    // uint256 internal maxStrikes;
-
+    //   minStakeEth;
+    //   expirationBlocks;
+    //   expirationSeconds;
+    //   requestMinGasLimit;
+    //   requestMaxGasLimit;
+    //   beaconFee;
+    //   maxStrikes;
     // Reserve config uint space for additional future config variables
-    uint256[64] internal configUints;
+    uint256[48] internal configUints;
+
+    //  totalSubmit;
+    //  submit;
+    //  finalSubmit;
+    //  renew;
+    //  processOptimistic;
+    //  completeOptimistic;
+    // + reserve for future estimates
+    uint256[16] internal gasEstimates;
 
     uint128 public latestRequestId;
     mapping(uint256 => bytes32) internal results;
@@ -60,5 +68,5 @@ contract Store {
     // Optimistic request data
     mapping(uint128 => uint256[2]) internal optRequestChallengeWindow;
 
-    SGasEstimates public gasEstimates;
+    // SGasEstimates public gasEstimates;
 }

@@ -102,7 +102,7 @@ contract Admin is OwnableUpgradeable, Store {
         uint256 newValue
     );
     event UpdateSequencer(address oldSequencer, address newSequencer);
-    event UpdateConfigGasEstimates(uint256[6] from, uint256[6] to);
+    event UpdateConfigGasEstimates(uint256[16] from, uint256[16] to);
 
     error SenderNotDeveloper();
     error SenderNotProposedDeveloper();
@@ -147,26 +147,8 @@ contract Admin is OwnableUpgradeable, Store {
         emit UpdateConfigUint(key, old, _value);
     }
 
-    function setGasEstimates(uint256[6] calldata _amounts) external onlyOwner {
-        emit UpdateConfigGasEstimates(
-            [
-                gasEstimates.totalSubmit,
-                gasEstimates.submit,
-                gasEstimates.finalSubmit,
-                gasEstimates.renew,
-                gasEstimates.processOptimistic,
-                gasEstimates.completeOptimistic
-            ],
-            _amounts
-        );
-
-        gasEstimates = SGasEstimates(
-            _amounts[0],
-            _amounts[1],
-            _amounts[2],
-            _amounts[3],
-            _amounts[4],
-            _amounts[5]
-        );
+    function setGasEstimates(uint256[16] calldata _amounts) external onlyOwner {
+        emit UpdateConfigGasEstimates(gasEstimates, _amounts);
+        gasEstimates = _amounts;
     }
 }

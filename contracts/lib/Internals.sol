@@ -30,22 +30,21 @@ library Internals {
     struct ChallengeDynamicVars {
         uint128 id;
         bool vrfFailed;
-        address[3] beaconsToRemove;
         uint256 ethToSender;
     }
 
     struct ChallengeCallVars {
-        uint256[2][3] publicKeys;
+        uint256[2] publicKeys;
         uint256 feePaid;
         uint256 clientDeposit;
-        uint256[3] collaterals;
-        address[3] beacons;
+        uint256 collateral;
+        address beacon;
         address client;
     }
 
     struct ChallengeReturnData {
         bool vrfFailed;
-        address[3] beaconsToRemove;
+        address beaconToRemove;
         uint256 ethToSender;
         uint256 newRequestToFee;
         uint256 newClientDeposit;
@@ -148,76 +147,61 @@ library Internals {
     function _challenge(
         uint128 id,
         bytes32 seed,
-        SFastVerifyData[3] memory vrfDatas,
+        SFastVerifyData memory vrfData,
         ChallengeCallVars memory callVars,
         address vrf
     ) external returns (ChallengeReturnData memory) {
         // Iterate through requestToProofs and VRF fastVerify each
-
         ChallengeDynamicVars memory vars = ChallengeDynamicVars({
             id: id,
             vrfFailed: false,
-            beaconsToRemove: [address(0), address(0), address(0)],
             ethToSender: 0
         });
 
-        uint256 k = 0;
+        // Run VRF Secp256k1 fastVerify method
+        if (!_verify(callVars.publicKeys, vrfData, seed, vrf)) {
+            // Manipulating beacons pay for all transaction fees to client so far.
+            // Send full stake if beacon doesn't have enough.
 
-        for (uint256 i; i < 3; i++) {
-            // Run VRF Secp256k1 fastVerify method
-            if (!_verify(callVars.publicKeys[i], vrfDatas[i], seed, vrf)) {
-                // Manipulating beacons pay for all transaction fees to client so far.
-                // Send full stake if beacon doesn't have enough.
+            if (callVars.feePaid > 0 && callVars.collateral > 0) {
+                if (callVars.feePaid < callVars.collateral) {
+                    callVars.collateral -= callVars.feePaid;
+                    callVars.clientDeposit += callVars.feePaid;
+                    callVars.feePaid = 0;
 
-                if (callVars.feePaid > 0 && callVars.collaterals[i] > 0) {
-                    if (callVars.feePaid < callVars.collaterals[i]) {
-                        callVars.collaterals[i] -= callVars.feePaid;
-                        callVars.clientDeposit += callVars.feePaid;
-                        callVars.feePaid = 0;
+                    emit ChargeEth(
+                        callVars.beacon,
+                        callVars.client,
+                        callVars.feePaid,
+                        true,
+                        false
+                    );
+                } else {
+                    callVars.clientDeposit += callVars.collateral;
+                    callVars.feePaid -= callVars.collateral;
+                    callVars.collateral = 0;
 
-                        emit ChargeEth(
-                            callVars.beacons[i],
-                            callVars.client,
-                            callVars.feePaid,
-                            true,
-                            false
-                        );
-                    } else {
-                        callVars.clientDeposit += callVars.collaterals[i];
-                        callVars.feePaid -= callVars.collaterals[i];
-                        callVars.collaterals[i] = 0;
-
-                        emit ChargeEth(
-                            callVars.beacons[i],
-                            callVars.client,
-                            callVars.collaterals[i],
-                            true,
-                            false
-                        );
-                    }
-                }
-
-                vars.vrfFailed = true;
-                // Entire remaining stake of manipulating beacons should go to the challenger
-                // This penalty is possible because invalid VRF proofs can only be done on purpose
-                vars.ethToSender += callVars.collaterals[i];
-                callVars.collaterals[i] = 0;
-                {
-                    emit BeaconInvalidVRF(
-                        callVars.beacons[i],
-                        vars.id,
-                        seed,
-                        vrfDatas[i]
+                    emit ChargeEth(
+                        callVars.beacon,
+                        callVars.client,
+                        callVars.collateral,
+                        true,
+                        false
                     );
                 }
-                vars.beaconsToRemove[k] = callVars.beacons[i];
-                k++;
             }
+
+            vars.vrfFailed = true;
+            // Entire remaining stake of manipulating beacons should go to the challenger
+            // This penalty is possible because invalid VRF proofs can only be done on purpose
+            vars.ethToSender += callVars.collateral;
+            emit BeaconInvalidVRF(callVars.beacon, vars.id, seed, vrfData);
         }
+
         return
             ChallengeReturnData(
                 vars.vrfFailed,
-                vars.beaconsToRemove,
+                callVars.beacon,
                 vars.ethToSender,
                 callVars.feePaid,
                 callVars.clientDeposit

@@ -42,7 +42,7 @@ describe("Renew", function () {
         VRF: vrf.address
       }
     });
-    randomizer = await Randomizer.deploy([ethers.constants.AddressZero, ethers.constants.AddressZero], 3, "500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000]);
+    randomizer = await Randomizer.deploy([ethers.constants.AddressZero, ethers.constants.AddressZero], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000]);
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(randomizer.address);
 
@@ -127,7 +127,7 @@ describe("Renew", function () {
     // Submit signature
     const data = await vrfHelper.getSubmitData(signer.address, request);
 
-    await randomizer.connect(signer)['submitRandom(address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, false);
+    await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, false);
 
 
 
@@ -189,7 +189,7 @@ describe("Renew", function () {
     for (const signer of selectedSigners) {
       const data = await vrfHelper.getSubmitData(signer.address, request);
 
-      const tx = await randomizer.connect(signer)['submitRandom(address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, false);
+      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, false);
 
       const res = await tx.wait();
       const requestEvent = randomizer.interface.parseLog(res.logs[0]);
@@ -246,7 +246,7 @@ describe("Renew", function () {
         VRF: vrf.address
       }
     });
-    const randomizer2 = await Randomizer2.deploy([ethers.constants.AddressZero, ethers.constants.AddressZero], 3, "500000000000000000", 50, 600, 10000, 3000000, ethers.utils.parseEther("0.00005"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address], [ecKeys[0], ecKeys[1], ecKeys[2], ecKeys[3], ecKeys[4], ecKeys[5], ecKeys[6], ecKeys[7], ecKeys[8], ecKeys[9]], [570000, 90000, 65000, 21000, 21000, 21000]);
+    const randomizer2 = await Randomizer2.deploy([ethers.constants.AddressZero, ethers.constants.AddressZero], ["500000000000000000", 50, 600, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address], [ecKeys[0], ecKeys[1], ecKeys[2], ecKeys[3], ecKeys[4], ecKeys[5], ecKeys[6], ecKeys[7], ecKeys[8], ecKeys[9]], [570000, 90000, 65000, 21000, 21000, 21000]);
     const testCallback2 = await (await ethers.getContractFactory("TestCallback")).deploy(randomizer2.address);
 
     await randomizer2.clientDeposit(testCallback2.address, { value: ethers.utils.parseEther("50") });
@@ -262,7 +262,7 @@ describe("Renew", function () {
 
     // Make signature
     const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
-    await randomizer2.connect(selectedSigners[0])['submitRandom(address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, false);
+    await randomizer2.connect(selectedSigners[0])['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, false);
 
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
     const oldClientBalanceOf = ethers.BigNumber.from(await randomizer2.clientBalanceOf(request.client));
@@ -310,7 +310,7 @@ describe("Renew", function () {
 
     const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
     // Submit request with first selectedSigner
-    await randomizer.connect(selectedSigners[0])['submitRandom(address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, false);
+    await randomizer.connect(selectedSigners[0])['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, false);
     const renewUintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
     // Mine 20 blocks with 45 seconds per block
     await hre.network.provider.send("hardhat_mine", ["0x20", ethers.utils.hexlify(45)]);
@@ -363,7 +363,7 @@ describe("Renew", function () {
 
     const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
 
-    await randomizer.connect(selectedSigners[0])['submitRandom(address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, false);
+    await randomizer.connect(selectedSigners[0])['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, false);
 
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
     // Renew the request

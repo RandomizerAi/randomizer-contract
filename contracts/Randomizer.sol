@@ -61,15 +61,12 @@ contract Randomizer is Client, Beacon {
             );
         }
 
+        require(_gasEstimates.length <= 16, "GAS_ESTIMATES_LENGTH");
+        for (uint256 i; i < length; i++) {
+            gasEstimates[i] = _gasEstimates[i];
+        }
+
         _status = _NOT_ENTERED;
-        gasEstimates = SGasEstimates(
-            _gasEstimates[0],
-            _gasEstimates[1],
-            _gasEstimates[2],
-            _gasEstimates[3],
-            _gasEstimates[4],
-            _gasEstimates[5]
-        );
     }
 
     function getResult(uint128 _request) public view returns (bytes32) {
@@ -83,7 +80,7 @@ contract Randomizer is Client, Beacon {
         bool _optimistic
     ) external {
         // 20k gas offset for balance updates after fee calculation
-        uint256 gasAtStart = gasleft() + gasEstimates.renew;
+        uint256 gasAtStart = gasleft() + gasEstimates[3];
 
         if (_optimistic) {
             if (optRequestChallengeWindow[uint128(_uintData[0])][0] != 0)

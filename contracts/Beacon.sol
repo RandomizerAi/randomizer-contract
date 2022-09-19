@@ -137,11 +137,11 @@ contract Beacon is Utils {
     // 7 uint256 _callbackGasLimit,
     // 8-17 VRF fastVerify uint256s (proof[4], uPoint[2], vComponents[4])
     function submitRandom(
+        uint256 beaconPos,
         address[4] calldata _addressData,
         uint256[18] calldata _uintData,
         bytes32[3] calldata _rsAndSeed,
-        uint8 _v,
-        uint256 beaconPos
+        uint8 _v
     ) public {
         uint256 gasAtStart = gasleft();
 
@@ -182,11 +182,11 @@ contract Beacon is Utils {
 
     // Override that uses msg.sender instead of address based on signature
     function submitRandom(
+        uint256 beaconPos,
         address[4] calldata _addressData,
         uint256[18] calldata _uintData,
         bytes32 seed,
-        bool optimistic,
-        uint256 beaconPos
+        bool optimistic
     ) public {
         uint256 gasAtStart = gasleft();
 
@@ -209,16 +209,13 @@ contract Beacon is Utils {
 
     /// @notice Challenges a VRF submission. If the challenge is successful, manipulating beacon stakes go to the challenger and a new request is made.
     function challenge(
+        uint256 beaconPos,
         address[4] calldata _addressData,
         uint256[18] calldata _uintData,
         bytes32 seed,
-        SFastVerifyData[3] memory _vrfData
+        SFastVerifyData memory _vrfData
     ) external {
         // Request is challengeable until the request is completed by a complete() call
-
-        if (optRequestChallengeWindow[uint128(_uintData[0])][0] == 0)
-            revert NotChallengeable();
-
         (
             SAccounts memory accounts,
             SPackedSubmitData memory packed
@@ -228,33 +225,24 @@ contract Beacon is Utils {
 
         // Iterate through requestToProofs and VRF fastVerify each
 
-        uint256[2][3] memory publicKeys;
-        uint256[3] memory collaterals;
+        // Check that encoded vrfData matches the hash stores in proof
+        if (
+            keccak256(abi.encode(_vrfData)) !=
+            requestToProofs[packed.id][beaconPos]
+        ) revert("VRFDataMismatch");
 
-        for (uint256 i = 0; i < 3; i++) {
-            // Check that encoded vrfData matches the hash stores in proof
-            if (
-                keccak256(abi.encode(_vrfData[i])) !=
-                requestToProofs[packed.id][i]
-            ) revert("VRFDataMismatch");
-
-            publicKeys[i] = [
-                sBeacon[accounts.beacons[i]].publicKey[0],
-                sBeacon[accounts.beacons[i]].publicKey[1]
-            ];
-            collaterals[i] = ethCollateral[accounts.beacons[i]];
-        }
+        address beacon = accounts.beacons[beaconPos];
 
         Internals.ChallengeReturnData memory cd = Internals._challenge(
             packed.id,
             seed,
             _vrfData,
             Internals.ChallengeCallVars({
-                publicKeys: publicKeys,
+                publicKeys: sBeacon[beacon].publicKey,
                 feePaid: requestToFeePaid[packed.id],
                 clientDeposit: ethDeposit[accounts.client],
-                collaterals: collaterals,
-                beacons: accounts.beacons,
+                collateral: ethCollateral[beacon],
+                beacon: beacon,
                 client: accounts.client
             }),
             address(VRF)
@@ -262,25 +250,44 @@ contract Beacon is Utils {
 
         // Iterate through beaconsToRemove and remove them
         // Don't need to emit an event because Internals already emits BeaconInvalidVRF
-
-        for (uint256 i = 0; i < cd.beaconsToRemove.length; i++) {
-            if (cd.beaconsToRemove[i] != address(0)) {
-                ethCollateral[cd.beaconsToRemove[i]] = 0;
-                _removeBeacon(cd.beaconsToRemove[i]);
-            }
-        }
-
-        requestToFeePaid[packed.id] = cd.newRequestToFee;
-        ethDeposit[accounts.client] = cd.newClientDeposit;
-        ethCollateral[msg.sender] += cd.ethToSender;
-
         if (cd.vrfFailed) {
+            requestToFeePaid[packed.id] = cd.newRequestToFee;
+            ethDeposit[accounts.client] = cd.newClientDeposit;
+            ethCollateral[msg.sender] += cd.ethToSender;
+            ethCollateral[beacon] = 0;
+            _removeBeacon(beacon);
             // Delete the old request and generate a new one with the same parameters (except for new seed, beacons, and block data)
             delete optRequestChallengeWindow[packed.id];
-            delete requestToProofs[packed.id];
-            delete requestToVrfHashes[packed.id];
+            delete requestToProofs[packed.id][beaconPos];
+            delete requestToVrfHashes[packed.id][beaconPos];
 
-            _generateRequest(packed.id, accounts.client, packed.data, true);
+            // Replace the beacon in the request and emit RequestBeacon for the new beacon
+            address randomBeacon = _randomBeacon(seed, accounts.beacons);
+            accounts.beacons[beaconPos] = randomBeacon;
+            requestToHash[packed.id] = _getRequestHash(
+                packed.id,
+                accounts,
+                packed.data,
+                seed,
+                true
+            );
+            emit RequestBeacon(
+                packed.id,
+                SRequestEventData(
+                    packed.data.ethReserved,
+                    packed.data.beaconFee,
+                    packed.data.height,
+                    packed.data.timestamp,
+                    packed.data.expirationSeconds,
+                    packed.data.expirationBlocks,
+                    packed.data.callbackGasLimit,
+                    accounts.client,
+                    accounts.beacons,
+                    seed,
+                    true
+                ),
+                randomBeacon
+            );
         } else {
             revert("NoInvalidProofs");
         }
@@ -327,10 +334,9 @@ contract Beacon is Utils {
         // Dev fee
         _chargeClient(accounts.client, developer, packed.data.beaconFee);
 
-        uint256 fee = ((gasAtStart -
-            gasleft() +
-            gasEstimates.completeOptimistic) * _getGasPrice()) +
-            packed.data.beaconFee;
+        // Caller fee
+        uint256 fee = ((gasAtStart - gasleft() + gasEstimates[5]) *
+            _getGasPrice()) + packed.data.beaconFee;
         requestToFeePaid[packed.id] += fee;
         _chargeClient(accounts.client, msg.sender, fee);
     }
@@ -457,7 +463,7 @@ contract Beacon is Utils {
         uint256 submitFee = _handleSubmitFeeCharge(
             gasAtStart,
             packed.data.beaconFee,
-            gasEstimates.finalSubmit,
+            gasEstimates[2],
             accounts.client
         );
 
@@ -493,7 +499,7 @@ contract Beacon is Utils {
         uint256 submitFee = _handleSubmitFeeCharge(
             gasAtStart,
             _beaconFee,
-            gasEstimates.processOptimistic,
+            gasEstimates[4],
             client
         );
 
@@ -574,7 +580,7 @@ contract Beacon is Utils {
         }
 
         // 62k offset for charge
-        uint256 fee = ((gasAtStart - gasleft() + gasEstimates.submit) *
+        uint256 fee = ((gasAtStart - gasleft() + gasEstimates[1]) *
             _getGasPrice()) + packed.data.beaconFee;
         requestToFeePaid[packed.id] += fee;
         _chargeClient(accounts.client, msg.sender, fee);
@@ -609,12 +615,12 @@ contract Beacon is Utils {
 
     function _checkCanSubmit(
         address beacon,
-        address[3] memory beacons,
+        address[3] memory _beacons,
         uint256 beaconPos,
         bytes32[3] memory reqValues,
         SRandomUintData memory data
     ) private view {
-        if (beacons[beaconPos] != msg.sender && msg.sender != sequencer)
+        if (_beacons[beaconPos] != msg.sender && msg.sender != sequencer)
             revert BeaconNotSelected();
 
         if (reqValues[beaconPos] != bytes32(0)) revert ResultExists();
