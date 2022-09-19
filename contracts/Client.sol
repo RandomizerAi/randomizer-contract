@@ -62,7 +62,7 @@ contract Client is Utils {
         returns (uint256)
     {
         return
-            ((gasEstimates[0] + _callbackGasLimit) * _getGasPrice()) +
+            ((gasEstimates[GKEY_SUBMIT] + _callbackGasLimit) * _getGasPrice()) +
             (configUints[CKEY_BEACON_FEE] * 4); //  3 beacon premium fees, 1 dev fee;
     }
 

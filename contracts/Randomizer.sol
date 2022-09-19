@@ -19,7 +19,7 @@ contract Randomizer is Client, Beacon {
         uint256 expirationHeight
     );
 
-    error CantRenewDuringChallengeWindow();
+    error CantRenewDuringDisputeWindow();
 
     /// @notice One-time internal initializer of the contract.
     /// @dev To be called only once on deployment of RandomizerStatic (in constructor) or RandomizerUpgradeable (in initialize()).
@@ -80,11 +80,11 @@ contract Randomizer is Client, Beacon {
         bool _optimistic
     ) external {
         // 20k gas offset for balance updates after fee calculation
-        uint256 gasAtStart = gasleft() + gasEstimates[3];
+        uint256 gasAtStart = gasleft() + gasEstimates[GKEY_PROCESS_OPTIMISTIC];
 
         if (_optimistic) {
-            if (optRequestChallengeWindow[uint128(_uintData[0])][0] != 0)
-                revert CantRenewDuringChallengeWindow();
+            if (optRequestDisputeWindow[uint128(_uintData[0])][0] != 0)
+                revert CantRenewDuringDisputeWindow();
         }
 
         SAccounts memory accounts = _resolveAddressCalldata(_addressData);

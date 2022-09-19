@@ -27,13 +27,13 @@ library Internals {
         SFastVerifyData vrfData
     );
 
-    struct ChallengeDynamicVars {
+    struct DisputeDynamicVars {
         uint128 id;
         bool vrfFailed;
         uint256 ethToSender;
     }
 
-    struct ChallengeCallVars {
+    struct DisputeCallVars {
         uint256[2] publicKeys;
         uint256 feePaid;
         uint256 clientDeposit;
@@ -42,7 +42,7 @@ library Internals {
         address client;
     }
 
-    struct ChallengeReturnData {
+    struct DisputeReturnData {
         bool vrfFailed;
         address beaconToRemove;
         uint256 ethToSender;
@@ -53,7 +53,7 @@ library Internals {
     struct SCanCompleteData {
         uint256 expirationSeconds;
         uint256 expirationBlocks;
-        uint256[2] challengeWindow;
+        uint256[2] disputeWindow;
         address[3] beacons;
         address sequencer;
     }
@@ -144,15 +144,15 @@ library Internals {
             );
     }
 
-    function _challenge(
+    function _dispute(
         uint128 id,
         bytes32 seed,
         SFastVerifyData memory vrfData,
-        ChallengeCallVars memory callVars,
+        DisputeCallVars memory callVars,
         address vrf
-    ) external returns (ChallengeReturnData memory) {
+    ) external returns (DisputeReturnData memory) {
         // Iterate through requestToProofs and VRF fastVerify each
-        ChallengeDynamicVars memory vars = ChallengeDynamicVars({
+        DisputeDynamicVars memory vars = DisputeDynamicVars({
             id: id,
             vrfFailed: false,
             ethToSender: 0
@@ -192,14 +192,14 @@ library Internals {
             }
 
             vars.vrfFailed = true;
-            // Entire remaining stake of manipulating beacons should go to the challenger
+            // Entire remaining stake of manipulating beacons should go to the disputer
             // This penalty is possible because invalid VRF proofs can only be done on purpose
             vars.ethToSender += callVars.collateral;
             emit BeaconInvalidVRF(callVars.beacon, vars.id, seed, vrfData);
         }
 
         return
-            ChallengeReturnData(
+            DisputeReturnData(
                 vars.vrfFailed,
                 callVars.beacon,
                 vars.ethToSender,
@@ -231,9 +231,9 @@ library Internals {
         private
         view
     {
-        uint256 completeHeight = d.challengeWindow[0] +
+        uint256 completeHeight = d.disputeWindow[0] +
             (d.expirationBlocks * multiplier);
-        uint256 completeTimestamp = d.challengeWindow[1] +
+        uint256 completeTimestamp = d.disputeWindow[1] +
             (multiplier * 5 minutes);
         if (
             block.number < completeHeight || block.timestamp < completeTimestamp

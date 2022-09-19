@@ -28,7 +28,7 @@ contract Beacon is Utils {
         uint256 minBlock
     );
     error SenderNotBeaconOrSequencer();
-    error NotChallengeable();
+    error NotDisputeable();
 
     /// @notice Returns a list of active beacon addresses
     function getBeacons() external view returns (address[] memory) {
@@ -141,7 +141,8 @@ contract Beacon is Utils {
         address[4] calldata _addressData,
         uint256[18] calldata _uintData,
         bytes32[3] calldata _rsAndSeed,
-        uint8 _v
+        uint8 _v,
+        bool optimistic
     ) public {
         uint256 gasAtStart = gasleft();
 
@@ -176,7 +177,7 @@ contract Beacon is Utils {
             gasAtStart,
             packed,
             accounts,
-            false
+            optimistic
         );
     }
 
@@ -207,23 +208,21 @@ contract Beacon is Utils {
         );
     }
 
-    /// @notice Challenges a VRF submission. If the challenge is successful, manipulating beacon stakes go to the challenger and a new request is made.
-    function challenge(
+    /// @notice Disputes a VRF submission. If the VRF validation in this function fails, the manipulating beacon's stake goes to the disputer and a new request is made.
+    function dispute(
         uint256 beaconPos,
         address[4] calldata _addressData,
         uint256[18] calldata _uintData,
         bytes32 seed,
         SFastVerifyData memory _vrfData
     ) external {
-        // Request is challengeable until the request is completed by a complete() call
+        // Request is disputeable until the request is completed by a complete() call
         (
             SAccounts memory accounts,
             SPackedSubmitData memory packed
         ) = _getAccountsAndPackedData(_addressData, _uintData);
 
         _validateRequestData(packed.id, seed, accounts, packed.data, true);
-
-        // Iterate through requestToProofs and VRF fastVerify each
 
         // Check that encoded vrfData matches the hash stores in proof
         if (
@@ -233,11 +232,11 @@ contract Beacon is Utils {
 
         address beacon = accounts.beacons[beaconPos];
 
-        Internals.ChallengeReturnData memory cd = Internals._challenge(
+        Internals.DisputeReturnData memory cd = Internals._dispute(
             packed.id,
             seed,
             _vrfData,
-            Internals.ChallengeCallVars({
+            Internals.DisputeCallVars({
                 publicKeys: sBeacon[beacon].publicKey,
                 feePaid: requestToFeePaid[packed.id],
                 clientDeposit: ethDeposit[accounts.client],
@@ -257,7 +256,7 @@ contract Beacon is Utils {
             ethCollateral[beacon] = 0;
             _removeBeacon(beacon);
             // Delete the old request and generate a new one with the same parameters (except for new seed, beacons, and block data)
-            delete optRequestChallengeWindow[packed.id];
+            delete optRequestDisputeWindow[packed.id];
             delete requestToProofs[packed.id][beaconPos];
             delete requestToVrfHashes[packed.id][beaconPos];
 
@@ -293,7 +292,7 @@ contract Beacon is Utils {
         }
     }
 
-    /// @notice Complete an optimistic random submission after the challenge window is over.
+    /// @notice Complete an optimistic random submission after the dispute window is over.
     function completeOptimistic(
         address[4] calldata _addressData,
         uint256[18] calldata _uintData,
@@ -307,12 +306,12 @@ contract Beacon is Utils {
         ) = _getAccountsAndPackedData(_addressData, _uintData);
         _validateRequestData(packed.id, seed, accounts, packed.data, true);
 
-        // Require that this function can only be called by the first beacon in the first 5 minutes of the challenge window, then by the second beacon in the next 5 minutes, and so on.
+        // Require that this function can only be called by the first beacon in the first 5 minutes of the dispute window, then by the second beacon in the next 5 minutes, and so on.
         Internals._optimisticCanComplete(
             Internals.SCanCompleteData({
                 expirationSeconds: packed.data.expirationSeconds,
                 expirationBlocks: packed.data.expirationBlocks,
-                challengeWindow: optRequestChallengeWindow[packed.id],
+                disputeWindow: optRequestDisputeWindow[packed.id],
                 beacons: accounts.beacons,
                 sequencer: sequencer
             })
@@ -327,7 +326,7 @@ contract Beacon is Utils {
         );
 
         delete requestToVrfHashes[packed.id];
-        delete optRequestChallengeWindow[packed.id];
+        delete optRequestDisputeWindow[packed.id];
         delete requestToProofs[packed.id];
         delete requestToHash[packed.id];
 
@@ -398,7 +397,6 @@ contract Beacon is Utils {
         reqValues[beaconPos] = vrfHash;
         // Every 100 consecutive submissions, strikes are reset to 0
         _updateBeaconSubmissionCount(beacon);
-
         // Store hash of valid signature to results
         if (submissionsCount < 2) {
             //             address[] memory _addresses,
@@ -417,6 +415,14 @@ contract Beacon is Utils {
                 reqValues,
                 optimistic
             );
+            if (optimistic)
+                emit OptimisticSubmission(
+                    beacon,
+                    packed.id,
+                    packed.vrf.proof,
+                    packed.vrf.uPoint,
+                    packed.vrf.vComponents
+                );
         } else {
             if (!optimistic)
                 _processFinalSubmission(
@@ -463,7 +469,7 @@ contract Beacon is Utils {
         uint256 submitFee = _handleSubmitFeeCharge(
             gasAtStart,
             packed.data.beaconFee,
-            gasEstimates[2],
+            gasEstimates[GKEY_RENEW],
             accounts.client
         );
 
@@ -477,7 +483,7 @@ contract Beacon is Utils {
         _status = _NOT_ENTERED;
     }
 
-    // Called on final submission, adds time window for challenges after which it can be completed
+    // Called on final submission, adds time window for disputes after which it can be completed
     function _processFinalOptimisticSubmission(
         uint128 id,
         address client,
@@ -488,24 +494,24 @@ contract Beacon is Utils {
         _status = _ENTERED;
         // Final beacon submission logic (callback & complete)
 
-        // Set challenge window time
-        uint256[2] memory challengeWindow = [
+        // Set dispute window time
+        uint256[2] memory disputeWindow = [
             block.number + configUints[CKEY_EXPIRATION_BLOCKS],
             block.timestamp + configUints[CKEY_EXPIRATION_SECONDS]
         ];
-        optRequestChallengeWindow[id] = challengeWindow;
+        optRequestDisputeWindow[id] = disputeWindow;
 
         // Beacon fee
         uint256 submitFee = _handleSubmitFeeCharge(
             gasAtStart,
             _beaconFee,
-            gasEstimates[4],
+            gasEstimates[GKEY_COMPLETE_OPTIMISTIC],
             client
         );
 
         requestToFeePaid[id] += submitFee + _beaconFee;
 
-        emit OptimisticReady(id, challengeWindow[0], challengeWindow[1]);
+        emit OptimisticReady(id, disputeWindow[0], disputeWindow[1]);
 
         _status = _NOT_ENTERED;
     }
@@ -530,7 +536,8 @@ contract Beacon is Utils {
         uint256 submissionsCount,
         bytes32[3] memory reqValues,
         bool optimistic
-    ) private {
+    ) private returns (SRequestEventData memory) {
+        SRequestEventData memory newEventData;
         // Second to last requests final beacon
         if (submissionsCount == 1) {
             bytes32 lastBeaconSeed;
@@ -560,30 +567,32 @@ contract Beacon is Utils {
                 optimistic
             );
 
-            emit RequestBeacon(
-                packed.id,
-                SRequestEventData(
-                    packed.data.ethReserved,
-                    packed.data.beaconFee,
-                    packed.data.height,
-                    packed.data.timestamp,
-                    packed.data.expirationSeconds,
-                    packed.data.expirationBlocks,
-                    packed.data.callbackGasLimit,
-                    accounts.client,
-                    accounts.beacons,
-                    seed,
-                    optimistic
-                ),
-                randomBeacon
+            newEventData = SRequestEventData(
+                packed.data.ethReserved,
+                packed.data.beaconFee,
+                packed.data.height,
+                packed.data.timestamp,
+                packed.data.expirationSeconds,
+                packed.data.expirationBlocks,
+                packed.data.callbackGasLimit,
+                accounts.client,
+                accounts.beacons,
+                seed,
+                optimistic
             );
+
+            emit RequestBeacon(packed.id, newEventData, randomBeacon);
         }
 
         // 62k offset for charge
-        uint256 fee = ((gasAtStart - gasleft() + gasEstimates[1]) *
-            _getGasPrice()) + packed.data.beaconFee;
+        uint256 fee = ((gasAtStart -
+            gasleft() +
+            gasEstimates[GKEY_FINAL_SUBMIT]) * _getGasPrice()) +
+            packed.data.beaconFee;
         requestToFeePaid[packed.id] += fee;
         _chargeClient(accounts.client, msg.sender, fee);
+
+        return newEventData;
     }
 
     function _validateRequestData(

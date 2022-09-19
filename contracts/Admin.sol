@@ -72,14 +72,7 @@ contract Admin is OwnableUpgradeable, Store {
         SRequestEventData request,
         address indexed beacon
     );
-    event Strike(
-        address indexed beacon,
-        address indexed striker,
-        address indexed client,
-        uint128 id,
-        uint256 amount,
-        uint256 slashedTokens
-    );
+
     event CallbackFailed(
         address indexed client,
         uint128 indexed id,
@@ -90,6 +83,14 @@ contract Admin is OwnableUpgradeable, Store {
         uint128 indexed id,
         uint256 completeTime,
         uint256 completeHeight
+    );
+
+    event OptimisticSubmission(
+        address indexed beacon,
+        uint128 indexed id,
+        uint256[4] proof,
+        uint256[2] uPoint,
+        uint256[4] vComponents
     );
 
     // Admin events

@@ -17,6 +17,13 @@ contract Store {
     uint256 constant CKEY_BEACON_FEE = 5;
     uint256 constant CKEY_MAX_STRIKES = 6;
 
+    // Gas keys for estimateGas
+    uint256 constant GKEY_SUBMIT = 0;
+    uint256 constant GKEY_FINAL_SUBMIT = 1;
+    uint256 constant GKEY_RENEW = 2;
+    uint256 constant GKEY_PROCESS_OPTIMISTIC = 3;
+    uint256 constant GKEY_COMPLETE_OPTIMISTIC = 4;
+
     // Re-entrancy guard for final beacon submit
     uint256 internal _status;
 
@@ -27,23 +34,8 @@ contract Store {
 
     address[] internal beacons;
 
-    //   minStakeEth;
-    //   expirationBlocks;
-    //   expirationSeconds;
-    //   requestMinGasLimit;
-    //   requestMaxGasLimit;
-    //   beaconFee;
-    //   maxStrikes;
-    // Reserve config uint space for additional future config variables
+    // Reserve uint space for additional future config kv stores
     uint256[48] internal configUints;
-
-    //  totalSubmit;
-    //  submit;
-    //  finalSubmit;
-    //  renew;
-    //  processOptimistic;
-    //  completeOptimistic;
-    // + reserve for future estimates
     uint256[16] internal gasEstimates;
 
     uint128 public latestRequestId;
@@ -66,7 +58,7 @@ contract Store {
     mapping(address => uint256) internal ethCollateral;
 
     // Optimistic request data
-    mapping(uint128 => uint256[2]) internal optRequestChallengeWindow;
+    mapping(uint128 => uint256[2]) internal optRequestDisputeWindow;
 
     // SGasEstimates public gasEstimates;
 }
