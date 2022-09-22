@@ -24,19 +24,25 @@ describe("VRF", function () {
       ],
     });
     signers = await ethers.getSigners();
+    const VRF = await ethers.getContractFactory("VRF");
+    vrf = await VRF.deploy();
+    const Internals = await ethers.getContractFactory("Internals");
+    const lib = await Internals.deploy();
+    const Randomizer = await ethers.getContractFactory("RandomizerWithStorageControls", {
+      libraries: {
+        Internals: lib.address,
+        VRF: vrf.address
+      },
+    });
+
     let ecKeys = [];
     let i = 0;
     while (i < 6) {
-      const keys = vrfHelper.getVrfPublicKeys(await signers[i].getAddress());
+      const keys = vrfHelper.getVrfPublicKeys(signers[i].address);
       ecKeys = ecKeys.concat(keys);
       i++;
     }
-    console.log(ecKeys.length);
-    const VRF = await ethers.getContractFactory("VRF");
-    vrf = await VRF.deploy();
-    const Randomizer = await ethers.getContractFactory("RandomizerUpgradeable");
-    randomizer = await upgrades.deployProxy(Randomizer, [[vrf.address, signers[0].address, signers[0].address], 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000]]);
-    await randomizer.deployed();
+    randomizer = await Randomizer.deploy([signers[6].address, signers[6].address], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]);
   });
 
   it("generates proof for message and verifies client-side and on-chain", async function () {
@@ -46,13 +52,11 @@ describe("VRF", function () {
     const vKeys = [keypair.public_key.x.toString(), keypair.public_key.y.toString()];
     const vProof = [proof.decoded.gammaX.toString(), proof.decoded.gammaY.toString(), proof.decoded.c.toString(), proof.decoded.s.toString()];
     const verified = await vrf.verify(vKeys, vProof, message);
-    console.log("verified", verified);
     const params = await vrf.computeFastVerifyParams(
       vKeys,
       vProof,
       message
     );
-    console.log(params);
     const verify = await vrf.fastVerify(vKeys, vProof, message, params[0], params[1]);
     // Bytes to string
     // const gamma = await randomizer.gammaToHash(vProof[0], vProof[1]);

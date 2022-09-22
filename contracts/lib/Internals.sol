@@ -65,6 +65,8 @@ library Internals {
         uint256 completableTimestamp
     );
 
+    // error NotCompleteable();
+
     /// @dev Replaces all non-submitting beacons from a request (called when a request is renewed)
     function _replaceNonSubmitters(
         uint128 _request,
@@ -208,41 +210,39 @@ library Internals {
             );
     }
 
-    function _optimisticCanComplete(SCanCompleteData memory d) external view {
-        bool isBeaconOrSequencer;
-        if (msg.sender == d.sequencer) {
-            _checkCanComplete(d, 3);
-            isBeaconOrSequencer = true;
-        } else {
-            for (uint256 i; i < 3; i++) {
-                if (d.beacons[i] == msg.sender) {
-                    _checkCanComplete(d, i);
-                    isBeaconOrSequencer = true;
-                    break;
-                }
-            }
-            if (!isBeaconOrSequencer) {
-                _checkCanComplete(d, 4);
-            }
-        }
-    }
+    // function _optimisticCanComplete(SCanCompleteData memory d) external view {
+    //     if (d.disputeWindow[0] == 0) {
+    //         revert NotCompleteable();
+    //     }
+    //     bool isBeaconOrSequencer;
+    //     if (msg.sender == d.sequencer) {
+    //         _checkCanComplete(d, 3);
+    //     } else {
+    //         for (uint256 i; i < 3; i++) {
+    //             if (d.beacons[i] == msg.sender) {
+    //                 _checkCanComplete(d, i);
+    //                 break;
+    //             }
+    //         }
+    //     }
+    // }
 
-    function _checkCanComplete(SCanCompleteData memory d, uint256 multiplier)
-        private
-        view
-    {
-        uint256 completeHeight = d.disputeWindow[0] +
-            (d.expirationBlocks * multiplier);
-        uint256 completeTimestamp = d.disputeWindow[1] +
-            (multiplier * 5 minutes);
-        if (
-            block.number < completeHeight || block.timestamp < completeTimestamp
-        )
-            revert NotYetCompletableBySender(
-                block.number,
-                completeHeight,
-                block.timestamp,
-                completeTimestamp
-            );
-    }
+    // function _optCanComplete(SCanCompleteData memory d, uint256 multiplier)
+    //     private
+    //     view
+    // {
+    //     uint256 completeHeight = d.disputeWindow[0] +
+    //         (d.expirationBlocks * multiplier);
+    //     uint256 completeTimestamp = d.disputeWindow[1] +
+    //         (multiplier * 5 minutes);
+    //     if (
+    //         block.number < completeHeight || block.timestamp < completeTimestamp
+    //     )
+    //         revert NotYetCompletableBySender(
+    //             block.number,
+    //             completeHeight,
+    //             block.timestamp,
+    //             completeTimestamp
+    //         );
+    // }
 }

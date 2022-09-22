@@ -56,13 +56,16 @@ contract Client is Utils {
 
     /// @notice Gets fee estimate for full request fulfillment
     /// @dev If your users pay for a random request, use this to calculate how much ETH a user should add to your payable function.
-    function getFeeEstimate(uint256 _callbackGasLimit)
+    function getFeeEstimate(uint256 _callbackGasLimit, bool _optimistic)
         public
         view
         returns (uint256)
     {
+        uint256 gasEstimate = _optimistic
+            ? gasEstimates[GKEY_OPT_SUBMIT_TOTAL]
+            : gasEstimates[GKEY_SUBMIT_TOTAL];
         return
-            ((gasEstimates[GKEY_SUBMIT] + _callbackGasLimit) * _getGasPrice()) +
+            ((gasEstimate + _callbackGasLimit) * _getGasPrice()) +
             (configUints[CKEY_BEACON_FEE] * 4); //  3 beacon premium fees, 1 dev fee;
     }
 
@@ -96,7 +99,7 @@ contract Client is Utils {
             );
 
         // Requester must have enough to cover gas for each beacon + the callback gas limit
-        uint256 estimateFee = getFeeEstimate(_callbackGasLimit);
+        uint256 estimateFee = getFeeEstimate(_callbackGasLimit, _optimistic);
 
         if (
             ethDeposit[msg.sender] < ethReserved[msg.sender] ||

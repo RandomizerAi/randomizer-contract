@@ -20,7 +20,7 @@ struct SFastVerifyData {
     uint256[4] vComponents;
 }
 
-struct SPackedRenewData {
+struct SPackedUintData {
     uint128 id;
     SRandomUintData data;
 }

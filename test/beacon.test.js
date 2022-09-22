@@ -1,8 +1,9 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
+const vrfHelper = require("./helpers.js");
 
-describe("Beacon", function () {
+describe("Beacon Tests", function () {
   const signAndCallback = async (request) => {
     // Get beacons
     const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
@@ -18,12 +19,9 @@ describe("Beacon", function () {
     let selectedFinalBeacon;
     for (const signer of selectedSigners) {
       // await randomizer.testCharge(testCallback.address, signer.address, 1);
-      const flatSig = await signer.signMessage(messageHashBytes);
-      const sig = ethers.utils.splitSignature(flatSig);
-      const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
-      const addressData = [request.client].concat(request.beacons);
-      const bytesData = [sig.r, sig.s, request.seed];
-      const tx = await randomizer.connect(signer).submitRandom(addressData, uintData, bytesData);
+      const data = await vrfHelper.getSubmitData(signer.address, request);
+      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, false);
+
       const res = await tx.wait();
       const requestEvent = randomizer.interface.parseLog(res.logs[0]);
 
@@ -37,12 +35,8 @@ describe("Beacon", function () {
       }
     }
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
-    const flatSig = await finalSigner.signMessage(messageHashBytes);
-    const sig = ethers.utils.splitSignature(flatSig);
-    const uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
-    const addressData = [request.client].concat(request.beacons);
-    const bytesData = [sig.r, sig.s, request.seed];
-    const tx = await randomizer.connect(finalSigner).submitRandom(addressData, uintData, bytesData);
+    const data = await vrfHelper.getSubmitData(finalSigner.address, request);
+    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(finalSigner.address), data.addresses, data.uints, request.seed, false);
     await tx.wait();
 
     const callbackResult = await testCallback.result();
@@ -65,11 +59,28 @@ describe("Beacon", function () {
     await helpers.setCode("0x000000000000000000000000000000000000006C", ArbGas.bytecode);
 
     signers = await ethers.getSigners();
-    const Randomizer = await ethers.getContractFactory("RandomizerUpgradeable");
     const VRF = await ethers.getContractFactory("VRF");
     const vrf = await VRF.deploy();
-    randomizer = await upgrades.deployProxy(Randomizer, [[vrf.address, signers[0].address, signers[0].address], 3, "500000000000000000", 20, 900, 50000, 2000000, ethers.utils.parseEther("0.00005"), [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], [570000, 90000, 65000, 21000]]);
+    const Internals = await ethers.getContractFactory("Internals");
+    const lib = await Internals.deploy();
+    const Randomizer = await ethers.getContractFactory("RandomizerWithStorageControls", {
+      libraries: {
+        Internals: lib.address,
+        VRF: vrf.address
+      },
+    });
+
+    let ecKeys = [];
+    let i = 1;
+    while (i < 7) {
+      const keys = vrfHelper.getVrfPublicKeys(signers[i].address);
+      ecKeys = ecKeys.concat(keys);
+      i++;
+    }
+    randomizer = await Randomizer.deploy([signers[0].address, signers[0].address], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]);
     await randomizer.deployed();
+    vrfHelper.init(vrf, randomizer);
+
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(randomizer.address);
   });
@@ -107,7 +118,8 @@ describe("Beacon", function () {
 
   it("register a new beacon", async function () {
     await randomizer.beaconStakeEth(signers[7].address, { value: ethers.utils.parseEther("5") });
-    const tx = await randomizer.registerBeacon(signers[7].address);
+    const publicKeys = vrfHelper.getVrfPublicKeys(signers[7].address);
+    const tx = await randomizer.registerBeacon(signers[7].address, publicKeys);
     const receipt = await tx.wait();
     // Check if receipt emitted a RegisterBeacon event
     const event = receipt.events.find(e => e.event == "RegisterBeacon");
@@ -146,7 +158,8 @@ describe("Beacon", function () {
     expect(await randomizer.getBeaconIndex(beacons[1])).to.equal(1);
     expect(await randomizer.getBeaconIndex(beacons[beacons.length - 1])).to.equal(beacons.length - 1);
     await randomizer.beaconStakeEth(signers[0].address, { value: ethers.utils.parseEther("5") });
-    await randomizer.registerBeacon(signers[0].address);
+    const publicKeys = vrfHelper.getVrfPublicKeys(signers[0].address);
+    await randomizer.registerBeacon(signers[0].address, publicKeys);
     const newBeacons = await randomizer.getBeacons();
 
     // Iterate through beacons and check that the indices match in randomizer.getBeaconIndex(beacon)
@@ -169,7 +182,8 @@ describe("Beacon", function () {
   });
 
   it("throw if beacon is registered without enough stake", async function () {
-    await expect(randomizer.registerBeacon(signers[0].address)).to.be.revertedWith("BeaconStakedEthTooLow(0, 500000000000000000)");
+    const publicKeys = vrfHelper.getVrfPublicKeys(signers[0].address);
+    await expect(randomizer.registerBeacon(signers[0].address, publicKeys)).to.be.revertedWith("BeaconStakedEthTooLow(0, 500000000000000000)");
   });
 
   it("return all registered beacons with getBeacons and update indices on unregister", async function () {

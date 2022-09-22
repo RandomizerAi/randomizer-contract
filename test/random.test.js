@@ -74,7 +74,7 @@ describe("Request & Submit", function () {
       ecKeys = ecKeys.concat(keys);
       i++;
     }
-    randomizer = await Randomizer.deploy([ethers.constants.AddressZero, ethers.constants.AddressZero], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000]);
+    randomizer = await Randomizer.deploy([ethers.constants.AddressZero, ethers.constants.AddressZero], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]);
     await randomizer.deployed();
     vrfHelper.init(vrf, randomizer);
     const TestCallback = await ethers.getContractFactory("TestCallback");

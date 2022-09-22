@@ -18,11 +18,14 @@ contract Store {
     uint256 constant CKEY_MAX_STRIKES = 6;
 
     // Gas keys for estimateGas
+    // All are offsets. The ones ending with "_TOTAL" are estimate total fees.
     uint256 constant GKEY_SUBMIT = 0;
     uint256 constant GKEY_FINAL_SUBMIT = 1;
     uint256 constant GKEY_RENEW = 2;
     uint256 constant GKEY_PROCESS_OPTIMISTIC = 3;
     uint256 constant GKEY_COMPLETE_OPTIMISTIC = 4;
+    uint256 constant GKEY_SUBMIT_TOTAL = 5;
+    uint256 constant GKEY_OPT_SUBMIT_TOTAL = 6;
 
     // Re-entrancy guard for final beacon submit
     uint256 internal _status;
@@ -50,7 +53,7 @@ contract Store {
 
     // Random Stores
     mapping(uint128 => bytes32) internal requestToHash;
-    mapping(uint128 => bytes32[3]) internal requestToVrfHashes;
+    mapping(uint128 => bytes32[3]) public requestToVrfHashes;
     mapping(uint128 => bytes32[3]) internal requestToProofs;
     mapping(uint128 => uint256) internal requestToFeePaid;
 

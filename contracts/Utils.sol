@@ -14,6 +14,7 @@ interface IRandomReceiver {
     function randomizerCallback(uint128 _id, bytes32 value) external;
 }
 
+/// @custom:oz-upgrades-unsafe-allow external-library-linking
 contract Utils is Admin, GasHandler {
     // Errors used by Utils, Beacon, and Client
     error RequestDataMismatch(bytes32 givenHash, bytes32 expectedHash);
@@ -151,7 +152,7 @@ contract Utils is Admin, GasHandler {
         }
     }
 
-    function _resolveUintData(uint256[18] calldata _data)
+    function _resolveUintVrfData(uint256[18] calldata _data)
         internal
         pure
         returns (SPackedSubmitData memory)
@@ -176,13 +177,13 @@ contract Utils is Admin, GasHandler {
             );
     }
 
-    function _resolveRenewUintData(uint256[8] calldata _data)
+    function _resolveUintData(uint256[8] calldata _data)
         internal
         pure
-        returns (SPackedRenewData memory)
+        returns (SPackedUintData memory)
     {
         return
-            SPackedRenewData(
+            SPackedUintData(
                 uint128(_data[0]),
                 SRandomUintData(
                     _data[1],
@@ -242,7 +243,7 @@ contract Utils is Admin, GasHandler {
         address[4] calldata _accounts,
         uint256[18] calldata _data
     ) internal pure returns (SAccounts memory, SPackedSubmitData memory) {
-        return (_resolveAddressCalldata(_accounts), _resolveUintData(_data));
+        return (_resolveAddressCalldata(_accounts), _resolveUintVrfData(_data));
     }
 
     function _generateRequest(

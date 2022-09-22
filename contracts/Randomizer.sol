@@ -69,8 +69,17 @@ contract Randomizer is Client, Beacon {
         _status = _NOT_ENTERED;
     }
 
-    function getResult(uint128 _request) public view returns (bytes32) {
+    function getResult(uint128 _request) external view returns (bytes32) {
         return results[_request];
+    }
+
+    /// @notice Returns the dispute window of a request (0 if no dispute window). First value is blocks, second is seconds.
+    function getDisputeWindow(uint128 _request)
+        external
+        view
+        returns (uint256[2] memory)
+    {
+        return optRequestDisputeWindow[_request];
     }
 
     function renewRequest(
@@ -80,7 +89,7 @@ contract Randomizer is Client, Beacon {
         bool _optimistic
     ) external {
         // 20k gas offset for balance updates after fee calculation
-        uint256 gasAtStart = gasleft() + gasEstimates[GKEY_PROCESS_OPTIMISTIC];
+        uint256 gasAtStart = gasleft() + gasEstimates[GKEY_RENEW];
 
         if (_optimistic) {
             if (optRequestDisputeWindow[uint128(_uintData[0])][0] != 0)
@@ -88,7 +97,7 @@ contract Randomizer is Client, Beacon {
         }
 
         SAccounts memory accounts = _resolveAddressCalldata(_addressData);
-        SPackedRenewData memory packed = _resolveRenewUintData(_uintData);
+        SPackedUintData memory packed = _resolveUintData(_uintData);
 
         if (packed.data.height == 0) revert RequestNotFound(packed.id);
 
@@ -224,8 +233,8 @@ contract Randomizer is Client, Beacon {
             packed.data.beaconFee,
             packed.data.height,
             packed.data.timestamp,
-            packed.data.expirationBlocks,
             packed.data.expirationSeconds,
+            packed.data.expirationBlocks,
             packed.data.callbackGasLimit,
             accounts.client,
             accounts.beacons,

@@ -4,18 +4,19 @@ const vrfHelper = require("./helpers.js");
 
 // const hre = require("hardhat");
 
-describe("Optimistic Randomness", function () {
+describe("Optimistic Tests", function () {
 
   const signAndCallback = async (request, client) => {
     if (!client) client = testCallback;
     // Get beacons
     const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
-
+    // Sort selectedSigners by request.beacons
+    selectedSigners.sort((a, b) => request.beacons.indexOf(a.address) - request.beacons.indexOf(b.address));
 
     for (const signer of selectedSigners) {
       // await randomizer.testCharge(testCallback.address, signer.address, 1);
       const data = await vrfHelper.getSubmitData(signer.address, request);
-      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, true);
+      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
 
       const res = await tx.wait();
       const requestEvent = randomizer.interface.parseLog(res.logs[0]);
@@ -30,11 +31,12 @@ describe("Optimistic Randomness", function () {
 
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
     const data = await vrfHelper.getSubmitData(finalSigner.address, request);
-    await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, true);
-    await hre.network.provider.send("hardhat_mine", [ethers.utils.hexlify(40), ethers.utils.hexlify(45)]);
+    await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(finalSigner.address), data.addresses, data.uints, request.seed, true);
 
     // complete optimistic
-    const final = await randomizer.connect(selectedSigners[0]).completeOptimistic(data.addresses, data.uints, request.seed);
+    await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(20), ethers.utils.hexValue(60)]);
+
+    const final = await randomizer.connect(selectedSigners[0]).completeOptimistic(data.addresses, data.rawUints, request.seed);
     return await final.wait();
 
   }
@@ -80,7 +82,7 @@ describe("Optimistic Randomness", function () {
       ecKeys = ecKeys.concat(keys);
       i++;
     }
-    randomizer = await Randomizer.deploy([ethers.constants.AddressZero, ethers.constants.AddressZero], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000]);
+    randomizer = await Randomizer.deploy([ethers.constants.AddressZero, ethers.constants.AddressZero], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 50000, 21000, 21000, 21000]);
     await randomizer.deployed();
     vrfHelper.init(vrf, randomizer);
     const TestCallback = await ethers.getContractFactory("OptimisticTestCallback");
@@ -120,7 +122,7 @@ describe("Optimistic Randomness", function () {
     }
   });
 
-  it("make multiple deposits and random requests", async function () {
+  it("optimistic make multiple deposits and random requests", async function () {
     const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     /*  uint256 _minPrioFee,
@@ -129,31 +131,19 @@ describe("Optimistic Randomness", function () {
         bytes32 _seed */
     expect(await randomizer.clientBalanceOf(testCallback.address)).to.equal(ethers.utils.parseEther("5"));
 
-    for (let i = 1; i < 10; i++) {
+    for (let i = 1; i < 3; i++) {
       let req = await testCallback.makeRequest();
       const res = await req.wait();
       // Get request data
-      let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+      const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
       expect(request.beacons.length).to.equal(3);
-      const message = ethers.utils.arrayify(request.seed);
 
       const selectedBeacons = request.beacons;
       const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
       // Sign some requests but don't finish
       for (const signer of selectedSigners) {
-        const proof = vrfHelper.prove(signer.address, message);
-        const publicKeys = vrfHelper.getVrfPublicKeys(signer.address);
-        const params = await vrf.computeFastVerifyParams(
-          publicKeys,
-          proof,
-          request.seed
-        );
-
-        let uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
-        uintData = uintData.concat(proof, params[0], params[1]);
-
-        const addressData = [request.client].concat(request.beacons);
-        const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](addressData, uintData, message, true);
+        const data = await vrfHelper.getSubmitData(signer.address, request);
+        await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
         const sigs = await randomizer.getRequestVrfHashes(request.id);
         let signed = false;
         expect(sigs.length).to.equal(3);
@@ -165,6 +155,7 @@ describe("Optimistic Randomness", function () {
         }
         expect(signed).to.equal(true);
       }
+      await require('timers/promises').setTimeout(1000);
     }
   });
 
@@ -187,7 +178,7 @@ describe("Optimistic Randomness", function () {
 
 
     try {
-      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, true);
+      await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
       expect(true).to.equal(false, "Transaction should have reverted");
     } catch (e) {
       expect(e).to.match(/RequestDataMismatch.*/g);
@@ -217,7 +208,7 @@ describe("Optimistic Randomness", function () {
 
 
     const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
-    await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, true);
+    await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
     beacon = await randomizer.getBeacon(signer.address);
     expect(beacon.strikes).to.equal(0);
     expect(beacon.consecutiveSubmissions).to.equal(0);
@@ -266,7 +257,7 @@ describe("Optimistic Randomness", function () {
       expect(verify).to.be.true;
 
       // const bytesData = [sig.r, sig.s];
-      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, message, true);
+      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, message, true);
       const res = await tx.wait();
       const requestEvent = randomizer.interface.parseLog(res.logs[0]);
       const requestHash = await randomizer.gammaToHash(proof[0], proof[1]);
@@ -301,7 +292,7 @@ describe("Optimistic Randomness", function () {
         selectedFinalBeacon = requestEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         expect(selectedFinalBeacon).to.equal(randomBeacon);
-        request = requestEvent.args.request;
+        request = { ...requestEvent.args.request, id: requestEvent.args.id };
       }
 
     }
@@ -310,7 +301,7 @@ describe("Optimistic Randomness", function () {
 
     const data = await vrfHelper.getSubmitData(finalSigner.address, request);
 
-    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, message, true);
+    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(finalSigner.address), data.addresses, data.uints, request.seed, true);
     await tx.wait();
 
 
@@ -325,15 +316,15 @@ describe("Optimistic Randomness", function () {
 
 
     try {
-      await randomizer.connect(selectedSigners[0]).completeOptimistic(data.addresses, data.uints, message);
+      await randomizer.connect(selectedSigners[0]).completeOptimistic(data.addresses, data.rawUints, message);
       expect(true).to.be.false;
     } catch (e) {
       expect(e.message).to.include(`NotYetCompletableBySender`);
     }
 
-    await hre.network.provider.send("hardhat_mine", [ethers.utils.hexlify(40), ethers.utils.hexlify(45)]);
+    await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(50), ethers.utils.hexValue(45)]);
 
-    await randomizer.connect(selectedSigners[0]).completeOptimistic(data.addresses, data.uints, message);
+    await randomizer.connect(selectedSigners[0]).completeOptimistic(data.addresses, data.rawUints, message);
 
     const callbackResult = await testCallback.result();
 
@@ -357,7 +348,7 @@ describe("Optimistic Randomness", function () {
     for (const signer of selectedSigners) {
       const data = await vrfHelper.getSubmitData(signer.address, request);
 
-      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, true);
+      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
 
       const receipt = await tx.wait();
       const receiptBlockBaseFee = (await ethers.provider.getBlock(receipt.blockNumber)).baseFeePerGas;
@@ -375,10 +366,12 @@ describe("Optimistic Randomness", function () {
 
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
     const data = await vrfHelper.getSubmitData(finalSigner.address, request);
-    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, true);
+    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(finalSigner.address), data.addresses, data.uints, request.seed, true);
     const receipt = await tx.wait();
-    await hre.network.provider.send("hardhat_mine", [ethers.utils.hexlify(40), ethers.utils.hexlify(45)]);
-    await randomizer.connect(selectedSigners[0]).completeOptimistic(data.addresses, data.uints, request.seed);
+    await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(40), ethers.utils.hexValue(60)]);
+    await randomizer.connect(selectedSigners[0]).completeOptimistic(data.addresses, data.rawUints, request.seed);
+
+
     const result = await randomizer.getResult(request.id);
     expect(result).to.not.equal(ethers.constants.HashZero);
     const receiptBlockBaseFee = (await ethers.provider.getBlock(receipt.blockNumber)).baseFeePerGas;
@@ -479,14 +472,14 @@ describe("Optimistic Randomness", function () {
         }
         // submitRandom should fail with NotEnoughBeaconsAvailable
         try {
-          await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, true);
+          await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
 
           expect(true).to.be.false;
         } catch (e) {
           expect(e).to.match(/NotEnoughBeaconsAvailable/);
         }
       } else {
-        const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](data.addresses, data.uints, request.seed, true);
+        const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
         await tx.wait();
       }
     }

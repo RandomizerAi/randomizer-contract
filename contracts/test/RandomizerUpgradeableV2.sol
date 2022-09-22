@@ -4,6 +4,7 @@ pragma solidity ^0.8.16;
 import "../Randomizer.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+/// @custom:oz-upgrades-unsafe-allow external-library-linking
 contract RandomizerUpgradeableV2 is Initializable, Randomizer {
     function initialize(
         address[2] memory _addresses,

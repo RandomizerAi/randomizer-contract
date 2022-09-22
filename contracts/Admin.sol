@@ -148,6 +148,10 @@ contract Admin is OwnableUpgradeable, Store {
         emit UpdateConfigUint(key, old, _value);
     }
 
+    function getConfigUint(uint256 key) external view returns (uint256) {
+        return configUints[key];
+    }
+
     function setGasEstimates(uint256[16] calldata _amounts) external onlyOwner {
         emit UpdateConfigGasEstimates(gasEstimates, _amounts);
         gasEstimates = _amounts;
