@@ -155,7 +155,7 @@ describe("Optimistic Tests", function () {
         }
         expect(signed).to.equal(true);
       }
-      await require('timers/promises').setTimeout(1000);
+      // await require('timers/promises').setTimeout(1000);
     }
   });
 
@@ -503,6 +503,49 @@ describe("Optimistic Tests", function () {
       expect(true).to.be.false;
     } catch (e) {
       expect(e).to.match(/NotEnoughBeaconsAvailable/);
+    }
+  });
+
+  it("revert with CantRenewDuringDisputeWindow when renewing optimistic request during dispute window", async () => {
+    const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    let req = await testCallback.makeRequest();
+    const res = await req.wait();
+    // Get request data
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let selectedBeacons = request.beacons;
+    let selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
+    // Sort selectedSigners to be in the same order as selectedBeacons
+    selectedSigners.sort((a, b) => {
+      return selectedBeacons.indexOf(a.address) - selectedBeacons.indexOf(b.address);
+    });
+
+    let signer = selectedSigners[0];
+
+    let data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
+    await randomizer.connect(selectedSigners[0])['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(selectedSigners[0].address), data.addresses, data.uints, request.seed, true);
+    let data2 = await vrfHelper.getSubmitData(selectedSigners[1].address, request);
+    const submitTx = await randomizer.connect(selectedSigners[1])['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(selectedSigners[1].address), data2.addresses, data2.uints, request.seed, true);
+
+    const events = (await submitTx.wait()).logs;
+    let selectedFinalBeacon;
+    for (const event of events) {
+      const parsed = randomizer.interface.parseLog(event);
+      if (parsed.name == "RequestBeacon") {
+        selectedFinalBeacon = parsed.args.beacon;
+        expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
+        request = { ...parsed.args.request, id: parsed.args.id };
+      }
+    }
+    const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
+    selectedSigners[2] = finalSigner;
+    const finalData = await vrfHelper.getSubmitData(finalSigner.address, request);
+    await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](2, finalData.addresses, finalData.uints, request.seed, true);
+    try {
+      await randomizer.connect(signer).renewRequest(finalData.addresses, finalData.rawUints, request.seed, true);
+      expect(true).to.be.false;
+    } catch (e) {
+      expect(e.message).to.match(/CantRenewDuringDisputeWindow/);
     }
   });
 });

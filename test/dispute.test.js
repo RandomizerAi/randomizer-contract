@@ -222,7 +222,6 @@ describe("Optimistic VRF Disputes", function () {
 
   it("only complete after assigned dispute window period for each completeable party", async function () {
     this.timeout(100000);
-
     await makeAndCompleteWithSigner(0);
     await makeAndCompleteWithSigner(1);
     await makeAndCompleteWithSigner(2);

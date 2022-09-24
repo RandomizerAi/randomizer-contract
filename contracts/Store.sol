@@ -55,7 +55,7 @@ contract Store {
     mapping(uint128 => bytes32) internal requestToHash;
     mapping(uint128 => bytes32[3]) public requestToVrfHashes;
     mapping(uint128 => bytes32[3]) internal requestToProofs;
-    mapping(uint128 => uint256) internal requestToFeePaid;
+    mapping(uint128 => uint256) public requestToFeePaid;
 
     // Collateral
     mapping(address => uint256) internal ethCollateral;

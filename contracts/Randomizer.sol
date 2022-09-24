@@ -91,15 +91,15 @@ contract Randomizer is Client, Beacon {
         // 20k gas offset for balance updates after fee calculation
         uint256 gasAtStart = gasleft() + gasEstimates[GKEY_RENEW];
 
-        if (_optimistic) {
-            if (optRequestDisputeWindow[uint128(_uintData[0])][0] != 0)
-                revert CantRenewDuringDisputeWindow();
-        }
-
         SAccounts memory accounts = _resolveAddressCalldata(_addressData);
         SPackedUintData memory packed = _resolveUintData(_uintData);
 
         if (packed.data.height == 0) revert RequestNotFound(packed.id);
+
+        if (_optimistic) {
+            if (optRequestDisputeWindow[packed.id][0] != 0)
+                revert CantRenewDuringDisputeWindow();
+        }
 
         bytes32 generatedHash = _getRequestHash(
             packed.id,
