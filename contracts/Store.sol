@@ -32,7 +32,7 @@ contract Store {
 
     // Protocol addresses
     address public developer;
-    address internal proposedDeveloper;
+    address public proposedDeveloper;
     address public sequencer;
 
     address[] internal beacons;

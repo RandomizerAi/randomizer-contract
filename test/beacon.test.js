@@ -85,6 +85,8 @@ describe("Beacon Tests", function () {
     testCallback = await TestCallback.deploy(randomizer.address);
   });
 
+
+
   it("fail beacon withdraw when it is not sender/owner or has pending requests", async function () {
     const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();

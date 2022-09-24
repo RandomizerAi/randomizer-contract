@@ -121,8 +121,8 @@ contract Client is Utils {
             beaconFee: configUints[CKEY_BEACON_FEE],
             height: block.number,
             timestamp: block.timestamp,
-            expirationSeconds: configUints[CKEY_EXPIRATION_SECONDS],
             expirationBlocks: configUints[CKEY_EXPIRATION_BLOCKS],
+            expirationSeconds: configUints[CKEY_EXPIRATION_SECONDS],
             callbackGasLimit: _callbackGasLimit
         });
 

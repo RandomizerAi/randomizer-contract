@@ -29,7 +29,7 @@ const submitRandom = async function (signer, id, request) {
     const sig = ethers.utils.splitSignature(flatSig);
 
     const addressData = [request.client].concat(request.beacons);
-    const uintData = [id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit, sig.v];
+    const uintData = [id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, sig.v];
     const bytesData = [sig.r, sig.s, request.seed];
 
     let interval;

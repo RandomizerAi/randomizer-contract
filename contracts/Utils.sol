@@ -222,8 +222,8 @@ contract Utils is Admin, GasHandler {
                     data.ethReserved,
                     data.beaconFee,
                     [data.height, data.timestamp],
-                    data.expirationSeconds,
                     data.expirationBlocks,
+                    data.expirationSeconds,
                     data.callbackGasLimit,
                     optimistic
                 )
@@ -286,8 +286,8 @@ contract Utils is Admin, GasHandler {
                 data.beaconFee,
                 block.number,
                 block.timestamp,
-                data.expirationSeconds,
                 data.expirationBlocks,
+                data.expirationSeconds,
                 data.callbackGasLimit,
                 accounts.client,
                 accounts.beacons,

@@ -28,4 +28,8 @@ contract RandomizerWithStorageControls is Randomizer {
         sBeacon[beacon].consecutiveSubmissions = submissions;
         sBeacon[beacon].strikes = strikes;
     }
+
+    function _debug_setCollateral(address beacon, uint256 collateral) external {
+        ethCollateral[beacon] = collateral;
+    }
 }

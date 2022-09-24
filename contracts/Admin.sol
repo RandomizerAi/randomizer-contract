@@ -81,8 +81,8 @@ contract Admin is OwnableUpgradeable, Store {
     );
     event OptimisticReady(
         uint128 indexed id,
-        uint256 completeTime,
-        uint256 completeHeight
+        uint256 completeHeight,
+        uint256 completeTime
     );
 
     event OptimisticSubmission(
@@ -102,8 +102,12 @@ contract Admin is OwnableUpgradeable, Store {
         uint256 oldValue,
         uint256 newValue
     );
+    event UpdateGasEstimate(
+        uint256 indexed key,
+        uint256 oldValue,
+        uint256 newValue
+    );
     event UpdateSequencer(address oldSequencer, address newSequencer);
-    event UpdateConfigGasEstimates(uint256[16] from, uint256[16] to);
 
     error SenderNotDeveloper();
     error SenderNotProposedDeveloper();
@@ -117,16 +121,17 @@ contract Admin is OwnableUpgradeable, Store {
         proposedDeveloper = _proposedDeveloper;
     }
 
-    function acceptDeveloper(address _proposedDeveloper) external {
-        if (
-            msg.sender != proposedDeveloper &&
-            proposedDeveloper != _proposedDeveloper
-        ) revert SenderNotProposedDeveloper();
+    /// @notice The proposed developer can accept the developer role.
+    function acceptDeveloper() external {
+        if (msg.sender != proposedDeveloper)
+            revert SenderNotProposedDeveloper();
 
-        emit AcceptTransferDeveloper(developer, _proposedDeveloper);
-        developer = _proposedDeveloper;
+        emit AcceptTransferDeveloper(developer, msg.sender);
+        developer = msg.sender;
+        proposedDeveloper = address(0);
     }
 
+    /// @notice The developer or proposed developer can cancel the new developer address proposal.
     function cancelProposeDeveloper() external {
         if (msg.sender != developer && msg.sender != proposedDeveloper)
             revert SenderNotDeveloperOrProposed();
@@ -143,17 +148,20 @@ contract Admin is OwnableUpgradeable, Store {
     }
 
     function setConfigUint(uint256 key, uint256 _value) external onlyOwner {
-        uint256 old = configUints[key];
+        emit UpdateConfigUint(key, configUints[key], _value);
         configUints[key] = _value;
-        emit UpdateConfigUint(key, old, _value);
+    }
+
+    function setGasEstimate(uint256 key, uint256 _value) external onlyOwner {
+        emit UpdateGasEstimate(key, gasEstimates[key], _value);
+        gasEstimates[key] = _value;
     }
 
     function getConfigUint(uint256 key) external view returns (uint256) {
         return configUints[key];
     }
 
-    function setGasEstimates(uint256[16] calldata _amounts) external onlyOwner {
-        emit UpdateConfigGasEstimates(gasEstimates, _amounts);
-        gasEstimates = _amounts;
+    function getGasEstimate(uint256 key) external view returns (uint256) {
+        return gasEstimates[key];
     }
 }

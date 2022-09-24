@@ -61,11 +61,11 @@ const parseRequest = (receipt) => {
 
 const getSubmitData = async (privateKey, request) => {
   const vrf = await getVrfData(privateKey, request.seed);
-  const rawUints = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
+  const rawUints = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
   const uints = rawUints.concat(vrf.proof, vrf.params[0], vrf.params[1]);
   const addresses = [request.client].concat(request.beacons);
 
-  return { addresses, uints, rawUints };
+  return { addresses, uints, rawUints, vrf };
 }
 
 // Export functions

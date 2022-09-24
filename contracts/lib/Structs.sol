@@ -30,8 +30,8 @@ struct SRandomUintData {
     uint256 beaconFee;
     uint256 height;
     uint256 timestamp;
-    uint256 expirationSeconds;
     uint256 expirationBlocks;
+    uint256 expirationSeconds;
     uint256 callbackGasLimit;
 }
 
@@ -40,8 +40,8 @@ struct SRequestEventData {
     uint256 beaconFee;
     uint256 height;
     uint256 timestamp;
-    uint256 expirationSeconds;
     uint256 expirationBlocks;
+    uint256 expirationSeconds;
     uint256 callbackGasLimit;
     address client;
     address[3] beacons;

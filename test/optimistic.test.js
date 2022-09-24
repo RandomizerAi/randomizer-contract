@@ -319,7 +319,7 @@ describe("Optimistic Tests", function () {
       await randomizer.connect(selectedSigners[0]).completeOptimistic(data.addresses, data.rawUints, message);
       expect(true).to.be.false;
     } catch (e) {
-      expect(e.message).to.include(`NotYetCompletableBySender`);
+      expect(e.message).to.match(/NotYetCompletableBySender/g);
     }
 
     await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(50), ethers.utils.hexValue(45)]);

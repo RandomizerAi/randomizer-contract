@@ -13,10 +13,10 @@ import "./Client.sol";
 contract Randomizer is Client, Beacon {
     // Errors exclusive to Beacon.sol
     error NotYetRenewable(
-        uint256 timestamp,
-        uint256 expirationSeconds,
         uint256 height,
-        uint256 expirationHeight
+        uint256 expirationHeight,
+        uint256 timestamp,
+        uint256 expirationSeconds
     );
 
     error CantRenewDuringDisputeWindow();
@@ -131,7 +131,7 @@ contract Randomizer is Client, Beacon {
                 (packed.data.expirationBlocks / 2);
             _expirationSeconds =
                 packed.data.timestamp +
-                packed.data.expirationBlocks +
+                packed.data.expirationSeconds +
                 (packed.data.expirationSeconds / 2);
         } else {
             _expirationBlocks =
@@ -147,10 +147,10 @@ contract Randomizer is Client, Beacon {
             block.timestamp < _expirationSeconds
         )
             revert NotYetRenewable(
-                block.timestamp,
-                _expirationSeconds,
                 block.number,
-                _expirationBlocks
+                _expirationBlocks,
+                block.timestamp,
+                _expirationSeconds
             );
 
         address[] memory beaconsToStrike = new address[](3);
@@ -233,8 +233,8 @@ contract Randomizer is Client, Beacon {
             packed.data.beaconFee,
             packed.data.height,
             packed.data.timestamp,
-            packed.data.expirationSeconds,
             packed.data.expirationBlocks,
+            packed.data.expirationSeconds,
             packed.data.callbackGasLimit,
             accounts.client,
             accounts.beacons,
@@ -243,17 +243,18 @@ contract Randomizer is Client, Beacon {
         );
 
         // The paying non-submitter might fall below collateral here. It will be removed on next strike if it doesn't add collateral.
+        // TODO: Add offsets for renewFee
         uint256 renewFee = ((gasAtStart - gasleft()) * _getGasPrice()) +
             packed.data.beaconFee;
 
         uint256 refundToClient = requestToFeePaid[packed.id];
         uint256 totalCharge = renewFee + refundToClient;
 
-        // If charging more than the striked beacon has staked, refund the remainder to the client
+        // If charging more than the striked beacon has staked, refund the remaining stake to the client
         if (ethCollateral[firstStrikeBeacon] > 0) {
             if (totalCharge > ethCollateral[firstStrikeBeacon]) {
                 totalCharge = ethCollateral[firstStrikeBeacon];
-                renewFee = renewFee >= totalCharge ? totalCharge : renewFee;
+                renewFee = renewFee > totalCharge ? totalCharge : renewFee;
                 ethCollateral[msg.sender] += renewFee;
                 emit ChargeEth(
                     firstStrikeBeacon,
@@ -280,13 +281,12 @@ contract Randomizer is Client, Beacon {
                 ethCollateral[firstStrikeBeacon] -= totalCharge;
                 // Refund this function's gas to the caller
                 ethCollateral[msg.sender] += renewFee;
+                ethDeposit[accounts.client] += refundToClient;
                 // Fees paid on this request are reset to 0
                 requestToFeePaid[packed.id] = 0;
                 // Client receives refund to ensure they have enough to pay for the next request
                 // Also since the request is taking slower than expected due to a non-submitting beacon,
                 // the non-submitting beacon should pay for the delay.
-                ethDeposit[accounts.client] += refundToClient;
-
                 // Log charge from striked beacon to caller (collateral to collateral)
                 emit ChargeEth(
                     firstStrikeBeacon,
@@ -305,6 +305,9 @@ contract Randomizer is Client, Beacon {
                     false
                 );
             }
+        } else {
+            refundToClient = 0;
+            renewFee = 0;
         }
 
         // Log Retry

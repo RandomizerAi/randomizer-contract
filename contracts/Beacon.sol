@@ -23,14 +23,16 @@ contract Beacon is Utils {
     error NotOwnerOrBeacon();
     error BeaconStakedEthTooLow(uint256 staked, uint256 minimum);
     error SequencerSubmissionTooEarly(
-        uint256 currentTime,
-        uint256 minTime,
         uint256 currentBlock,
-        uint256 minBlock
+        uint256 minBlock,
+        uint256 currentTime,
+        uint256 minTime
     );
     error SenderNotBeaconOrSequencer();
     error NotDisputeable();
     error NotCompleteable();
+    error VRFDataMismatch();
+    error ProofNotInvalid();
 
     /// @notice Returns a list of active beacon addresses
     function getBeacons() external view returns (address[] memory) {
@@ -161,8 +163,10 @@ contract Beacon is Utils {
                         abi.encode(
                             accounts.client,
                             packed.id,
-                            packed.vrf.proof[0],
-                            packed.vrf.proof[1]
+                            packed.vrf.proof,
+                            packed.vrf.uPoint,
+                            packed.vrf.vComponents,
+                            block.chainid
                         )
                     )
                 )
@@ -230,7 +234,7 @@ contract Beacon is Utils {
         if (
             vrfBytes == bytes32(0) ||
             vrfBytes != requestToProofs[packed.id][beaconPos]
-        ) revert("VRFDataMismatch");
+        ) revert VRFDataMismatch();
 
         address beacon = accounts.beacons[beaconPos];
 
@@ -279,8 +283,8 @@ contract Beacon is Utils {
                     packed.data.beaconFee,
                     packed.data.height,
                     packed.data.timestamp,
-                    packed.data.expirationSeconds,
                     packed.data.expirationBlocks,
+                    packed.data.expirationSeconds,
                     packed.data.callbackGasLimit,
                     accounts.client,
                     accounts.beacons,
@@ -290,7 +294,7 @@ contract Beacon is Utils {
                 randomBeacon
             );
         } else {
-            revert("ProofNotInvalid");
+            revert ProofNotInvalid();
         }
     }
 
@@ -616,8 +620,8 @@ contract Beacon is Utils {
                 packed.data.beaconFee,
                 packed.data.height,
                 packed.data.timestamp,
-                packed.data.expirationSeconds,
                 packed.data.expirationBlocks,
+                packed.data.expirationSeconds,
                 packed.data.callbackGasLimit,
                 accounts.client,
                 accounts.beacons,
@@ -671,29 +675,30 @@ contract Beacon is Utils {
         bytes32[3] memory reqValues,
         SRandomUintData memory data
     ) private view {
-        if (_beacons[beaconPos] != msg.sender && msg.sender != sequencer)
-            revert BeaconNotSelected();
+        if (_beacons[beaconPos] != beacon) revert BeaconNotSelected();
+
+        if (msg.sender != sequencer && msg.sender != beacon)
+            revert SenderNotBeaconOrSequencer();
 
         if (reqValues[beaconPos] != bytes32(0)) revert BeaconValueExists();
 
-        // Check that only beacon and sequencer can submit the result
-        if (msg.sender != beacon && msg.sender != sequencer)
-            revert SenderNotBeaconOrSequencer();
-
+        // Sequencer can submit on behalf of the beacon (using beacon's signed VRF data)
+        // after half an expiration period.
         uint256 sequencerSubmitTime = data.timestamp +
             (data.expirationSeconds / 2);
         uint256 sequencerSubmitBlock = data.height +
             (data.expirationBlocks / 2);
+
         if (
             msg.sender != beacon &&
             (block.timestamp < sequencerSubmitTime ||
                 block.number < sequencerSubmitBlock)
         )
             revert SequencerSubmissionTooEarly(
-                block.timestamp,
-                sequencerSubmitTime,
                 block.number,
-                sequencerSubmitBlock
+                sequencerSubmitBlock,
+                block.timestamp,
+                sequencerSubmitTime
             );
     }
 

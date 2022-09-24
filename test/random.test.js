@@ -114,6 +114,56 @@ describe("Request & Submit", function () {
     }
   });
 
+  it("reverts when beaconPos does not match sender address", async () => {
+    const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+
+    let req = await testCallback.makeRequest();
+    const res = await req.wait();
+    // Get request data
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+
+    const selectedBeacons = request.beacons;
+    const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
+    const signer = selectedSigners[0];
+
+    const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
+    // Regex to match the string "RequestDataMismatch" and any infinite characters after
+
+
+    try {
+      await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](2, data.addresses, data.uints, request.seed, false);
+      expect(true).to.equal(false, "Transaction should have reverted");
+    } catch (e) {
+      expect(e).to.match(/BeaconNotSelected.*/g);
+    }
+  });
+
+  it("reverts when beaconPos does not match sender address", async () => {
+    const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+
+    let req = await testCallback.makeRequest();
+    const res = await req.wait();
+    // Get request data
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+
+    const selectedBeacons = request.beacons;
+    const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
+    const signer = selectedSigners[0];
+
+    const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
+    // Regex to match the string "RequestDataMismatch" and any infinite characters after
+
+
+    try {
+      await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](2, data.addresses, data.uints, request.seed, false);
+      expect(true).to.equal(false, "Transaction should have reverted");
+    } catch (e) {
+      expect(e).to.match(/BeaconNotSelected.*/g);
+    }
+  });
+
   it("non-optimistic make multiple deposits and random requests", async function () {
     const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
@@ -123,7 +173,7 @@ describe("Request & Submit", function () {
         bytes32 _seed */
     expect(await randomizer.clientBalanceOf(testCallback.address)).to.equal(ethers.utils.parseEther("5"));
 
-    for (let i = 1; i < 5; i++) {
+    for (let i = 1; i < 3; i++) {
       let req = await testCallback.makeRequest();
       const res = await req.wait();
       // Get request data
@@ -143,7 +193,7 @@ describe("Request & Submit", function () {
           request.seed
         );
 
-        let uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
+        let uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
         uintData = uintData.concat(proof, params[0], params[1]);
 
         const addressData = [request.client].concat(request.beacons);
@@ -274,7 +324,7 @@ describe("Request & Submit", function () {
       // const sig = ethers.utils.splitSignature(flatSig);
 
 
-      let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
+      let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
       uintData = uintData.concat(proof, params[0], params[1]);
       const addressData = [request.client].concat(request.beacons);
       // const bytesData = [sig.r, sig.s];
@@ -331,7 +381,7 @@ describe("Request & Submit", function () {
       message
     );
 
-    let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationSeconds, request.expirationBlocks, request.callbackGasLimit];
+    let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
     uintData = uintData.concat(proof, params[0], params[1]);
     const addressData = [request.client].concat(request.beacons);
 
@@ -482,30 +532,25 @@ describe("Request & Submit", function () {
     const res = await req.wait();
     let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
     const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
-    for (const signer of selectedSigners) {
-      const data = await vrfHelper.getSubmitData(signer.address, request);
+    selectedSigners.sort((a, b) => {
+      return request.beacons.indexOf(a.address) - request.beacons.indexOf(b.address);
+    });
 
-      // If signer is of index 1 in selectedSigners
-      if (request.beacons.indexOf(signer.address) === 1) {
-        // Call randomizer.unregisterBeacon(signer.address) all signers except for this signer
-        for (const otherSigner of signers.filter(fSigner => fSigner.address !== signer.address)) {
-          if ((await randomizer.getBeacons()).includes(otherSigner.address)) {
-            const tx = await randomizer.connect(otherSigner).unregisterBeacon(otherSigner.address);
-            await tx.wait();
-          }
-        }
-        // submitRandom should fail with NotEnoughBeaconsAvailable
-        try {
-          await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, false);
+    const data1 = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
+    await randomizer.connect(selectedSigners[0])['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(selectedSigners[0].address), data1.addresses, data1.uints, request.seed, false);
 
-          expect(true).to.be.false;
-        } catch (e) {
-          expect(e).to.match(/NotEnoughBeaconsAvailable/);
-        }
-      } else {
-        const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, false);
-        await tx.wait();
+    for (const otherSigner of signers.filter(fSigner => !request.beacons.includes(fSigner.address))) {
+      if ((await randomizer.getBeacons()).includes(otherSigner.address)) {
+        await randomizer.connect(otherSigner).unregisterBeacon(otherSigner.address);
       }
+    }
+
+    const data2 = await vrfHelper.getSubmitData(selectedSigners[1].address, request);
+    try {
+      await randomizer.connect(selectedSigners[1])['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(selectedSigners[1].address), data2.addresses, data2.uints, request.seed, false);
+      expect(true).to.be.false;
+    } catch (e) {
+      expect(e).to.match(/NotEnoughBeaconsAvailable/g);
     }
 
   });

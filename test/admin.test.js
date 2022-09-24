@@ -51,20 +51,68 @@ describe("Admin", function () {
     }
   });
 
-  it("be able to set settable variables", async function () {
+  it("set config and gas variables", async function () {
+    await randomizer.setConfigUint(0, ethers.utils.parseEther("0.1"));
+    await randomizer.setConfigUint(1, ethers.utils.parseEther("0.1"));
+    await randomizer.setConfigUint(2, 30);
+    await randomizer.setConfigUint(3, 30);
+    await randomizer.setConfigUint(4, 30);
+    await randomizer.setConfigUint(5, 30);
+    await randomizer.setConfigUint(6, 30);
+
+    await randomizer.setGasEstimate(1, 99999);
+    expect((await randomizer.getGasEstimate(1)).toString()).to.equal("99999");
+
+    expect((await randomizer.getConfigUint(0)).eq(ethers.utils.parseEther("0.1"))).to.be.true;
+
+    await randomizer.setConfigUint(0, ethers.utils.parseEther("0.00005"));
+    expect((await randomizer.getConfigUint(0)).eq(ethers.utils.parseEther("0.00005"))).to.be.true;
+
     try {
-      await randomizer.setConfigUint(0, ethers.utils.parseEther("0.1"));
-      await randomizer.setConfigUint(1, ethers.utils.parseEther("0.1"));
-      await randomizer.setConfigUint(2, 30);
-      await randomizer.setConfigUint(3, 30);
-      await randomizer.setConfigUint(4, 30);
-      await randomizer.setConfigUint(5, 30);
-      await randomizer.setConfigUint(6, 30);
-    } catch (e) {
-      console.log(e);
+      await randomizer.connect(signers[1]).setSequencer(signers[1].address);
       expect(true).to.be.false;
+    } catch (e) {
+      expect(e).to.match(/SenderNotDeveloper/g);
     }
+
+    await randomizer.setSequencer(signers[1].address);
+
+    expect(await randomizer.sequencer()).to.equal(signers[1].address);
+
   });
+
+  it("propose, cancel and accept developer", async function () {
+    try {
+      await randomizer.connect(signers[1]).proposeDeveloper(signers[1].address);
+    } catch (e) {
+      expect(e).to.match(/SenderNotDeveloper/g);
+    }
+    await randomizer.connect(signers[0]).proposeDeveloper(signers[1].address);
+    expect(await randomizer.proposedDeveloper()).to.equal(signers[1].address);
+
+    try {
+      await randomizer.connect(signers[2]).cancelProposeDeveloper();
+    } catch (e) {
+      expect(e).to.match(/SenderNotDeveloperOrProposed/g);
+    }
+
+    await randomizer.cancelProposeDeveloper();
+    expect(await randomizer.proposedDeveloper()).to.equal(ethers.constants.AddressZero);
+    await randomizer.connect(signers[0]).proposeDeveloper(signers[1].address);
+
+    try {
+      await randomizer.connect(signers[2]).acceptDeveloper();
+    } catch (e) {
+      expect(e).to.match(/SenderNotProposedDeveloper/g);
+    }
+
+    await randomizer.connect(signers[1]).acceptDeveloper();
+
+    expect(await randomizer.developer()).to.equal(signers[1].address);
+    expect(await randomizer.proposedDeveloper()).to.equal(ethers.constants.AddressZero);
+
+  });
+
 
   it("return ArbGasInfo data", async function () {
     const ArbGasInfo = await ethers.getContractFactory("ArbGasInfo");
