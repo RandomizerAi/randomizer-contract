@@ -2,10 +2,10 @@
 
 /// @title Randomizer State
 /// @author Deanpress (https://github.com/deanpress)
-/// @notice Contains state variables and structs used by SoRandom
+/// @notice Contains state variables and structs used by Randomizer
 import "./lib/Structs.sol";
 
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
 contract Store {
     // Config keys for configUints

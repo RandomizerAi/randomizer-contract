@@ -3,7 +3,7 @@
 /// @title Randomizer Admin Functions
 /// @author Deanpress (https://github.com/deanpress)
 /// @notice Administrative functions, variables, and constants used by Randomizer.
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
 import "./Store.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";

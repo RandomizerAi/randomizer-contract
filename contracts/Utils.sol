@@ -4,7 +4,7 @@
 /// @author Deanpress (https://github.com/deanpress)
 /// @notice Internal utilities used by Randomizer functions
 
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 import "./Admin.sol";
 import "./lib/Internals.sol";
 // Import the gas handler for the desired network to deploy to
@@ -16,7 +16,8 @@ interface IRandomReceiver {
 
 /// @custom:oz-upgrades-unsafe-allow external-library-linking
 contract Utils is Admin, GasHandler {
-    // Errors used by Utils, Beacon, and Client
+    // Errors used by Utils, Beacon, Optimistic, and Client
+    error ReentrancyGuard();
     error RequestDataMismatch(bytes32 givenHash, bytes32 expectedHash);
     error RequestNotFound(uint128 id);
     error BeaconNotFound();
@@ -312,6 +313,47 @@ contract Utils is Admin, GasHandler {
 
         results[id] = result;
         emit Result(id, result);
+    }
+
+    function _handleSubmitFeeCharge(
+        uint256 gasAtStart,
+        uint256 _beaconFee,
+        uint256 offset,
+        address client
+    ) internal returns (uint256) {
+        // Beacon fee
+        uint256 fee = ((gasAtStart - gasleft() + offset) * _getGasPrice()) +
+            _beaconFee;
+        _chargeClient(client, msg.sender, fee);
+
+        return fee;
+    }
+
+    function _validateRequestData(
+        uint128 id,
+        bytes32 seed,
+        SAccounts memory accounts,
+        SRandomUintData memory data,
+        bool optimistic
+    ) internal view {
+        bytes32 generatedHash = _getRequestHash(
+            id,
+            accounts,
+            data,
+            seed,
+            optimistic
+        );
+
+        /* No need to require(requestToResult[packed.id] == bytes(0))
+         * because requestToHash will already be bytes(0) if it's fulfilled
+         * and wouldn't match the generated hash.
+         * generatedHash can never be bytes(0) because packed.data.height must be greater than 0 */
+
+        if (requestToHash[id] != generatedHash)
+            revert RequestDataMismatch(generatedHash, requestToHash[id]);
+
+        // SRandomRequest storage request = requests[requestId];
+        if (data.height == 0) revert RequestNotFound(id);
     }
 
     function _callback(

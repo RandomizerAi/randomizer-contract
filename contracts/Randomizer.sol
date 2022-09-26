@@ -6,7 +6,7 @@
  @notice A decentralized protocol that sends random values to requesting smart contracts
 **/
 
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
 import "./Client.sol";
 
@@ -71,15 +71,6 @@ contract Randomizer is Client, Beacon {
 
     function getResult(uint128 _request) external view returns (bytes32) {
         return results[_request];
-    }
-
-    /// @notice Returns the dispute window of a request (0 if no dispute window). First value is blocks, second is seconds.
-    function getDisputeWindow(uint128 _request)
-        external
-        view
-        returns (uint256[2] memory)
-    {
-        return optRequestDisputeWindow[_request];
     }
 
     function renewRequest(

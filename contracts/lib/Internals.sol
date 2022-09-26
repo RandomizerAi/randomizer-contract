@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL 1.1
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 import "./Structs.sol";
 
 interface IVRF {

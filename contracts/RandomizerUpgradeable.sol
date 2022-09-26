@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSL 1.1
 // Upgradeable version of Randomizer for EVM networks that support OpenZeppelin's Upgradeable contract.
 
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 import "./Randomizer.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
