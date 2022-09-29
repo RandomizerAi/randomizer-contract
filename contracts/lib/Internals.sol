@@ -45,7 +45,7 @@ library Internals {
         bool vrfFailed;
         address beaconToRemove;
         uint256 ethToSender;
-        uint256 newRequestToFee;
+        uint256 feeRefunded;
         uint256 newClientDeposit;
     }
 
@@ -160,6 +160,7 @@ library Internals {
         });
 
         // Run VRF Secp256k1 fastVerify method
+        uint256 feeRefunded;
         if (!_verify(callVars.publicKeys, vrfData, seed, vrf)) {
             // Manipulating beacons pay for all transaction fees to client so far.
             // Send full stake if beacon doesn't have enough.
@@ -168,23 +169,30 @@ library Internals {
                 if (callVars.feePaid < callVars.collateral) {
                     callVars.collateral -= callVars.feePaid;
                     callVars.clientDeposit += callVars.feePaid;
-                    callVars.feePaid = 0;
+                    feeRefunded = callVars.feePaid;
 
                     emit ChargeEth(
                         callVars.beacon,
                         callVars.client,
-                        callVars.feePaid,
+                        feeRefunded,
                         1
+                    );
+
+                    vars.ethToSender += callVars.collateral;
+                    emit ChargeEth(
+                        callVars.beacon,
+                        msg.sender,
+                        vars.ethToSender,
+                        2
                     );
                 } else {
                     callVars.clientDeposit += callVars.collateral;
-                    callVars.feePaid -= callVars.collateral;
-                    callVars.collateral = 0;
+                    feeRefunded = callVars.collateral;
 
                     emit ChargeEth(
                         callVars.beacon,
                         callVars.client,
-                        callVars.collateral,
+                        feeRefunded,
                         1
                     );
                 }
@@ -193,7 +201,6 @@ library Internals {
             vars.vrfFailed = true;
             // Entire remaining stake of manipulating beacons should go to the disputer
             // This penalty is possible because invalid VRF proofs can only be done on purpose
-            vars.ethToSender += callVars.collateral;
             emit BeaconInvalidVRF(callVars.beacon, vars.id, seed, vrfData);
         }
 
@@ -202,7 +209,7 @@ library Internals {
                 vars.vrfFailed,
                 callVars.beacon,
                 vars.ethToSender,
-                callVars.feePaid,
+                feeRefunded,
                 callVars.clientDeposit
             );
     }

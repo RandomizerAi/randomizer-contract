@@ -261,8 +261,8 @@ contract Randomizer is Client, Beacon {
                 // Refund this function's gas to the caller
                 ethCollateral[msg.sender] += renewFee;
                 ethDeposit[accounts.client] += refundToClient;
-                // Fees paid on this request are reset to 0
-                requestToFeePaid[packed.id] = 0;
+                // Add to fees refunded
+                requestToFeeRefunded[packed.id] += refundToClient;
                 // Client receives refund to ensure they have enough to pay for the next request
                 // Also since the request is taking slower than expected due to a non-submitting beacon,
                 // the non-submitting beacon should pay for the delay.

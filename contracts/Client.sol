@@ -35,8 +35,16 @@ contract Client is Utils {
 
     /// @notice Gets the amount of ETH reserved for a client's pending requests
     /// @dev Reserved amounts are based on an estimate per request so clients can't make more requests than they can fund.
-    function getEthReserved(address _client) public view returns (uint256) {
+    function getEthReserved(address _client) external view returns (uint256) {
         return ethReserved[_client];
+    }
+
+    function getFeePaid(uint128 _request) external view returns (uint256) {
+        return requestToFeePaid[_request];
+    }
+
+    function getFeeRefunded(uint128 _request) external view returns (uint256) {
+        return requestToFeePaid[_request];
     }
 
     /// @notice Withdraws client ETH to a different receiver
@@ -71,7 +79,7 @@ contract Client is Utils {
 
     /// @notice Requests a random value with on-chain VRF validation
     function request(uint256 callbackGasLimit) external returns (uint128 id) {
-        return _request(callbackGasLimit, false);
+        return _requestRandom(callbackGasLimit, false);
     }
 
     /// @notice Low gas request() alternative that processes the VRF proofs off-chain, with beacons acting as multisig validators
@@ -79,10 +87,10 @@ contract Client is Utils {
         external
         returns (uint128 id)
     {
-        return _request(callbackGasLimit, optimistic);
+        return _requestRandom(callbackGasLimit, optimistic);
     }
 
-    function _request(uint256 _callbackGasLimit, bool _optimistic)
+    function _requestRandom(uint256 _callbackGasLimit, bool _optimistic)
         private
         returns (uint128 id)
     {

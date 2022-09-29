@@ -57,9 +57,9 @@ contract Optimistic is Utils {
         // Iterate through beaconsToRemove and remove them
         // Don't need to emit an Invalid event because Internals already emits BeaconInvalidVRF
         if (cd.vrfFailed) {
-            requestToFeePaid[packed.id] = cd.newRequestToFee;
+            requestToFeeRefunded[packed.id] += cd.feeRefunded;
             ethDeposit[accounts.client] = cd.newClientDeposit;
-            ethCollateral[msg.sender] += cd.ethToSender;
+            if (cd.ethToSender > 0) ethCollateral[msg.sender] += cd.ethToSender;
             ethCollateral[beacon] = 0;
             if (sBeacon[beacon].exists) {
                 _removeBeacon(beacon);

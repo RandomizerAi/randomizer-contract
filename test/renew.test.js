@@ -134,6 +134,8 @@ describe("Renew", function () {
     // Skip blocks and renew request
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
     const renewUintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
+
+    const oldFeePaid = await randomizer.getFeePaid(request.id);
     const res = await (await randomizer.renewRequest(data.addresses, renewUintData, request.seed, false)).wait();
 
     // Get new request data
@@ -153,6 +155,11 @@ describe("Renew", function () {
     expect(newSigs[1]).to.not.equal(ethers.constants.HashZero);
     expect(newSigs[0]).to.equal(ethers.constants.HashZero);
     expect(newSigs[2]).to.equal(ethers.constants.HashZero);
+
+    // Fee should be added to refunded. feePaid should remain the same so the client contract can refund the total fees to the user.
+    expect((await randomizer.getFeeRefunded(request.id)).eq(0)).to.be.false;
+    expect((await randomizer.getFeeRefunded(request.id)).eq(oldFeePaid)).to.be.true;
+    expect((await randomizer.getFeePaid(request.id)).eq(oldFeePaid)).to.be.true;
   });
 
   it("renew final non-submitter", async function () {
