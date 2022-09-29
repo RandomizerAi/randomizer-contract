@@ -17,8 +17,7 @@ library Internals {
         address indexed from,
         address indexed to,
         uint256 amount,
-        bool fromDepositOrCollateral,
-        bool toDepositOrCollateral
+        uint8 chargeType
     );
     event BeaconInvalidVRF(
         address indexed beacon,
@@ -175,8 +174,7 @@ library Internals {
                         callVars.beacon,
                         callVars.client,
                         callVars.feePaid,
-                        true,
-                        false
+                        1
                     );
                 } else {
                     callVars.clientDeposit += callVars.collateral;
@@ -187,8 +185,7 @@ library Internals {
                         callVars.beacon,
                         callVars.client,
                         callVars.collateral,
-                        true,
-                        false
+                        1
                     );
                 }
             }

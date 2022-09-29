@@ -109,13 +109,18 @@ describe("Sequencer", function () {
       const tx = await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v, false);
 
       const res = await tx.wait();
-      const requestEvent = randomizer.interface.parseLog(res.logs[0]);
 
       // Process RequestBeacon event (from 2nd-to-last submitter)
-      if (requestEvent.name == "RequestBeacon") {
+      const requestEventRaw = res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
+
+      // Process RequestBeacon event (from 2nd-to-last submitter)
+      if (requestEventRaw) {
+        const requestEvent = randomizer.interface.parseLog(res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon"));
         selectedFinalBeacon = requestEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
-        request = { ...requestEvent.args.request, id: requestEvent.args.id };
+        request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
+        request.timestamp = requestEvent.args.timestamp;
+        request.height = requestEvent.args.height;
       }
     }
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
@@ -152,7 +157,8 @@ describe("Sequencer", function () {
     const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
     const lastTx = await signAndCallback(request, testCallbackWithTooMuchGas);
     // Check if lastTx emitted "CallbackFailed" event
-    const callbackFailedEvent = randomizer.interface.parseLog(lastTx.logs[0]);
+    const callbackFailedEvent = randomizer.interface.parseLog(lastTx.logs.find(log => randomizer.interface.parseLog(log).name === "CallbackFailed"));
+    expect(callbackFailedEvent).to.not.be.undefined;
     expect(callbackFailedEvent.name).to.equal("CallbackFailed");
     expect(callbackFailedEvent.args.id).to.equal(request.id);
     // Except getResult(request.id) to return not be bytes32(0)

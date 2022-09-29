@@ -23,15 +23,17 @@ describe("Beacon Tests", function () {
       const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, false);
 
       const res = await tx.wait();
-      const requestEvent = randomizer.interface.parseLog(res.logs[0]);
+      const requestEventRaw = res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
 
       // Process RequestBeacon event (from 2nd-to-last submitter)
-      if (requestEvent.name == "RequestBeacon") {
-
+      if (requestEventRaw) {
+        console.log("REQUESTBEACON FOUND");
+        const requestEvent = randomizer.interface.parseLog(requestEventRaw);
         selectedFinalBeacon = requestEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
-        request = { ...requestEvent.args.request, id: requestEvent.args.id };
-
+        request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
+        request.timestamp = requestEvent.args.timestamp;
+        request.height = requestEvent.args.height;
       }
     }
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];

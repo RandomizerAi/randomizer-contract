@@ -26,7 +26,7 @@ contract OptimisticTestCallbackWithTooMuchGas {
         randomizer = _randomizer;
     }
 
-    function randomizerCallback(uint256 _id, bytes32 value) external {
+    function randomizerCallback(uint128 _id, bytes32 value) external {
         // Keep running this until it runs out of gas
         while (true) {
             i = keccak256(abi.encodePacked(i, _id, value));

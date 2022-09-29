@@ -17,13 +17,18 @@ describe("Request & Submit", function () {
       const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, false);
 
       const res = await tx.wait();
-      const requestEvent = randomizer.interface.parseLog(res.logs[0]);
 
       // Process RequestBeacon event (from 2nd-to-last submitter)
-      if (requestEvent.name == "RequestBeacon") {
+      const requestEventRaw = res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
+
+      // Process RequestBeacon event (from 2nd-to-last submitter)
+      if (requestEventRaw) {
+        const requestEvent = randomizer.interface.parseLog(res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon"));
         selectedFinalBeacon = requestEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
-        request = { ...requestEvent.args.request, id: requestEvent.args.id };
+        request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
+        request.timestamp = requestEvent.args.timestamp;
+        request.height = requestEvent.args.height;
       }
     }
 
@@ -330,14 +335,17 @@ describe("Request & Submit", function () {
       // const bytesData = [sig.r, sig.s];
       const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), addressData, uintData, message, false);
       const res = await tx.wait();
-      const requestEvent = randomizer.interface.parseLog(res.logs[0]);
+      // const requestEvent = res.logs.find(log => randomizer.interface.parseLog(log).name === "Request");
       const requestHash = await randomizer.gammaToHash(proof[0], proof[1]);
       const index = request.beacons.indexOf(signer.address);
       localSignatures[index] = requestHash;
       const requestSignatures = await randomizer.getRequestVrfHashes(request.id);
       expect(requestSignatures).to.include(requestHash);
 
-      if (requestEvent.name == "RequestBeacon") {
+      const beaconEventRaw = res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
+      if (beaconEventRaw !== undefined) {
+        const beaconEvent = randomizer.interface.parseLog(beaconEventRaw);
+        console.log("Request Beacon");
         // Check that the beacon is the one we expect
         const allBeacons = await randomizer.getBeacons();
         let seed = ethers.utils.solidityKeccak256(
@@ -360,10 +368,12 @@ describe("Request & Submit", function () {
           }
         }
         const randomBeacon = getRandomBeacon(seed);
-        selectedFinalBeacon = requestEvent.args.beacon;
+        selectedFinalBeacon = beaconEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         expect(selectedFinalBeacon).to.equal(randomBeacon);
-        request = requestEvent.args.request;
+        request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
+        request.timestamp = beaconEvent.args.timestamp;
+        request.height = beaconEvent.args.height;
       }
 
     }
@@ -391,12 +401,6 @@ describe("Request & Submit", function () {
     await tx.wait();
 
     const callbackResult = await testCallback.result();
-
-    const requestHash = proofHash;
-    const requestHashBytes = ethers.utils.arrayify(requestHash);
-    const requestHashHex = ethers.utils.hexlify(requestHashBytes);
-    const requestHashBytes12 = ethers.utils.hexDataSlice(requestHashHex, 0, 32);
-    const hash = ethers.utils.hexlify(requestHashBytes12);
 
     const result =
       ethers.utils.solidityKeccak256(
@@ -432,12 +436,15 @@ describe("Request & Submit", function () {
       const gasPaid = receiptBlockBaseFee.mul(receipt.gasUsed).add(request.beaconFee);
       const beaconStake = await randomizer.getBeaconStakeEth(signer.address);
       expect(beaconStake.gte(gasPaid)).to.be.true;
-      const requestEvent = randomizer.interface.parseLog(receipt.logs[0]);
+      const requestEventRaw = receipt.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
 
-      if (requestEvent.name == "RequestBeacon") {
+      if (requestEventRaw) {
+        const requestEvent = randomizer.interface.parseLog(requestEventRaw);
         selectedFinalBeacon = requestEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
-        request = { ...requestEvent.args.request, id: requestEvent.args.id };
+        request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
+        request.timestamp = requestEvent.args.timestamp;
+        request.height = requestEvent.args.height;
       }
     }
 
@@ -497,8 +504,8 @@ describe("Request & Submit", function () {
     const res = await req.wait();
     const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
     const lastTx = await signAndCallback(request, testCallbackWithRevert);
-    const callbackFailedEvent = randomizer.interface.parseLog(lastTx.logs[0]);
-    expect(callbackFailedEvent.name).to.equal("CallbackFailed");
+    const callbackFailedEvent = randomizer.interface.parseLog(lastTx.logs.find(log => randomizer.interface.parseLog(log).name === "CallbackFailed"));
+    expect(callbackFailedEvent).to.not.be.undefined;
     expect(callbackFailedEvent.args.id).to.equal(request.id);
     // Except getResult(request.id) to return not be bytes32(0)
     const result = await randomizer.getResult(request.id);
@@ -517,8 +524,8 @@ describe("Request & Submit", function () {
     const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
     const lastTx = await signAndCallback(request, testCallbackWithTooMuchGas);
     // Check if lastTx emitted "CallbackFailed" event
-    const callbackFailedEvent = randomizer.interface.parseLog(lastTx.logs[0]);
-    expect(callbackFailedEvent.name).to.equal("CallbackFailed");
+    const callbackFailedEvent = randomizer.interface.parseLog(lastTx.logs.find(log => randomizer.interface.parseLog(log).name === "CallbackFailed"));
+    expect(callbackFailedEvent).to.not.be.undefined;
     expect(callbackFailedEvent.args.id).to.equal(request.id);
     // Except getResult(request.id) to return not be bytes32(0)
     const result = await randomizer.getResult(request.id);

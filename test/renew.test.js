@@ -187,23 +187,27 @@ describe("Renew", function () {
       const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, false);
 
       const res = await tx.wait();
-      const requestEvent = randomizer.interface.parseLog(res.logs[0]);
 
       // Process RequestBeacon event (from 2nd-to-last submitter)
-      if (requestEvent.name == "RequestBeacon") {
-        selectedFinalBeacon = requestEvent.args[2];
-        request = requestEvent.args[1];
+      const requestEventRaw = res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
+
+      // Process RequestBeacon event (from 2nd-to-last submitter)
+      if (requestEventRaw) {
+        const requestEvent = randomizer.interface.parseLog(requestEventRaw);
+        const selectedFinalBeacon = requestEvent.args.beacon;
+        request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
+        request.timestamp = requestEvent.args.timestamp;
+        request.height = requestEvent.args.height;
         expect(request.beacons[2]).to.not.equal(ethers.constants.AddressZero);
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         oldReq = request;
-
       }
     }
     const oldSigs = await randomizer.getRequestVrfHashes(1);
 
 
     expect(oldReq.beacons[2]).to.not.equal(ethers.constants.AddressZero);
-    const finalSigner = signers.filter(signer => signer.address == oldReq.beacons[2])[0];
+    const finalSigner = signers.find(signer => signer.address == request.beacons[2]);
     await randomizer.connect(finalSigner).beaconStakeEth(finalSigner.address, { value: ethers.utils.parseEther("1") });
 
 
@@ -322,7 +326,7 @@ describe("Renew", function () {
     expect(renew.events[renew.events.length - 1].event).to.equal("Retry");
   });
 
-  it("allow first beacon, then sequencer, then everyone to renew a request after an added half expiration period for each party", async function () {
+  it("allow first submitter, then sequencer, then everyone to renew a request after an added half expiration period for each party", async function () {
     const newReq = async () => {
       const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
       await deposit.wait();
@@ -361,13 +365,60 @@ describe("Renew", function () {
       const data = await vrfHelper.getSubmitData(firstSubmitter.address, request);
       await randomizer.connect(firstSubmitter)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(firstSubmitter.address), data.addresses, data.uints, request.seed, false);
       const allSigners = [firstSubmitter, sequencer, signers[9]];
-      const signerStrings = ["first", "seq", "rando"];
       const waitBlocks = ethers.BigNumber.from(request.height).add(request.expirationBlocks).sub(await hre.ethers.provider.getBlockNumber()).add(request.expirationBlocks.div(2).mul(i)).toNumber();
       const waitSeconds = ethers.BigNumber.from(request.timestamp).add(request.expirationSeconds).sub((await hre.ethers.provider.getBlock()).timestamp).add(request.expirationSeconds.div(2).mul(i)).toNumber();
       const res = await renewWith(request, allSigners[i], waitBlocks, waitSeconds);
       expect(res).to.equal(true);
     }
 
+    // Sequencer and random signer can't renew as first submitter
+    for (let i = 1; i < 3; i++) {
+      const request = await newReq();
+      const data = await vrfHelper.getSubmitData(signers[0].address, request);
+      const waitBlocks = ethers.BigNumber.from(request.height).add(request.expirationBlocks).sub(await hre.ethers.provider.getBlockNumber()).toNumber();
+      const waitSeconds = ethers.BigNumber.from(request.timestamp).add(request.expirationSeconds).sub((await hre.ethers.provider.getBlock()).timestamp).toNumber();
+      await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(waitBlocks - 5), ethers.utils.hexValue(Math.ceil(waitSeconds / waitBlocks + 20))]);
+      try {
+        await randomizer.connect(sequencer).renewRequest(data.addresses, data.rawUints, request.seed, false);
+        expect(true).to.equal(false);
+      } catch (e) {
+        expect(e.message).to.match(/NotYetRenewable/g);
+      }
+      try {
+        await randomizer.connect(signers[9]).renewRequest(data.addresses, data.rawUints, request.seed, false);
+        expect(true).to.equal(false);
+      } catch (e) {
+        expect(e.message).to.match(/NotYetRenewable/g);
+      }
+    }
+
+    // Sequencer and random signer can renew after their specific expiration period if noone submitted
+    for (let i = 1; i < 3; i++) {
+      const request = await newReq();
+      const allSigners = [sequencer, signers[9]];
+      const waitBlocks = ethers.BigNumber.from(request.height).add(request.expirationBlocks).sub(await hre.ethers.provider.getBlockNumber()).add(request.expirationBlocks.div(2).mul(i)).toNumber();
+      const waitSeconds = ethers.BigNumber.from(request.timestamp).add(request.expirationSeconds).sub((await hre.ethers.provider.getBlock()).timestamp).add(request.expirationSeconds.div(2).mul(i)).toNumber();
+      const res = await renewWith(request, allSigners[i - 1], waitBlocks, waitSeconds);
+      expect(res).to.equal(true);
+    }
+
+    // Second submitter can only renew within first timeframe if they submitted
+    const request = await newReq();
+    const secondSubmitter = signers.find(signer => signer.address === request.beacons[1]);
+    const data = await vrfHelper.getSubmitData(secondSubmitter.address, request);
+    const waitBlocks = ethers.BigNumber.from(request.height).add(request.expirationBlocks).sub(await hre.ethers.provider.getBlockNumber()).toNumber();
+    const waitSeconds = ethers.BigNumber.from(request.timestamp).add(request.expirationSeconds).sub((await hre.ethers.provider.getBlock()).timestamp).toNumber();
+    await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(waitBlocks + 5), ethers.utils.hexValue(Math.ceil(waitSeconds / waitBlocks + 20))]);
+    // Can't renew yet because 2nd beacon hasn't submitted yet
+    try {
+      await randomizer.connect(secondSubmitter).renewRequest(data.addresses, data.rawUints, request.seed, false);
+      expect(true).to.equal(false);
+    } catch (e) {
+      expect(e.message).to.match(/NotYetRenewable/g);
+    }
+    // After submit they can renew
+    await randomizer.connect(secondSubmitter)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(secondSubmitter.address), data.addresses, data.uints, request.seed, false);
+    await randomizer.connect(secondSubmitter).renewRequest(data.addresses, data.rawUints, request.seed, false);
 
 
   });

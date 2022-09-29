@@ -52,6 +52,7 @@ describe("Admin", function () {
   });
 
   it("set config and gas variables", async function () {
+    this.timeout(100000);
     await randomizer.setConfigUint(0, ethers.utils.parseEther("0.1"));
     await randomizer.setConfigUint(1, ethers.utils.parseEther("0.1"));
     await randomizer.setConfigUint(2, 30);

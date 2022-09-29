@@ -102,56 +102,51 @@ contract Randomizer is Client, Beacon {
         if (requestToHash[packed.id] != generatedHash)
             revert RequestDataMismatch(generatedHash, requestToHash[packed.id]);
 
-        uint256 _expirationBlocks;
-        uint256 _expirationSeconds;
-
-        // For the first expiration period, the first successful submitter of this request can renew it exclusively
+        // For the first expiration period, the request's first beacon can renew it exclusively
         // After half an expiration period it's open to the sequencer
         // After another half expiration period, it's open to everyone to renew
-        if (_getFirstSubmitter(packed.id, accounts.beacons) == msg.sender) {
-            _expirationBlocks =
-                packed.data.height +
-                packed.data.expirationBlocks;
-            _expirationSeconds =
-                packed.data.timestamp +
-                packed.data.expirationSeconds;
-        } else if (msg.sender == sequencer) {
-            _expirationBlocks =
-                packed.data.height +
-                packed.data.expirationBlocks +
-                (packed.data.expirationBlocks / 2);
-            _expirationSeconds =
-                packed.data.timestamp +
-                packed.data.expirationSeconds +
-                (packed.data.expirationSeconds / 2);
-        } else {
-            _expirationBlocks =
-                packed.data.height +
-                (packed.data.expirationBlocks * 2);
-            _expirationSeconds =
-                packed.data.timestamp +
-                (packed.data.expirationSeconds * 2);
-        }
 
-        if (
-            block.number < _expirationBlocks ||
-            block.timestamp < _expirationSeconds
-        )
-            revert NotYetRenewable(
-                block.number,
-                _expirationBlocks,
-                block.timestamp,
-                _expirationSeconds
-            );
+        bytes32[3] memory hashes = requestToVrfHashes[packed.id];
+
+        // Nest this check to bypass overflow
+        {
+            uint256 _expirationBlocks = packed.data.height +
+                packed.data.expirationBlocks;
+            uint256 _expirationSeconds = packed.data.timestamp +
+                packed.data.expirationSeconds;
+            if (msg.sender == sequencer) {
+                _expirationBlocks += packed.data.expirationBlocks / 2;
+                _expirationSeconds += packed.data.expirationSeconds / 2;
+            } else if (
+                // First beacon can renew first if they submitted
+                // Second beacon can renew first if the first beacon has not yet submitted
+                !((msg.sender == accounts.beacons[0] &&
+                    hashes[0] != bytes32(0)) ||
+                    (msg.sender == accounts.beacons[1] &&
+                        hashes[1] != bytes32(0) &&
+                        hashes[0] == bytes32(0)))
+            ) {
+                _expirationBlocks += packed.data.expirationBlocks;
+                _expirationSeconds += packed.data.expirationSeconds;
+            }
+
+            if (
+                block.number < _expirationBlocks ||
+                block.timestamp < _expirationSeconds
+            )
+                revert NotYetRenewable(
+                    block.number,
+                    _expirationBlocks,
+                    block.timestamp,
+                    _expirationSeconds
+                );
+        }
 
         address[] memory beaconsToStrike = new address[](3);
         uint8 beaconsToStrikeLen = 0;
         address[3] memory reqBeacons = accounts.beacons;
         for (uint256 i; i < 3; i++) {
-            if (
-                requestToVrfHashes[packed.id][i] == bytes32(0) &&
-                reqBeacons[i] != address(0)
-            ) {
+            if (hashes[i] == bytes32(0) && reqBeacons[i] != address(0)) {
                 address beaconAddress = reqBeacons[i];
                 SBeacon memory tempBeacon = sBeacon[beaconAddress];
                 if (tempBeacon.exists) tempBeacon.strikes++;
@@ -173,7 +168,7 @@ contract Randomizer is Client, Beacon {
         accounts.beacons = _replaceNonSubmitters(
             packed.id,
             accounts.beacons,
-            requestToVrfHashes[packed.id]
+            hashes
         );
 
         // Refund fees paid by client paid by non-submitting beacon
@@ -247,13 +242,7 @@ contract Randomizer is Client, Beacon {
                 totalCharge = ethCollateral[firstStrikeBeacon];
                 renewFee = renewFee > totalCharge ? totalCharge : renewFee;
                 ethCollateral[msg.sender] += renewFee;
-                emit ChargeEth(
-                    firstStrikeBeacon,
-                    msg.sender,
-                    renewFee,
-                    true,
-                    true
-                );
+                emit ChargeEth(firstStrikeBeacon, msg.sender, renewFee, 2);
                 // totalCharge - renewFee is now 0 at its lowest
                 // If collateral is remaining after renewFee, it will be refunded to the client
                 refundToClient = totalCharge - renewFee;
@@ -263,8 +252,7 @@ contract Randomizer is Client, Beacon {
                         firstStrikeBeacon,
                         accounts.client,
                         refundToClient,
-                        true,
-                        false
+                        1
                     );
                 }
                 ethCollateral[firstStrikeBeacon] = 0;
@@ -279,21 +267,14 @@ contract Randomizer is Client, Beacon {
                 // Also since the request is taking slower than expected due to a non-submitting beacon,
                 // the non-submitting beacon should pay for the delay.
                 // Log charge from striked beacon to caller (collateral to collateral)
-                emit ChargeEth(
-                    firstStrikeBeacon,
-                    msg.sender,
-                    renewFee,
-                    true,
-                    true
-                );
+                emit ChargeEth(firstStrikeBeacon, msg.sender, renewFee, 2);
 
                 // Log charge from striked beacon to client (collateral to deposit)
                 emit ChargeEth(
                     firstStrikeBeacon,
                     accounts.client,
                     refundToClient,
-                    true,
-                    false
+                    1
                 );
             }
         } else {

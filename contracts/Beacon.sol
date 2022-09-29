@@ -267,7 +267,17 @@ contract Beacon is Utils, Optimistic {
         reqValues[beaconPos] = vrfHash;
         // Every 100 consecutive submissions, strikes are reset to 0
         _updateBeaconSubmissionCount(beacon);
-        // Store hash of valid signature to results
+
+        if (optimistic)
+            emit SubmitOptimistic(
+                packed.id,
+                beacon,
+                packed.vrf.proof,
+                packed.vrf.uPoint,
+                packed.vrf.vComponents
+            );
+        else emit SubmitRandom(packed.id, beacon);
+
         if (submissionsCount < 2) {
             //             address[] memory _addresses,
             // uint256[] memory _data,
@@ -285,14 +295,6 @@ contract Beacon is Utils, Optimistic {
                 reqValues,
                 optimistic
             );
-            if (optimistic)
-                emit OptimisticSubmission(
-                    beacon,
-                    packed.id,
-                    packed.vrf.proof,
-                    packed.vrf.uPoint,
-                    packed.vrf.vComponents
-                );
         } else {
             if (!optimistic)
                 _processFinalSubmission(
@@ -373,10 +375,10 @@ contract Beacon is Utils, Optimistic {
         uint256 submissionsCount,
         bytes32[3] memory reqValues,
         bool optimistic
-    ) private returns (SRequestEventData memory) {
-        SRequestEventData memory newEventData;
+    ) private {
         // Second to last requests final beacon
         if (submissionsCount == 1) {
+            SRequestEventData memory newEventData;
             bytes32 lastBeaconSeed;
 
             lastBeaconSeed = keccak256(
@@ -418,7 +420,12 @@ contract Beacon is Utils, Optimistic {
                 optimistic
             );
 
-            emit RequestBeacon(packed.id, newEventData, randomBeacon);
+            emit RequestBeacon(
+                packed.id,
+                randomBeacon,
+                packed.data.height,
+                packed.data.timestamp
+            );
         }
 
         // 62k offset for charge
@@ -426,8 +433,6 @@ contract Beacon is Utils, Optimistic {
             _getGasPrice()) + packed.data.beaconFee;
         requestToFeePaid[packed.id] += fee;
         _chargeClient(accounts.client, msg.sender, fee);
-
-        return newEventData;
     }
 
     function _checkCanSubmit(

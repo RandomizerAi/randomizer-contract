@@ -36,61 +36,52 @@ contract Admin is OwnableUpgradeable, Store {
         uint256 amount
     );
     /// @notice Emits when ETH is charged from a client to a beacon
-    /// @param fromDepositOrCollateral charged from ethDeposit (client) or ethCollateral (beacon). False = deposit, true = collateral.
-    /// @param toDepositOrCollateral sent to ethDeposit (client) or ethCollateral (beacon).
+    /// @param chargeType 0: client deposit to beacon collateral, 1: beacon collateral to client deposit, 2: beacon collateral to beacon collateral
     event ChargeEth(
         address indexed from,
         address indexed to,
         uint256 amount,
-        bool fromDepositOrCollateral,
-        bool toDepositOrCollateral
+        uint8 chargeType
     );
 
     event WithdrawEth(address indexed to, uint256 amount);
     event RegisterBeacon(address indexed beacon);
-    event UnregisterBeacon(address indexed beacon, uint256 strikes);
+    event UnregisterBeacon(address indexed beacon, uint8 strikes);
     event RemoveBeacon(address indexed beacon, uint8 strikes);
-    event BeaconInvalidVRF(
-        address indexed beacon,
-        uint128 indexed request,
-        uint256[2] publicKey,
-        uint256[4] proof,
-        bytes32 seed,
-        uint256[2] uPoint,
-        uint256[4] vComponents
-    );
 
     /// @notice Emits an event that contains all data needed for a beacon to submit a random number.
     /// @param request request event data (id, ethReserved, beaconFee, height, timestamp, expirationSeconds, expirationBlocks, callbackGasLimit, client, beacons, lastBeaconSeed)
     event Request(uint128 indexed id, SRequestEventData request);
 
+    event SubmitRandom(uint128 indexed id, address indexed beacon);
+
+    event SubmitOptimistic(
+        uint128 indexed id,
+        address indexed beacon,
+        uint256[4] proof,
+        uint256[2] uPoint,
+        uint256[4] vComponents
+    );
+
     /// @notice Emits when final beacon is selected by second-to-last submitter
-    /// @param request request event data (id, ethReserved, beaconFee, height, timestamp, expirationSeconds, expirationBlocks, callbackGasLimit, client, beacons, lastBeaconSeed)
     /// @param beacon address of the beacon added
     event RequestBeacon(
         uint128 indexed id,
-        SRequestEventData request,
-        address indexed beacon
+        address indexed beacon,
+        uint256 height,
+        uint256 timestamp
     );
 
     event CallbackFailed(
         address indexed client,
         uint128 indexed id,
-        bytes32 value,
+        bytes32 result,
         bytes txData
     );
     event OptimisticReady(
         uint128 indexed id,
         uint256 completeHeight,
         uint256 completeTime
-    );
-
-    event OptimisticSubmission(
-        address indexed beacon,
-        uint128 indexed id,
-        uint256[4] proof,
-        uint256[2] uPoint,
-        uint256[4] vComponents
     );
 
     // Admin events

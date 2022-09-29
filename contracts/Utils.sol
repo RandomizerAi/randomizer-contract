@@ -8,14 +8,14 @@ pragma solidity ^0.8.17;
 import "./Admin.sol";
 import "./lib/Internals.sol";
 // Import the gas handler for the desired network to deploy to
-import "./GasHandler.sol";
+import "./NetworkHelper.sol";
 
 interface IRandomReceiver {
     function randomizerCallback(uint128 _id, bytes32 value) external;
 }
 
 /// @custom:oz-upgrades-unsafe-allow external-library-linking
-contract Utils is Admin, GasHandler {
+contract Utils is Admin, NetworkHelper {
     // Errors used by Utils, Beacon, Optimistic, and Client
     error ReentrancyGuard();
     error RequestDataMismatch(bytes32 givenHash, bytes32 expectedHash);
@@ -65,20 +65,6 @@ contract Utils is Admin, GasHandler {
         beacons.pop();
     }
 
-    /// @dev Gets the first submitter in a request (address(0) if none)
-    function _getFirstSubmitter(uint128 _request, address[3] memory _beacons)
-        internal
-        view
-        returns (address)
-    {
-        bytes32[3] memory signatures = requestToVrfHashes[_request];
-        // Iterate through values and return beacon address if it submitted a signature
-        for (uint256 i; i < 3; i++) {
-            if (signatures[i] != bytes32(0)) return _beacons[i];
-        }
-        return address(0);
-    }
-
     function _chargeClient(
         address _from,
         address _to,
@@ -86,7 +72,7 @@ contract Utils is Admin, GasHandler {
     ) internal {
         ethDeposit[_from] -= _value;
         ethCollateral[_to] += _value;
-        emit ChargeEth(_from, _to, _value, false, true);
+        emit ChargeEth(_from, _to, _value, 0);
     }
 
     /// @dev Gets BEACONS_PER_REQUEST number of random beacons for a request
@@ -253,16 +239,7 @@ contract Utils is Admin, GasHandler {
         SRandomUintData memory data,
         bool optimistic
     ) internal {
-        bytes32 seed = keccak256(
-            abi.encode(
-                address(this),
-                id,
-                blockhash(block.number - 1),
-                block.timestamp,
-                block.difficulty,
-                block.chainid
-            )
-        );
+        bytes32 seed = _seed(id);
 
         address[3] memory selectedBeacons = _randomBeacons(seed);
 

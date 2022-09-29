@@ -15,7 +15,7 @@ contract Optimistic is Utils {
     error VRFDataMismatch();
     error ProofNotInvalid();
 
-    /// @notice Disputes a VRF submission. If the VRF validation in this function fails, the manipulating beacon's stake goes to the disputer and a new request is made.
+    /// @notice Disputes a VRF submission. If the VRF validation in this function fails, the VRF beacon's stake goes to the disputer and the request is renewed.
     function dispute(
         uint256 beaconPos,
         address[4] calldata _addressData,
@@ -55,19 +55,24 @@ contract Optimistic is Utils {
         );
 
         // Iterate through beaconsToRemove and remove them
-        // Don't need to emit an event because Internals already emits BeaconInvalidVRF
+        // Don't need to emit an Invalid event because Internals already emits BeaconInvalidVRF
         if (cd.vrfFailed) {
             requestToFeePaid[packed.id] = cd.newRequestToFee;
             ethDeposit[accounts.client] = cd.newClientDeposit;
             ethCollateral[msg.sender] += cd.ethToSender;
             ethCollateral[beacon] = 0;
-            _removeBeacon(beacon);
+            if (sBeacon[beacon].exists) {
+                _removeBeacon(beacon);
+                emit RemoveBeacon(beacon, sBeacon[beacon].strikes);
+            }
             // Delete the old request and generate a new one with the same parameters (except for new seed, beacons, and block data)
             delete optRequestDisputeWindow[packed.id];
             delete requestToProofs[packed.id][beaconPos];
             delete requestToVrfHashes[packed.id][beaconPos];
 
             // Replace the beacon in the request and emit RequestBeacon for the new beacon
+            packed.data.height = block.number;
+            packed.data.timestamp = block.timestamp;
             address randomBeacon = _randomBeacon(seed, accounts.beacons);
             accounts.beacons[beaconPos] = randomBeacon;
             requestToHash[packed.id] = _getRequestHash(
@@ -79,20 +84,9 @@ contract Optimistic is Utils {
             );
             emit RequestBeacon(
                 packed.id,
-                SRequestEventData(
-                    packed.data.ethReserved,
-                    packed.data.beaconFee,
-                    packed.data.height,
-                    packed.data.timestamp,
-                    packed.data.expirationBlocks,
-                    packed.data.expirationSeconds,
-                    packed.data.callbackGasLimit,
-                    accounts.client,
-                    accounts.beacons,
-                    seed,
-                    true
-                ),
-                randomBeacon
+                randomBeacon,
+                packed.data.height,
+                packed.data.timestamp
             );
         } else {
             revert ProofNotInvalid();
@@ -123,7 +117,7 @@ contract Optimistic is Utils {
                 3
             );
         } else {
-            bool isBeaconOrSequencer;
+            bool isBeacon;
             for (uint256 i; i < 3; i++) {
                 if (accounts.beacons[i] == msg.sender) {
                     _optCanComplete(
@@ -132,11 +126,11 @@ contract Optimistic is Utils {
                         window,
                         i
                     );
-                    isBeaconOrSequencer = true;
+                    isBeacon = true;
                     break;
                 }
             }
-            if (!isBeaconOrSequencer) {
+            if (!isBeacon) {
                 _optCanComplete(
                     packed.data.expirationBlocks,
                     packed.data.expirationSeconds,
@@ -175,9 +169,10 @@ contract Optimistic is Utils {
         uint256[2] memory _window,
         uint256 _multiplier
     ) internal view {
-        uint256 completeHeight = _window[0] + (_expirationBlocks * _multiplier);
+        uint256 completeHeight = _window[0] +
+            ((_expirationBlocks / 2) * _multiplier);
         uint256 completeTimestamp = _window[1] +
-            (_expirationSeconds * _multiplier);
+            ((_expirationSeconds / 2) * _multiplier);
         if (
             block.number < completeHeight || block.timestamp < completeTimestamp
         )

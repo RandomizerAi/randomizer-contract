@@ -19,13 +19,18 @@ describe("Optimistic Tests", function () {
       const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
 
       const res = await tx.wait();
-      const requestEvent = randomizer.interface.parseLog(res.logs[0]);
+
+      const requestEventRaw = res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
 
       // Process RequestBeacon event (from 2nd-to-last submitter)
-      if (requestEvent.name == "RequestBeacon") {
+      if (requestEventRaw) {
+        const requestEvent = randomizer.interface.parseLog(requestEventRaw);
+
         selectedFinalBeacon = requestEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
-        request = { ...requestEvent.args.request, id: requestEvent.args.id };
+        request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
+        request.timestamp = requestEvent.args.timestamp;
+        request.height = requestEvent.args.height;
       }
     }
 
@@ -259,14 +264,17 @@ describe("Optimistic Tests", function () {
       // const bytesData = [sig.r, sig.s];
       const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, message, true);
       const res = await tx.wait();
-      const requestEvent = randomizer.interface.parseLog(res.logs[0]);
       const requestHash = await randomizer.gammaToHash(proof[0], proof[1]);
       const index = request.beacons.indexOf(signer.address);
       localSignatures[index] = requestHash;
       const requestSignatures = await randomizer.getRequestVrfHashes(request.id);
       expect(requestSignatures).to.include(requestHash);
 
-      if (requestEvent.name == "RequestBeacon") {
+      const requestEventRaw = res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
+
+      // Process RequestBeacon event (from 2nd-to-last submitter)
+      if (requestEventRaw) {
+        const requestEvent = randomizer.interface.parseLog(res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon"));
         // Check that the beacon is the one we expect
         const allBeacons = await randomizer.getBeacons();
         let seed = ethers.utils.solidityKeccak256(
@@ -292,7 +300,9 @@ describe("Optimistic Tests", function () {
         selectedFinalBeacon = requestEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         expect(selectedFinalBeacon).to.equal(randomBeacon);
-        request = { ...requestEvent.args.request, id: requestEvent.args.id };
+        request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
+        request.timestamp = requestEvent.args.timestamp;
+        request.height = requestEvent.args.height;
       }
 
     }
@@ -355,12 +365,14 @@ describe("Optimistic Tests", function () {
       const gasPaid = receiptBlockBaseFee.mul(receipt.gasUsed).add(request.beaconFee);
       const beaconStake = await randomizer.getBeaconStakeEth(signer.address);
       expect(beaconStake.gte(gasPaid)).to.be.true;
-      const requestEvent = randomizer.interface.parseLog(receipt.logs[0]);
-
-      if (requestEvent.name == "RequestBeacon") {
+      const requestEventRaw = receipt.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
+      if (requestEventRaw) {
+        const requestEvent = randomizer.interface.parseLog(requestEventRaw);
         selectedFinalBeacon = requestEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
-        request = { ...requestEvent.args.request, id: requestEvent.args.id };
+        request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
+        request.timestamp = requestEvent.args.timestamp;
+        request.height = requestEvent.args.height;
       }
     }
 
@@ -421,7 +433,8 @@ describe("Optimistic Tests", function () {
     await deposit.wait();
     const req = await testCallbackWithRevert.makeRequest();
     const res = await req.wait();
-    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const requestEvent = randomizer.interface.parseLog(res.logs.find(log => randomizer.interface.parseLog(log).name === "Request"));
+    const request = { ...requestEvent.args.request, id: requestEvent.args.id };
     const lastTx = await signAndCallback(request, testCallbackWithRevert);
     const callbackFailedEvent = randomizer.interface.parseLog(lastTx.logs[0]);
     expect(callbackFailedEvent.name).to.equal("CallbackFailed");
@@ -534,7 +547,9 @@ describe("Optimistic Tests", function () {
       if (parsed.name == "RequestBeacon") {
         selectedFinalBeacon = parsed.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
-        request = { ...parsed.args.request, id: parsed.args.id };
+        request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
+        request.timestamp = parsed.args.timestamp;
+        request.height = parsed.args.height;
       }
     }
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
