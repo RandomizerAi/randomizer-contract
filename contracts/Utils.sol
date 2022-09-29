@@ -75,6 +75,31 @@ contract Utils is Admin, NetworkHelper {
         emit ChargeEth(_from, _to, _value, 0);
     }
 
+    function _chargeClientIfPossible(
+        uint128 id,
+        bool payDev,
+        address client,
+        uint256 fee,
+        uint256 beaconFee
+    ) internal {
+        uint256 devFee;
+        uint256 deposit = ethDeposit[client];
+        // Nested ifs save some gas
+        if (deposit > 0) {
+            if (deposit > fee) {
+                if (payDev) {
+                    // Only pay developer if client has enough ETH left after paying fee
+                    devFee = beaconFee >= deposit - fee ? beaconFee : deposit;
+                    _chargeClient(client, developer, devFee);
+                }
+            } else if (deposit > 0) {
+                fee = deposit;
+            }
+            requestToFeePaid[id] += fee + devFee;
+            _chargeClient(client, msg.sender, fee);
+        }
+    }
+
     /// @dev Gets BEACONS_PER_REQUEST number of random beacons for a request
     function _randomBeacons(bytes32 _random)
         internal
@@ -292,17 +317,14 @@ contract Utils is Admin, NetworkHelper {
         emit Result(id, result);
     }
 
-    function _handleSubmitFeeCharge(
+    function _getSubmitFeeCharge(
         uint256 gasAtStart,
         uint256 _beaconFee,
-        uint256 offset,
-        address client
-    ) internal returns (uint256) {
+        uint256 offset
+    ) internal view returns (uint256) {
         // Beacon fee
         uint256 fee = ((gasAtStart - gasleft() + offset) * _getGasPrice()) +
             _beaconFee;
-        _chargeClient(client, msg.sender, fee);
-
         return fee;
     }
 

@@ -153,14 +153,18 @@ contract Optimistic is Utils {
         delete requestToProofs[packed.id];
         delete requestToHash[packed.id];
 
-        // Dev fee
-        _chargeClient(accounts.client, developer, packed.data.beaconFee);
+        uint256 fee = ((gasAtStart -
+            gasleft() +
+            gasEstimates[GKEY_COMPLETE_OPTIMISTIC]) * _getGasPrice()) +
+            packed.data.beaconFee;
 
-        // Caller fee
-        uint256 fee = ((gasAtStart - gasleft() + gasEstimates[5]) *
-            _getGasPrice()) + packed.data.beaconFee;
-        requestToFeePaid[packed.id] += fee;
-        _chargeClient(accounts.client, msg.sender, fee);
+        _chargeClientIfPossible(
+            packed.id,
+            true,
+            accounts.client,
+            fee,
+            packed.data.beaconFee
+        );
     }
 
     function _optCanComplete(
@@ -212,14 +216,13 @@ contract Optimistic is Utils {
         optRequestDisputeWindow[id] = disputeWindow;
 
         // Beacon fee
-        uint256 submitFee = _handleSubmitFeeCharge(
+        uint256 submitFee = _getSubmitFeeCharge(
             gasAtStart,
             _beaconFee,
-            gasEstimates[GKEY_PROCESS_OPTIMISTIC],
-            client
+            gasEstimates[GKEY_PROCESS_OPTIMISTIC]
         );
 
-        requestToFeePaid[id] += submitFee + _beaconFee;
+        _chargeClientIfPossible(id, true, client, submitFee, _beaconFee);
 
         emit OptimisticReady(id, disputeWindow[0], disputeWindow[1]);
 
