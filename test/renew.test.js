@@ -334,6 +334,7 @@ describe("Renew", function () {
   });
 
   it("allow first submitter, then sequencer, then everyone to renew a request after an added half expiration period for each party", async function () {
+    this.timeout(100000);
     const newReq = async () => {
       const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
       await deposit.wait();

@@ -343,20 +343,8 @@ contract Beacon is Utils, Optimistic {
             gasEstimates[GKEY_FINAL_SUBMIT]
         );
 
-        // if (ethDeposit[accounts.client] >= submitFee + packed.data.beaconFee) {
-        //     _chargeClient(accounts.client, msg.sender, submitFee);
-        //     _chargeClient(accounts.client, developer, packed.data.beaconFee);
-        //     requestToFeePaid[packed.id] += submitFee + packed.data.beaconFee;
-        // } else if (ethDeposit[accounts.client] > 0) {
-        //     _chargeClient(
-        //         accounts.client,
-        //         msg.sender,
-        //         ethDeposit[accounts.client]
-        //     );
-        //     requestToFeePaid[packed.id] += ethDeposit[accounts.client];
-        // }
 
-        _chargeClientIfPossible(
+        _softChargeClient(
             packed.id,
             true,
             accounts.client,
@@ -449,7 +437,7 @@ contract Beacon is Utils, Optimistic {
         uint256 fee = ((gasAtStart - gasleft() + gasEstimates[GKEY_SUBMIT]) *
             _getGasPrice()) + packed.data.beaconFee;
 
-        _chargeClientIfPossible(packed.id, false, accounts.client, fee, 0);
+        _softChargeClient(packed.id, false, accounts.client, fee, 0);
     }
 
     function _checkCanSubmit(

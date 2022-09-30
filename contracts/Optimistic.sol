@@ -158,7 +158,7 @@ contract Optimistic is Utils {
             gasEstimates[GKEY_COMPLETE_OPTIMISTIC]) * _getGasPrice()) +
             packed.data.beaconFee;
 
-        _chargeClientIfPossible(
+        _softChargeClient(
             packed.id,
             true,
             accounts.client,
@@ -222,7 +222,7 @@ contract Optimistic is Utils {
             gasEstimates[GKEY_PROCESS_OPTIMISTIC]
         );
 
-        _chargeClientIfPossible(id, true, client, submitFee, _beaconFee);
+        _softChargeClient(id, false, client, submitFee, 0);
 
         emit OptimisticReady(id, disputeWindow[0], disputeWindow[1]);
 

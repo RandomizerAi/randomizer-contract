@@ -214,7 +214,81 @@ describe("Beacon Tests", function () {
     expect(await randomizer.getBeaconIndex(secondToLastBeacon)).to.equal(secondToLastBeaconIndex);
   });
 
-  it("removes beacon with many pending and then re-registers while keeping pending", async function () {
+  it("beacon receives rest of deposit if submit tx fee is greater than client deposit", async function () {
+    const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    const req = await testCallback.makeRequest();
+    // Get request data
+    const res = await req.wait();
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const selectedSigner = signers.filter(signer => request.beacons[0] == signer.address)[0];
+    const oldStake = await randomizer.getBeaconStakeEth(selectedSigner.address);
+    await randomizer.connect(signers[9])._debug_setClientDeposit(testCallback.address, ethers.utils.parseUnits("5", "wei"));
+
+    const data = await vrfHelper.getSubmitData(selectedSigner.address, request);
+    const tx = await randomizer.connect(selectedSigner)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(selectedSigner.address), data.addresses, data.uints, request.seed, false);
+    const receipt = await tx.wait();
+    const newStake = await randomizer.getBeaconStakeEth(selectedSigner.address);
+    const chargeEvents = receipt.events.filter(e => e.event == "ChargeEth");
+    expect(chargeEvents.length).to.equal(1);
+    expect(chargeEvents[0].args.amount).to.equal(ethers.utils.parseUnits("5", "wei"));
+    expect(chargeEvents[0].args.from).to.equal(testCallback.address);
+    expect(chargeEvents[0].args.to).to.equal(selectedSigner.address);
+    expect(newStake.eq(oldStake.add(5))).to.be.true;
+    expect(await randomizer.clientBalanceOf(testCallback.address).toNumber()).to.equal(0);
   });
+
+  it("developer receives rest of deposit if client deposit is less than developer fee", async function () {
+    await randomizer.connect(signers[0]).setConfigUint(5, ethers.utils.parseEther("1"));
+    const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+    const req = await testCallback.makeRequest();
+    // Get request data
+    const res = await req.wait();
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
+    const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
+    const data2 = await vrfHelper.getSubmitData(selectedSigners[1].address, request);
+
+
+    await randomizer.connect(selectedSigners[0])['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(selectedSigners[0].address), data.addresses, data.uints, request.seed, false);
+    const reqTx = await randomizer.connect(selectedSigners[1])['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(selectedSigners[1].address), data2.addresses, data2.uints, request.seed, false);
+    // Get final beacon
+    const reqReceipt = await reqTx.wait();
+    const event = randomizer.interface.parseLog(reqReceipt.logs.find(log => randomizer.interface.parseLog(log).name == "RequestBeacon")).args;
+    const finalBeacon = signers.find(signer => signer.address == event.beacon);
+
+    request.beacons = [request.beacons[0], request.beacons[1], finalBeacon.address];
+    request.height = event.height;
+    request.timestamp = event.timestamp;
+
+    const oldStake = await randomizer.getBeaconStakeEth(request.beacons[2]);
+    const newData = await vrfHelper.getSubmitData(request.beacons[2], request);
+
+
+    await randomizer.connect(signers[9])._debug_setClientDeposit(testCallback.address, ethers.utils.parseEther("2"));
+    const tx = await randomizer.connect(finalBeacon)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](2, newData.addresses, newData.uints, request.seed, false);
+    const receipt = await tx.wait();
+    const newStake = await randomizer.getBeaconStakeEth(request.beacons[2]);
+    const chargeEvents = receipt.events.filter(e => e.event == "ChargeEth");
+    const submitterReward = receipt.effectiveGasPrice.mul(receipt.gasUsed).add(request.beaconFee);
+    expect(chargeEvents.length).to.equal(2);
+    expect(chargeEvents[1].args.amount.gt(0)).to.be.true;
+    expect(chargeEvents[1].args.amount.gte(submitterReward.mul(8).div(10)) && chargeEvents[0].args.amount.lte(submitterReward.mul(12).div(10))).to.be.true;
+    expect(chargeEvents[1].args.from).to.equal(testCallback.address);
+    expect(chargeEvents[1].args.to).to.equal(finalBeacon.address);
+    expect(newStake.eq(oldStake.add(chargeEvents[1].args.amount))).to.be.true;
+    expect((await randomizer.clientBalanceOf(testCallback.address)).eq(0)).to.be.true;
+
+    expect(chargeEvents[0].args.amount.gt(0)).to.be.true;
+    expect(chargeEvents[0].args.amount.lt(request.beaconFee)).to.be.true;
+    expect(chargeEvents[0].args.amount).to.equal(ethers.utils.parseEther("2").sub(chargeEvents[1].args.amount));
+    expect(chargeEvents[0].args.from).to.equal(testCallback.address);
+    expect(chargeEvents[0].args.to).to.equal(await randomizer.developer());
+  });
+
+
+  // it("removes beacon with many pending and then re-registers while keeping pending", async function () {
+  // });
 
 });

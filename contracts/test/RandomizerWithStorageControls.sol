@@ -32,4 +32,8 @@ contract RandomizerWithStorageControls is Randomizer {
     function _debug_setCollateral(address beacon, uint256 collateral) external {
         ethCollateral[beacon] = collateral;
     }
+
+    function _debug_setClientDeposit(address client, uint256 deposit) external {
+        ethDeposit[client] = deposit;
+    }
 }

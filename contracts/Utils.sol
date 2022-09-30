@@ -75,7 +75,7 @@ contract Utils is Admin, NetworkHelper {
         emit ChargeEth(_from, _to, _value, 0);
     }
 
-    function _chargeClientIfPossible(
+    function _softChargeClient(
         uint128 id,
         bool payDev,
         address client,
@@ -89,7 +89,9 @@ contract Utils is Admin, NetworkHelper {
             if (deposit > fee) {
                 if (payDev) {
                     // Only pay developer if client has enough ETH left after paying fee
-                    devFee = beaconFee >= deposit - fee ? beaconFee : deposit;
+                    devFee = deposit >= fee + beaconFee
+                        ? beaconFee
+                        : deposit - fee;
                     _chargeClient(client, developer, devFee);
                 }
             } else if (deposit > 0) {

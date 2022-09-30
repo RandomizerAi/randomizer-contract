@@ -74,7 +74,7 @@ contract Client is Utils {
             : gasEstimates[GKEY_SUBMIT_TOTAL];
         return
             ((gasEstimate + _callbackGasLimit) * _getGasPrice()) +
-            (configUints[CKEY_BEACON_FEE] * 4); //  3 beacon premium fees, 1 dev fee;
+            (configUints[CKEY_BEACON_FEE] * 4); //  3 beacon premium fees, 1 dev fee
     }
 
     /// @notice Requests a random value with on-chain VRF validation
