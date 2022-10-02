@@ -39,12 +39,28 @@ contract Client is Utils {
         return ethReserved[_client];
     }
 
-    function getFeePaid(uint128 _request) external view returns (uint256) {
+    function getRequestFeePaid(uint128 _request)
+        external
+        view
+        returns (uint256)
+    {
         return requestToFeePaid[_request];
     }
 
-    function getFeeRefunded(uint128 _request) external view returns (uint256) {
-        return requestToFeePaid[_request];
+    function getRequestFeeRefunded(uint128 _request)
+        external
+        view
+        returns (uint256)
+    {
+        return requestToFeeRefunded[_request];
+    }
+
+    function getRequestFeeStats(uint128 _request)
+        external
+        view
+        returns (uint256[2] memory)
+    {
+        return [requestToFeePaid[_request], requestToFeeRefunded[_request]];
     }
 
     /// @notice Withdraws client ETH to a different receiver

@@ -216,7 +216,7 @@ contract Optimistic is Utils {
         optRequestDisputeWindow[id] = disputeWindow;
 
         // Beacon fee
-        uint256 submitFee = _getSubmitFeeCharge(
+        uint256 submitFee = _getFeeCharge(
             gasAtStart,
             _beaconFee,
             gasEstimates[GKEY_PROCESS_OPTIMISTIC]

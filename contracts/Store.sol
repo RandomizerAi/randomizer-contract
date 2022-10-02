@@ -51,7 +51,7 @@ contract Store {
     mapping(address => uint256) internal beaconIndex;
     mapping(address => SBeacon) internal sBeacon;
 
-    // Random Stores
+    // Request Stores
     mapping(uint128 => bytes32) internal requestToHash;
     mapping(uint128 => bytes32[3]) public requestToVrfHashes;
     mapping(uint128 => bytes32[3]) internal requestToProofs;

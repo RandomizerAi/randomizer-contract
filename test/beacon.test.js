@@ -27,7 +27,6 @@ describe("Beacon Tests", function () {
 
       // Process RequestBeacon event (from 2nd-to-last submitter)
       if (requestEventRaw) {
-        console.log("REQUESTBEACON FOUND");
         const requestEvent = randomizer.interface.parseLog(requestEventRaw);
         selectedFinalBeacon = requestEvent.args.beacon;
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
@@ -214,7 +213,7 @@ describe("Beacon Tests", function () {
     expect(await randomizer.getBeaconIndex(secondToLastBeacon)).to.equal(secondToLastBeaconIndex);
   });
 
-  it("beacon receives rest of deposit if submit tx fee is greater than client deposit", async function () {
+  it("beacon receives rest of deposit if submit tx fee is greater than client deposit [ @skip-on-coverage ]", async function () {
     const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     const req = await testCallback.makeRequest();
@@ -235,10 +234,10 @@ describe("Beacon Tests", function () {
     expect(chargeEvents[0].args.from).to.equal(testCallback.address);
     expect(chargeEvents[0].args.to).to.equal(selectedSigner.address);
     expect(newStake.eq(oldStake.add(5))).to.be.true;
-    expect(await randomizer.clientBalanceOf(testCallback.address).toNumber()).to.equal(0);
+    expect((await randomizer.clientBalanceOf(testCallback.address)).toNumber()).to.equal(0);
   });
 
-  it("developer receives rest of deposit if client deposit is less than developer fee", async function () {
+  it("developer receives rest of deposit if client deposit is less than developer fee [ @skip-on-coverage ]", async function () {
     await randomizer.connect(signers[0]).setConfigUint(5, ethers.utils.parseEther("1"));
     const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();

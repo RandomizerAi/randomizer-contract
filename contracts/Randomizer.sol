@@ -229,7 +229,6 @@ contract Randomizer is Client, Beacon {
         );
 
         // The paying non-submitter might fall below collateral here. It will be removed on next strike if it doesn't add collateral.
-        // TODO: Add offsets for renewFee
         uint256 renewFee = ((gasAtStart - gasleft()) * _getGasPrice()) +
             packed.data.beaconFee;
 

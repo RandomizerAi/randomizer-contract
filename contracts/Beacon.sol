@@ -337,12 +337,11 @@ contract Beacon is Utils, Optimistic {
         // Dev fee
 
         // Beacon fee
-        uint256 submitFee = _getSubmitFeeCharge(
+        uint256 submitFee = _getFeeCharge(
             gasAtStart,
             packed.data.beaconFee,
             gasEstimates[GKEY_FINAL_SUBMIT]
         );
-
 
         _softChargeClient(
             packed.id,

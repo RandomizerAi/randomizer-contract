@@ -319,7 +319,7 @@ contract Utils is Admin, NetworkHelper {
         emit Result(id, result);
     }
 
-    function _getSubmitFeeCharge(
+    function _getFeeCharge(
         uint256 gasAtStart,
         uint256 _beaconFee,
         uint256 offset

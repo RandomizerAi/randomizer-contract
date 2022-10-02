@@ -121,21 +121,16 @@ describe("Renew", function () {
 
     // Submit signature
     const data = await vrfHelper.getSubmitData(signer.address, request);
-
     await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, false);
 
-
-
     // Store request with the 1 signature
-
     const oldSigs = await randomizer.getRequestVrfHashes(request.id);
-
 
     // Skip blocks and renew request
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
     const renewUintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
 
-    const oldFeePaid = await randomizer.getFeePaid(request.id);
+    const oldFeePaid = (await randomizer.getRequestFeeStats(request.id))[0];
     const res = await (await randomizer.renewRequest(data.addresses, renewUintData, request.seed, false)).wait();
 
     // Get new request data
@@ -157,9 +152,11 @@ describe("Renew", function () {
     expect(newSigs[2]).to.equal(ethers.constants.HashZero);
 
     // Fee should be added to refunded. feePaid should remain the same so the client contract can refund the total fees to the user.
-    expect((await randomizer.getFeeRefunded(request.id)).eq(0)).to.be.false;
-    expect((await randomizer.getFeeRefunded(request.id)).eq(oldFeePaid)).to.be.true;
-    expect((await randomizer.getFeePaid(request.id)).eq(oldFeePaid)).to.be.true;
+    const feeStats = await randomizer.getRequestFeeStats(request.id);
+    expect(oldFeePaid.gt(0)).to.be.true;
+    expect(feeStats[1].eq(oldFeePaid)).to.be.true;
+    expect(feeStats[0].eq(oldFeePaid)).to.be.true;
+    expect(feeStats[1].eq(feeStats[0])).to.be.true;
   });
 
   it("renew final non-submitter", async function () {
@@ -489,7 +486,7 @@ describe("Renew", function () {
     expect(signerNewDeposit.lte(signerOldDeposit.sub(retry.args.ethToClient.add(retry.args.ethToCaller)))).to.be.true;
   });
 
-  it("refund to client on renew when a striked beacon has less collateral than totalCharge but more than renewFee", async () => {
+  it("refund to client on renew when a striked beacon has less collateral than totalCharge but more than renewFee [ @skip-on-coverage ]", async () => {
     const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
     let request = await makeRequest(testCallback);
@@ -508,12 +505,17 @@ describe("Renew", function () {
     const clientOldDeposit = await randomizer.clientBalanceOf(testCallback.address);
 
     // Sets the collateral to a little over the renew gas price so that the collateral is less than the total charge but more than the renew fee 
-    const collateral = ethers.BigNumber.from(115000).mul(await ethers.provider.getGasPrice());
+    let renewGas = await randomizer.connect(signers[8]).estimateGas.renewRequest(data.addresses, data.rawUints, request.seed, false);
+    const collateral = ethers.BigNumber.from(renewGas).mul(await ethers.provider.getGasPrice()).sub(20000000000000);
     await randomizer._debug_setCollateral(selectedSigners[1].address, collateral);
 
     const signerOldDeposit = await randomizer.getBeaconStakeEth(selectedSigners[1].address);
     const renew = await randomizer.connect(signers[8]).renewRequest(data.addresses, data.rawUints, request.seed, false);
     const receipt = await renew.wait();
+    const chargeEvents = receipt.logs.filter(event => randomizer.interface.parseLog(event).name === "ChargeEth");
+    expect(chargeEvents.length).to.equal(2);
+    const parsedEvents = chargeEvents.map(event => randomizer.interface.parseLog(event).args);
+    expect(parsedEvents[1].amount).to.equal(collateral.sub(parsedEvents[0].amount));
     // Get logs from receipt
     let retry;
 
@@ -585,11 +587,11 @@ describe("Renew", function () {
     const renew = await randomizer.connect(signers[8]).renewRequest(data.addresses, data.rawUints, request.seed, false);
     const receipt = await renew.wait();
     // Get logs from receipt
-    let retry;
-    for (const log of receipt.logs) {
-      const event = randomizer.interface.parseLog(log);
-      if (event.name === "Retry") retry = event;
-    }
+    const retry = randomizer.interface.parseLog(receipt.logs.find(log => randomizer.interface.parseLog(log).name === "Retry"));
+    const charge = randomizer.interface.parseLog(receipt.logs.find(log => randomizer.interface.parseLog(log).name === "ChargeEth"));
+    const chargeEvents = receipt.logs.filter(log => randomizer.interface.parseLog(log).name === "ChargeEth");
+    expect(chargeEvents.length).to.equal(1);
+    expect(charge.args.amount).to.equal(ethers.utils.parseUnits("10", "wei"))
 
     const senderNewDeposit = await randomizer.getBeaconStakeEth(signers[8].address);
 
@@ -599,6 +601,7 @@ describe("Renew", function () {
     expect(signerNewDeposit.eq("0")).to.be.true;
     expect(senderNewDeposit.eq(senderOldDeposit.add(retry.args.ethToCaller))).to.be.true;
   });
+
 
 
   it("revert with NotEnoughBeaconsAvailable if renewing a request without enough beacons", async function () {

@@ -412,7 +412,7 @@ describe("Request & Submit", function () {
     expect(callbackResult).to.not.equal(ethers.constants.HashZero);
     expect(callbackResult).to.equal(result);
 
-    expect((await randomizer.getFeePaid(1)).toNumber() > request.beaconFee * 3).to.be.true;
+    expect(((await randomizer.getRequestFeeStats(1))[0]).toNumber() > request.beaconFee * 3).to.be.true;
   });
 
   it("charge enough per submit to cover gas cost and let beacon withdraw [ @skip-on-coverage ]", async function () {
