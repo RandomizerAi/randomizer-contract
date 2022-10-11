@@ -49,12 +49,16 @@ contract Beacon is Utils, Optimistic {
         return beaconIndex[_beacon];
     }
 
-    function getRequestVrfHashes(uint128 _request)
-        public
+    function getVrfHashes(uint128 _request)
+        external
         view
         returns (bytes32[3] memory)
     {
         return requestToVrfHashes[_request];
+    }
+
+    function getDataHash(uint128 _request) external view returns (bytes32) {
+        return requestToHash[_request];
     }
 
     /// @notice Registers a new beacon
@@ -81,7 +85,11 @@ contract Beacon is Utils, Optimistic {
     }
 
     /// @notice Returns the beacon staked ETH
-    function getBeaconStakeEth(address _beacon) public view returns (uint256) {
+    function getBeaconStakeEth(address _beacon)
+        external
+        view
+        returns (uint256)
+    {
         return ethCollateral[_beacon];
     }
 
@@ -102,7 +110,7 @@ contract Beacon is Utils, Optimistic {
     }
 
     /// @notice Unregisters the beacon (callable by beacon or owner). Returns staked ETH to beacon.
-    function unregisterBeacon(address _beacon) public {
+    function unregisterBeacon(address _beacon) external {
         if (msg.sender != _beacon && msg.sender != owner())
             revert NotOwnerOrBeacon();
 
@@ -143,7 +151,7 @@ contract Beacon is Utils, Optimistic {
         bytes32[3] calldata _rsAndSeed,
         uint8 _v,
         bool optimistic
-    ) public {
+    ) external {
         uint256 gasAtStart = gasleft();
 
         (
@@ -159,9 +167,11 @@ contract Beacon is Utils, Optimistic {
                         abi.encode(
                             accounts.client,
                             packed.id,
+                            _rsAndSeed[2],
                             packed.vrf.proof,
                             packed.vrf.uPoint,
                             packed.vrf.vComponents,
+                            address(this),
                             block.chainid
                         )
                     )
@@ -190,7 +200,7 @@ contract Beacon is Utils, Optimistic {
         uint256[18] calldata _uintData,
         bytes32 seed,
         bool optimistic
-    ) public {
+    ) external {
         uint256 gasAtStart = gasleft();
 
         (
@@ -402,7 +412,7 @@ contract Beacon is Utils, Optimistic {
             packed.data.height = block.number;
             packed.data.timestamp = block.timestamp;
 
-            requestToHash[packed.id] = _getRequestHash(
+            requestToHash[packed.id] = _generateRequestHash(
                 packed.id,
                 accounts,
                 packed.data,

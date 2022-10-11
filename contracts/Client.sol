@@ -23,7 +23,7 @@ contract Client is Utils {
     );
 
     /// @notice Gets the ETH balance of the client contract (used for paying for requests)
-    function clientBalanceOf(address _client) public view returns (uint256) {
+    function clientBalanceOf(address _client) external view returns (uint256) {
         return ethDeposit[_client];
     }
 
@@ -39,23 +39,15 @@ contract Client is Utils {
         return ethReserved[_client];
     }
 
-    function getRequestFeePaid(uint128 _request)
-        external
-        view
-        returns (uint256)
-    {
+    function getFeePaid(uint128 _request) external view returns (uint256) {
         return requestToFeePaid[_request];
     }
 
-    function getRequestFeeRefunded(uint128 _request)
-        external
-        view
-        returns (uint256)
-    {
+    function getFeeRefunded(uint128 _request) external view returns (uint256) {
         return requestToFeeRefunded[_request];
     }
 
-    function getRequestFeeStats(uint128 _request)
+    function getFeeStats(uint128 _request)
         external
         view
         returns (uint256[2] memory)

@@ -8,7 +8,12 @@ async function main() {
   const TestCallback = await hre.ethers.getContractFactory("TestCallback");
   const testCallback = await TestCallback.deploy(randomizerAddress);
 
-  const Randomizer = await hre.ethers.getContractFactory("Randomizer");
+  const Randomizer = await hre.ethers.getContractFactory("Randomizer", {
+    libraries: {
+      VRF: process.env.VRF_ADDRESS,
+      Internals: process.env.LIB_ADDRESS
+    }
+  });
   const randomizer = Randomizer.attach(randomizerAddress);
 
   await testCallback.deployed();

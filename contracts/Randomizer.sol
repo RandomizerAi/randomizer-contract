@@ -92,7 +92,7 @@ contract Randomizer is Client, Beacon {
                 revert CantRenewDuringDisputeWindow();
         }
 
-        bytes32 generatedHash = _getRequestHash(
+        bytes32 generatedHash = _generateRequestHash(
             packed.id,
             accounts,
             packed.data,
@@ -120,6 +120,7 @@ contract Randomizer is Client, Beacon {
             } else if (
                 // First beacon can renew first if they submitted
                 // Second beacon can renew first if the first beacon has not yet submitted
+                // Here we check if it's NOT the first allowed renewer, and let anyone else submit after another full expiration period.
                 !((msg.sender == accounts.beacons[0] &&
                     hashes[0] != bytes32(0)) ||
                     (msg.sender == accounts.beacons[1] &&
@@ -206,7 +207,7 @@ contract Randomizer is Client, Beacon {
         packed.data.height = block.number;
         packed.data.timestamp = block.timestamp;
 
-        requestToHash[packed.id] = _getRequestHash(
+        requestToHash[packed.id] = _generateRequestHash(
             packed.id,
             accounts,
             packed.data,

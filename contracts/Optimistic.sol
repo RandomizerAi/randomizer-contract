@@ -75,7 +75,7 @@ contract Optimistic is Utils {
             packed.data.timestamp = block.timestamp;
             address randomBeacon = _randomBeacon(seed, accounts.beacons);
             accounts.beacons[beaconPos] = randomBeacon;
-            requestToHash[packed.id] = _getRequestHash(
+            requestToHash[packed.id] = _generateRequestHash(
                 packed.id,
                 accounts,
                 packed.data,

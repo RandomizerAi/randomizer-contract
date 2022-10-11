@@ -219,7 +219,7 @@ contract Utils is Admin, NetworkHelper {
         return SAccounts(_data[0], [_data[1], _data[2], _data[3]]);
     }
 
-    function _getRequestHash(
+    function _generateRequestHash(
         uint128 id,
         SAccounts memory accounts,
         SRandomUintData memory data,
@@ -272,7 +272,7 @@ contract Utils is Admin, NetworkHelper {
 
         SAccounts memory accounts = SAccounts(client, selectedBeacons);
 
-        bytes32 generatedHash = _getRequestHash(
+        bytes32 generatedHash = _generateRequestHash(
             id,
             accounts,
             data,
@@ -337,7 +337,7 @@ contract Utils is Admin, NetworkHelper {
         SRandomUintData memory data,
         bool optimistic
     ) internal view {
-        bytes32 generatedHash = _getRequestHash(
+        bytes32 generatedHash = _generateRequestHash(
             id,
             accounts,
             data,

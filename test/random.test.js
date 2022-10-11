@@ -98,9 +98,18 @@ describe("Request & Submit", function () {
     const tx = await testCallback.makeRequest();
     const res = await tx.wait();
     const request = randomizer.interface.parseLog(res.logs[0]).args.request;
+    const id = randomizer.interface.parseLog(res.logs[0]).args.id
     // const request = await randomizer.getRequest(1);
     expect(request.beacons[0]).to.not.equal(ethers.constants.AddressZero);
     expect(request.beacons.length).to.equal(3);
+
+    console.log(id, request.seed, request.client, request.beacons, request.ethReserved, request.beaconFee, [request.height, request.timestamp], request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.optimistic);
+    const genHash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(
+      ['uint128', 'bytes32', 'address', 'address[3]', 'uint256', 'uint256', 'uint256[2]', 'uint256', 'uint256', 'uint256', 'bool'],
+      [id, request.seed, request.client, request.beacons, request.ethReserved, request.beaconFee, [request.height, request.timestamp], request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.optimistic]
+    ));
+    const realHash = await randomizer.getDataHash(id);
+    expect(genHash).to.equal(realHash);
   });
 
   it("revert on request with gas limit out of bounds", async function () {
@@ -203,7 +212,7 @@ describe("Request & Submit", function () {
 
         const addressData = [request.client].concat(request.beacons);
         const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](selectedBeacons.indexOf(signer.address), addressData, uintData, message, false);
-        const sigs = await randomizer.getRequestVrfHashes(request.id);
+        const sigs = await randomizer.getVrfHashes(request.id);
         let signed = false;
         expect(sigs.length).to.equal(3);
         for (const sig of sigs) {
@@ -339,7 +348,7 @@ describe("Request & Submit", function () {
       const requestHash = await randomizer.gammaToHash(proof[0], proof[1]);
       const index = request.beacons.indexOf(signer.address);
       localSignatures[index] = requestHash;
-      const requestSignatures = await randomizer.getRequestVrfHashes(request.id);
+      const requestSignatures = await randomizer.getVrfHashes(request.id);
       expect(requestSignatures).to.include(requestHash);
 
       const beaconEventRaw = res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
@@ -412,7 +421,7 @@ describe("Request & Submit", function () {
     expect(callbackResult).to.not.equal(ethers.constants.HashZero);
     expect(callbackResult).to.equal(result);
 
-    expect(((await randomizer.getRequestFeeStats(1))[0]).toNumber() > request.beaconFee * 3).to.be.true;
+    expect(((await randomizer.getFeeStats(1))[0]).toNumber() > request.beaconFee * 3).to.be.true;
   });
 
   it("charge enough per submit to cover gas cost and let beacon withdraw [ @skip-on-coverage ]", async function () {

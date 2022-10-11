@@ -149,7 +149,8 @@ describe("Optimistic VRF Disputes", function () {
     const { vrf, signer, request, data, selectedSigners } = await createAndFillOneOptimisticRequest();
 
     const hash = await randomizer.gammaToHash(vrf.proof[0], vrf.proof[1])
-    const storedHash = await randomizer.requestToVrfHashes(request.id, request.beacons.indexOf(signer.address));
+    const storedHashes = await randomizer.getVrfHashes(request.id);
+    const storedHash = storedHashes[request.beacons.indexOf(signer.address)];
     expect(hash).to.equal(storedHash);
 
     try {

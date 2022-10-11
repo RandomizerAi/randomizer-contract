@@ -124,13 +124,13 @@ describe("Renew", function () {
     await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, false);
 
     // Store request with the 1 signature
-    const oldSigs = await randomizer.getRequestVrfHashes(request.id);
+    const oldSigs = await randomizer.getVrfHashes(request.id);
 
     // Skip blocks and renew request
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
     const renewUintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
 
-    const oldFeePaid = (await randomizer.getRequestFeeStats(request.id))[0];
+    const oldFeePaid = (await randomizer.getFeeStats(request.id))[0];
     const res = await (await randomizer.renewRequest(data.addresses, renewUintData, request.seed, false)).wait();
 
     // Get new request data
@@ -138,7 +138,7 @@ describe("Renew", function () {
 
     const newBeacons = newReq.beacons;
 
-    const newSigs = await randomizer.getRequestVrfHashes(1);
+    const newSigs = await randomizer.getVrfHashes(1);
 
 
     // Beacons should be renewed except for the first one
@@ -152,7 +152,7 @@ describe("Renew", function () {
     expect(newSigs[2]).to.equal(ethers.constants.HashZero);
 
     // Fee should be added to refunded. feePaid should remain the same so the client contract can refund the total fees to the user.
-    const feeStats = await randomizer.getRequestFeeStats(request.id);
+    const feeStats = await randomizer.getFeeStats(request.id);
     expect(oldFeePaid.gt(0)).to.be.true;
     expect(feeStats[1].eq(oldFeePaid)).to.be.true;
     expect(feeStats[0].eq(oldFeePaid)).to.be.true;
@@ -207,7 +207,7 @@ describe("Renew", function () {
         oldReq = request;
       }
     }
-    const oldSigs = await randomizer.getRequestVrfHashes(1);
+    const oldSigs = await randomizer.getVrfHashes(1);
 
 
     expect(oldReq.beacons[2]).to.not.equal(ethers.constants.AddressZero);
@@ -225,7 +225,7 @@ describe("Renew", function () {
     const newReq = await randomizer.interface.parseLog(renewRes.logs[renewRes.logs.length - 1]).args.request;
     const newBeacons = newReq.beacons;
 
-    const newSigs = await randomizer.getRequestVrfHashes(1);
+    const newSigs = await randomizer.getVrfHashes(1);
 
     // Beacons should be renewed except for the first one
     expect(oldReq.beacons[2]).to.not.equal(newReq.beacons[2]);

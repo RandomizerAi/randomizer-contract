@@ -149,7 +149,7 @@ describe("Optimistic Tests", function () {
       for (const signer of selectedSigners) {
         const data = await vrfHelper.getSubmitData(signer.address, request);
         await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
-        const sigs = await randomizer.getRequestVrfHashes(request.id);
+        const sigs = await randomizer.getVrfHashes(request.id);
         let signed = false;
         expect(sigs.length).to.equal(3);
         for (const sig of sigs) {
@@ -267,7 +267,7 @@ describe("Optimistic Tests", function () {
       const requestHash = await randomizer.gammaToHash(proof[0], proof[1]);
       const index = request.beacons.indexOf(signer.address);
       localSignatures[index] = requestHash;
-      const requestSignatures = await randomizer.getRequestVrfHashes(request.id);
+      const requestSignatures = await randomizer.getVrfHashes(request.id);
       expect(requestSignatures).to.include(requestHash);
 
       const requestEventRaw = res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
