@@ -30,7 +30,7 @@ describe("Optimistic Tests", function () {
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
         request.timestamp = requestEvent.args.timestamp;
-        request.height = requestEvent.args.height;
+        request.height = requestEventRaw.blockNumber;
       }
     }
 
@@ -140,7 +140,7 @@ describe("Optimistic Tests", function () {
       let req = await testCallback.makeRequest();
       const res = await req.wait();
       // Get request data
-      const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+      const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
       expect(request.beacons.length).to.equal(3);
 
       const selectedBeacons = request.beacons;
@@ -171,7 +171,7 @@ describe("Optimistic Tests", function () {
     let req = await testCallback.makeRequest();
     const res = await req.wait();
     // Get request data
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
 
     const selectedBeacons = request.beacons;
     const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
@@ -197,7 +197,7 @@ describe("Optimistic Tests", function () {
     let req = await testCallback.makeRequest();
     const res = await req.wait();
     // Get request data
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
 
     const selectedBeacons = request.beacons;
     const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
@@ -226,7 +226,7 @@ describe("Optimistic Tests", function () {
 
     const req = await testCallback.makeRequest();
     const res = await req.wait();
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
 
     // const request = await randomizer.getRequest(1);
 
@@ -302,7 +302,7 @@ describe("Optimistic Tests", function () {
         expect(selectedFinalBeacon).to.equal(randomBeacon);
         request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
         request.timestamp = requestEvent.args.timestamp;
-        request.height = requestEvent.args.height;
+        request.height = requestEventRaw.blockNumber;
       }
 
     }
@@ -372,7 +372,7 @@ describe("Optimistic Tests", function () {
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
         request.timestamp = requestEvent.args.timestamp;
-        request.height = requestEvent.args.height;
+        request.height = requestEventRaw.blockNumber;
       }
     }
 
@@ -397,7 +397,7 @@ describe("Optimistic Tests", function () {
     await deposit.wait();
     const req = await testCallback.makeRequest();
     const res = await req.wait();
-    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     let ethReserved = await randomizer.getEthReserved(testCallback.address);
     expect(ethReserved.gt(0)).to.be.true;
     try {
@@ -433,8 +433,9 @@ describe("Optimistic Tests", function () {
     await deposit.wait();
     const req = await testCallbackWithRevert.makeRequest();
     const res = await req.wait();
-    const requestEvent = randomizer.interface.parseLog(res.logs.find(log => randomizer.interface.parseLog(log).name === "Request"));
-    const request = { ...requestEvent.args.request, id: requestEvent.args.id };
+    const log = res.logs.find(log => randomizer.interface.parseLog(log).name === "Request");
+    const requestEvent = randomizer.interface.parseLog(log);
+    const request = { ...requestEvent.args.request, id: requestEvent.args.id, height: log.blockNumber };
     const lastTx = await signAndCallback(request, testCallbackWithRevert);
     const callbackFailedEvent = randomizer.interface.parseLog(lastTx.logs[0]);
     expect(callbackFailedEvent.name).to.equal("CallbackFailed");
@@ -453,7 +454,7 @@ describe("Optimistic Tests", function () {
     await deposit.wait();
     const req = await testCallbackWithTooMuchGas.makeRequest();
     const res = await req.wait();
-    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     const lastTx = await signAndCallback(request, testCallbackWithTooMuchGas);
     // Check if lastTx emitted "CallbackFailed" event
     const callbackFailedEvent = randomizer.interface.parseLog(lastTx.logs[0]);
@@ -469,7 +470,7 @@ describe("Optimistic Tests", function () {
     await deposit.wait();
     const req = await testCallback.makeRequest();
     const res = await req.wait();
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
     for (const signer of selectedSigners) {
       const data = await vrfHelper.getSubmitData(signer.address, request);
@@ -525,7 +526,7 @@ describe("Optimistic Tests", function () {
     let req = await testCallback.makeRequest();
     const res = await req.wait();
     // Get request data
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     let selectedBeacons = request.beacons;
     let selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
     // Sort selectedSigners to be in the same order as selectedBeacons
@@ -549,7 +550,7 @@ describe("Optimistic Tests", function () {
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
         request.timestamp = parsed.args.timestamp;
-        request.height = parsed.args.height;
+        request.height = event.blockNumber;
       }
     }
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];

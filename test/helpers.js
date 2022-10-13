@@ -56,7 +56,7 @@ const getVrfData = async (privateKey, seed) => {
 };
 
 const parseRequest = (receipt) => {
-  return { ...randomizer.interface.parseLog(receipt.logs[0]).args.request, id: randomizer.interface.parseLog(receipt.logs[0]).args.id };
+  return { ...randomizer.interface.parseLog(receipt.logs[0]).args.request, id: randomizer.interface.parseLog(receipt.logs[0]).args.id, height: receipt.logs[0].blockNumber };
 }
 
 const getSubmitData = async (privateKey, request) => {

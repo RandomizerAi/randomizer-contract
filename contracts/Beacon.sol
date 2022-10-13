@@ -165,13 +165,13 @@ contract Beacon is Utils, Optimistic {
                     "\x19Ethereum Signed Message:\n32",
                     keccak256(
                         abi.encode(
+                            address(this),
                             accounts.client,
-                            packed.id,
                             _rsAndSeed[2],
+                            packed.id,
                             packed.vrf.proof,
                             packed.vrf.uPoint,
                             packed.vrf.vComponents,
-                            address(this),
                             block.chainid
                         )
                     )
@@ -392,7 +392,6 @@ contract Beacon is Utils, Optimistic {
     ) private {
         // Second to last requests final beacon
         if (submissionsCount == 1) {
-            SRequestEventData memory newEventData;
             bytes32 lastBeaconSeed;
 
             lastBeaconSeed = keccak256(
@@ -420,26 +419,7 @@ contract Beacon is Utils, Optimistic {
                 optimistic
             );
 
-            newEventData = SRequestEventData(
-                packed.data.ethReserved,
-                packed.data.beaconFee,
-                packed.data.height,
-                packed.data.timestamp,
-                packed.data.expirationBlocks,
-                packed.data.expirationSeconds,
-                packed.data.callbackGasLimit,
-                accounts.client,
-                accounts.beacons,
-                seed,
-                optimistic
-            );
-
-            emit RequestBeacon(
-                packed.id,
-                randomBeacon,
-                packed.data.height,
-                packed.data.timestamp
-            );
+            emit RequestBeacon(packed.id, randomBeacon, packed.data.timestamp);
         }
 
         // 62k offset for charge

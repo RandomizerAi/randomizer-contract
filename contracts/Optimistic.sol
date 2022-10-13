@@ -82,12 +82,7 @@ contract Optimistic is Utils {
                 seed,
                 true
             );
-            emit RequestBeacon(
-                packed.id,
-                randomBeacon,
-                packed.data.height,
-                packed.data.timestamp
-            );
+            emit RequestBeacon(packed.id, randomBeacon, packed.data.timestamp);
         } else {
             revert ProofNotInvalid();
         }

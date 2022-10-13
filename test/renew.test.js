@@ -58,7 +58,7 @@ describe("Renew", function () {
 
   const makeRequest = async (contract) => {
     let res = await (await contract.makeRequest()).wait();
-    const req = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const req = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     return req;
   }
 
@@ -77,8 +77,9 @@ describe("Renew", function () {
     const data = await vrfHelper.getSubmitData(signers[0].address, request);
     const res = await (await randomizer.renewRequest(data.addresses, data.rawUints, request.seed, false)).wait();
     // New request data
+    const log = res.logs.find((log) => randomizer.interface.parseLog(log).name === "Retry");
     const retryEvent = randomizer.interface.parseLog(res.logs.filter((log) => randomizer.interface.parseLog(log).name === "Retry")[0]);
-    request = { ...retryEvent.args.request, id: retryEvent.args.id };
+    request = { ...retryEvent.args.request, id: retryEvent.args.id, height: log.blockNumber };
 
     // Expect no beacons to be duplicates
     for (let i = 0; i < oldBeaconIds.length - 1; i++) {
@@ -93,9 +94,10 @@ describe("Renew", function () {
     const newData = await vrfHelper.getSubmitData(signers[0].address, request);
 
     const res2 = await (await randomizer.renewRequest(newData.addresses, newData.rawUints, request.seed, false)).wait();
+    const retryLog = res2.logs.find((log) => randomizer.interface.parseLog(log).name === "Retry");
     const retryEvent2 = randomizer.interface.parseLog(res2.logs.filter((log) => randomizer.interface.parseLog(log).name === "Retry")[0]);
 
-    request = { ...retryEvent2.args.request, id: retryEvent2.args.id };
+    request = { ...retryEvent2.args.request, id: retryEvent2.args.id, height: retryLog.blockNumber };
 
     // Expect no beacons to be duplicates
     for (let i = 0; i < oldBeaconIds.length - 1; i++) {
@@ -201,7 +203,7 @@ describe("Renew", function () {
         const selectedFinalBeacon = requestEvent.args.beacon;
         request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
         request.timestamp = requestEvent.args.timestamp;
-        request.height = requestEvent.args.height;
+        request.height = requestEventRaw.blockNumber;
         expect(request.beacons[2]).to.not.equal(ethers.constants.AddressZero);
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         oldReq = request;

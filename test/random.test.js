@@ -28,7 +28,7 @@ describe("Request & Submit", function () {
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
         request.timestamp = requestEvent.args.timestamp;
-        request.height = requestEvent.args.height;
+        request.height = requestEventRaw.blockNumber;
       }
     }
 
@@ -97,13 +97,12 @@ describe("Request & Submit", function () {
     expect(await randomizer.clientBalanceOf(testCallback.address)).to.equal(ethers.utils.parseEther("5"));
     const tx = await testCallback.makeRequest();
     const res = await tx.wait();
-    const request = randomizer.interface.parseLog(res.logs[0]).args.request;
     const id = randomizer.interface.parseLog(res.logs[0]).args.id
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, height: res.logs[0].blockNumber, id };
     // const request = await randomizer.getRequest(1);
     expect(request.beacons[0]).to.not.equal(ethers.constants.AddressZero);
     expect(request.beacons.length).to.equal(3);
 
-    console.log(id, request.seed, request.client, request.beacons, request.ethReserved, request.beaconFee, [request.height, request.timestamp], request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.optimistic);
     const genHash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(
       ['uint128', 'bytes32', 'address', 'address[3]', 'uint256', 'uint256', 'uint256[2]', 'uint256', 'uint256', 'uint256', 'bool'],
       [id, request.seed, request.client, request.beacons, request.ethReserved, request.beaconFee, [request.height, request.timestamp], request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.optimistic]
@@ -135,7 +134,7 @@ describe("Request & Submit", function () {
     let req = await testCallback.makeRequest();
     const res = await req.wait();
     // Get request data
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
 
     const selectedBeacons = request.beacons;
     const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
@@ -160,7 +159,7 @@ describe("Request & Submit", function () {
     let req = await testCallback.makeRequest();
     const res = await req.wait();
     // Get request data
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
 
     const selectedBeacons = request.beacons;
     const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
@@ -191,7 +190,7 @@ describe("Request & Submit", function () {
       let req = await testCallback.makeRequest();
       const res = await req.wait();
       // Get request data
-      let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+      let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
       expect(request.beacons.length).to.equal(3);
       const message = ethers.utils.arrayify(request.seed);
 
@@ -233,7 +232,7 @@ describe("Request & Submit", function () {
     let req = await testCallback.makeRequest();
     const res = await req.wait();
     // Get request data
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
 
     const selectedBeacons = request.beacons;
     const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
@@ -259,7 +258,7 @@ describe("Request & Submit", function () {
     let req = await testCallback.makeRequest();
     const res = await req.wait();
     // Get request data
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
 
     const selectedBeacons = request.beacons;
     const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
@@ -288,7 +287,7 @@ describe("Request & Submit", function () {
 
     const req = await testCallback.makeRequest();
     const res = await req.wait();
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
 
     // const request = await randomizer.getRequest(1);
 
@@ -354,7 +353,6 @@ describe("Request & Submit", function () {
       const beaconEventRaw = res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
       if (beaconEventRaw !== undefined) {
         const beaconEvent = randomizer.interface.parseLog(beaconEventRaw);
-        console.log("Request Beacon");
         // Check that the beacon is the one we expect
         const allBeacons = await randomizer.getBeacons();
         let seed = ethers.utils.solidityKeccak256(
@@ -382,7 +380,7 @@ describe("Request & Submit", function () {
         expect(selectedFinalBeacon).to.equal(randomBeacon);
         request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
         request.timestamp = beaconEvent.args.timestamp;
-        request.height = beaconEvent.args.height;
+        request.height = beaconEventRaw.blockNumber;
       }
 
     }
@@ -424,7 +422,7 @@ describe("Request & Submit", function () {
     expect(((await randomizer.getFeeStats(1))[0]).toNumber() > request.beaconFee * 3).to.be.true;
   });
 
-  it("charge enough per submit to cover gas cost and let beacon withdraw [ @skip-on-coverage ]", async function () {
+  it("non-opt charge enough per submit to cover gas cost and let beacon withdraw [ @skip-on-coverage ]", async function () {
     const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
 
@@ -455,10 +453,10 @@ describe("Request & Submit", function () {
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
         request.timestamp = requestEvent.args.timestamp;
-        request.height = requestEvent.args.height;
+        request.height = requestEventRaw.blockNumber;
+        break;
       }
     }
-
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
     const data = await vrfHelper.getSubmitData(finalSigner.address, request);
     const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(finalSigner.address), data.addresses, data.uints, request.seed, false);
@@ -476,7 +474,7 @@ describe("Request & Submit", function () {
     await deposit.wait();
     const req = await testCallback.makeRequest();
     const res = await req.wait();
-    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     let ethReserved = await randomizer.getEthReserved(testCallback.address);
     expect(ethReserved.gt(0)).to.be.true;
     try {
@@ -513,7 +511,7 @@ describe("Request & Submit", function () {
     await deposit.wait();
     const req = await testCallbackWithRevert.makeRequest();
     const res = await req.wait();
-    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     const lastTx = await signAndCallback(request, testCallbackWithRevert);
     const callbackFailedEvent = randomizer.interface.parseLog(lastTx.logs.find(log => randomizer.interface.parseLog(log).name === "CallbackFailed"));
     expect(callbackFailedEvent).to.not.be.undefined;
@@ -532,7 +530,7 @@ describe("Request & Submit", function () {
     await deposit.wait();
     const req = await testCallbackWithTooMuchGas.makeRequest();
     const res = await req.wait();
-    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     const lastTx = await signAndCallback(request, testCallbackWithTooMuchGas);
     // Check if lastTx emitted "CallbackFailed" event
     const callbackFailedEvent = randomizer.interface.parseLog(lastTx.logs.find(log => randomizer.interface.parseLog(log).name === "CallbackFailed"));
@@ -548,7 +546,7 @@ describe("Request & Submit", function () {
     await deposit.wait();
     const req = await testCallback.makeRequest();
     const res = await req.wait();
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
     selectedSigners.sort((a, b) => {
       return request.beacons.indexOf(a.address) - request.beacons.indexOf(b.address);

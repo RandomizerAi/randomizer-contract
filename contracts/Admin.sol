@@ -68,7 +68,6 @@ contract Admin is OwnableUpgradeable, Store {
     event RequestBeacon(
         uint128 indexed id,
         address indexed beacon,
-        uint256 height,
         uint256 timestamp
     );
 

@@ -218,15 +218,14 @@ contract Randomizer is Client, Beacon {
         SRequestEventData memory eventData = SRequestEventData(
             packed.data.ethReserved,
             packed.data.beaconFee,
-            packed.data.height,
             packed.data.timestamp,
             packed.data.expirationBlocks,
             packed.data.expirationSeconds,
             packed.data.callbackGasLimit,
+            _optimistic,
             accounts.client,
             accounts.beacons,
-            _seed,
-            _optimistic
+            _seed
         );
 
         // The paying non-submitter might fall below collateral here. It will be removed on next strike if it doesn't add collateral.

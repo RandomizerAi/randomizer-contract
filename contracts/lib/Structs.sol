@@ -38,15 +38,14 @@ struct SRandomUintData {
 struct SRequestEventData {
     uint256 ethReserved;
     uint256 beaconFee;
-    uint256 height;
     uint256 timestamp;
     uint256 expirationBlocks;
     uint256 expirationSeconds;
     uint256 callbackGasLimit;
+    bool optimistic;
     address client;
     address[3] beacons;
     bytes32 seed;
-    bool optimistic;
 }
 
 struct SAccounts {

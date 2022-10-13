@@ -12,7 +12,7 @@ describe("Optimistic VRF Disputes", function () {
     let req = await testCallback.makeRequest();
     const res = await req.wait();
     // Get request data
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     let selectedBeacons = request.beacons;
     let selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
     let signer = selectedSigners[0];
@@ -31,7 +31,7 @@ describe("Optimistic VRF Disputes", function () {
     let req = await testCallback.makeRequest();
     const res = await req.wait();
     // Get request data
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     let selectedBeacons = request.beacons;
     let selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
     // Sort selectedSigners to be in the same order as selectedBeacons
@@ -55,7 +55,7 @@ describe("Optimistic VRF Disputes", function () {
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
         request.timestamp = parsed.args.timestamp;
-        request.height = parsed.args.height;
+        request.height = event.blockNumber;
       }
     }
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
@@ -71,13 +71,13 @@ describe("Optimistic VRF Disputes", function () {
     let req = await testCallback.makeRequest();
     const res = await req.wait();
     // Get request data
-    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    let request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     const selectedBeacons = request.beacons;
     const selectedSigners = signers.filter(signer => selectedBeacons.includes(signer.address));
     const signer = selectedSigners[0];
 
     const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
-    data.uints[data.uints.length - 8] = "11111111111111111111111111111111";
+    data.uints[data.uints.length - 9] = "11111111111111111111111111111111";
     const submitTx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
 
     const events = (await submitTx.wait()).logs;
@@ -166,7 +166,7 @@ describe("Optimistic VRF Disputes", function () {
     const { parsed, signer, request, selectedSigners, data } = await createAndFillFalseOptimisticRequest();
 
     const hash = await randomizer.gammaToHash(parsed.args.proof[0], parsed.args.proof[1])
-    const storedHash = await randomizer.requestToVrfHashes(request.id, request.beacons.indexOf(signer.address));
+    const storedHash = (await randomizer.getVrfHashes(request.id))[request.beacons.indexOf(signer.address)];
     expect(hash).to.equal(storedHash);
 
     const oldStake = await randomizer.getBeaconStakeEth(selectedSigners[1].address);
@@ -284,7 +284,7 @@ describe("Optimistic VRF Disputes", function () {
       expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
       request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
       request.timestamp = requestEvent.args.timestamp;
-      request.height = requestEvent.args.height;
+      request.height = requestEventRaw.blockNumber;
     }
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
     data = await vrfHelper.getSubmitData(finalSigner.address, request);

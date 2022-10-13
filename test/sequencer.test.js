@@ -71,8 +71,8 @@ describe("Sequencer", function () {
       // abi.encode and sign the data as the signer
       const messageHash = ethers.utils.keccak256(
         ethers.utils.defaultAbiCoder.encode(
-          ["address", "uint256", "uint256[4]", "uint256[2]", "uint256[4]", "uint256"],
-          [request.client, request.id, data.vrf.proof, data.vrf.params[0], data.vrf.params[1], chainId]
+          ["address", "address", "bytes32", "uint256", "uint256[4]", "uint256[2]", "uint256[4]", "uint256"],
+          [randomizer.address, request.client, request.seed, request.id, data.vrf.proof, data.vrf.params[0], data.vrf.params[1], chainId]
         )
       );
 
@@ -81,10 +81,9 @@ describe("Sequencer", function () {
       const sig = ethers.utils.splitSignature(flatSig);
       const rsAndSeed = [sig.r, sig.s, request.seed];
 
-
-
       try {
-        await randomizer.connect(signers[8])['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v, false);
+        const someSigner = signers.find(signer => !request.beacons.includes(signer.address) && signer.address !== sequencer.address);
+        await randomizer.connect(someSigner)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v, false);
         expect(true).to.be.false;
       } catch (e) {
         expect(e.message).to.match(/SenderNotBeaconOrSequencer/);
@@ -92,7 +91,7 @@ describe("Sequencer", function () {
 
 
       const secondsRemaining = Math.floor(request.timestamp.toNumber() + (request.expirationSeconds.toNumber() / 2)) - ((await ethers.provider.getBlock()).timestamp - 30);
-      const blocksRemaining = Math.floor(request.height.toNumber() + (request.expirationBlocks.toNumber() / 2)) - await ethers.provider.getBlockNumber();
+      const blocksRemaining = Math.floor(request.height + (request.expirationBlocks.toNumber() / 2)) - await ethers.provider.getBlockNumber();
 
       if (i === 0) {
         try {
@@ -120,15 +119,15 @@ describe("Sequencer", function () {
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
         request.timestamp = requestEvent.args.timestamp;
-        request.height = requestEvent.args.height;
+        request.height = requestEventRaw.blockNumber;
       }
     }
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
     const data = await vrfHelper.getSubmitData(finalSigner.address, request);
     const messageHash = ethers.utils.keccak256(
       ethers.utils.defaultAbiCoder.encode(
-        ["address", "uint256", "uint256[4]", "uint256[2]", "uint256[4]", "uint256"],
-        [request.client, request.id, data.vrf.proof, data.vrf.params[0], data.vrf.params[1], chainId]
+        ["address", "address", "bytes32", "uint256", "uint256[4]", "uint256[2]", "uint256[4]", "uint256"],
+        [randomizer.address, request.client, request.seed, request.id, data.vrf.proof, data.vrf.params[0], data.vrf.params[1], chainId]
       )
     );
 
@@ -146,6 +145,7 @@ describe("Sequencer", function () {
   }
 
 
+  // TODO
   it("submit random as sequencer on behalf of a selected beacon", async function () {
     const TestCallbackWithTooMuchGas = await ethers.getContractFactory("TestCallbackWithTooMuchGas");
     const testCallbackWithTooMuchGas = await TestCallbackWithTooMuchGas.deploy(randomizer.address);
@@ -154,7 +154,7 @@ describe("Sequencer", function () {
     await deposit.wait();
     const req = await testCallbackWithTooMuchGas.makeRequest();
     const res = await req.wait();
-    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     const lastTx = await signAndCallback(request, testCallbackWithTooMuchGas);
     // Check if lastTx emitted "CallbackFailed" event
     const callbackFailedEvent = randomizer.interface.parseLog(lastTx.logs.find(log => randomizer.interface.parseLog(log).name === "CallbackFailed"));

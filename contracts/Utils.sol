@@ -289,15 +289,14 @@ contract Utils is Admin, NetworkHelper {
             SRequestEventData(
                 data.ethReserved,
                 data.beaconFee,
-                block.number,
                 block.timestamp,
                 data.expirationBlocks,
                 data.expirationSeconds,
                 data.callbackGasLimit,
+                optimistic,
                 accounts.client,
                 accounts.beacons,
-                seed,
-                optimistic
+                seed
             )
         );
     }

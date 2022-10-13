@@ -32,7 +32,7 @@ describe("Beacon Tests", function () {
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
         request.timestamp = requestEvent.args.timestamp;
-        request.height = requestEvent.args.height;
+        request.height = requestEventRaw.blockNumber;
       }
     }
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
@@ -94,7 +94,7 @@ describe("Beacon Tests", function () {
     const req = await testCallback.makeRequest();
     // Get request data
     const res = await req.wait();
-    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     const selectedSigner = signers.filter(signer => request.beacons[0] == signer.address)[0];
     const beacon = await randomizer.getBeacon(selectedSigner.address);
 
@@ -219,7 +219,7 @@ describe("Beacon Tests", function () {
     const req = await testCallback.makeRequest();
     // Get request data
     const res = await req.wait();
-    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     const selectedSigner = signers.filter(signer => request.beacons[0] == signer.address)[0];
     const oldStake = await randomizer.getBeaconStakeEth(selectedSigner.address);
     await randomizer.connect(signers[9])._debug_setClientDeposit(testCallback.address, ethers.utils.parseUnits("5", "wei"));
@@ -244,7 +244,7 @@ describe("Beacon Tests", function () {
     const req = await testCallback.makeRequest();
     // Get request data
     const res = await req.wait();
-    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id };
+    const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
     const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
     const data2 = await vrfHelper.getSubmitData(selectedSigners[1].address, request);
@@ -254,11 +254,12 @@ describe("Beacon Tests", function () {
     const reqTx = await randomizer.connect(selectedSigners[1])['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(selectedSigners[1].address), data2.addresses, data2.uints, request.seed, false);
     // Get final beacon
     const reqReceipt = await reqTx.wait();
-    const event = randomizer.interface.parseLog(reqReceipt.logs.find(log => randomizer.interface.parseLog(log).name == "RequestBeacon")).args;
+    const log = reqReceipt.logs.find(log => randomizer.interface.parseLog(log).name == "RequestBeacon");
+    const event = randomizer.interface.parseLog(log).args;
     const finalBeacon = signers.find(signer => signer.address == event.beacon);
 
     request.beacons = [request.beacons[0], request.beacons[1], finalBeacon.address];
-    request.height = event.height;
+    request.height = log.blockNumber;
     request.timestamp = event.timestamp;
 
     const oldStake = await randomizer.getBeaconStakeEth(request.beacons[2]);
