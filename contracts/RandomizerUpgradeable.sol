@@ -7,13 +7,12 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract RandomizerUpgradeable is Initializable, Randomizer {
     function initialize(
-        address[2] memory _addresses,
-        uint256[7] memory _configUints,
+        address[4] memory _addresses,
+        uint256[] memory _configUints,
         address[] memory _beacons,
         uint256[] memory _beaconPublicKeys,
         uint256[] memory _gasEstimates
     ) public initializer {
-        __Ownable_init();
         init(
             _addresses,
             _configUints,

@@ -65,10 +65,10 @@ describe("Beacon Tests", function () {
     const Internals = await ethers.getContractFactory("Internals");
     const lib = await Internals.deploy();
     const Randomizer = await ethers.getContractFactory("RandomizerWithStorageControls", {
-      libraries: {
-        Internals: lib.address,
-        VRF: vrf.address
-      },
+      // libraries: {
+      //   Internals: lib.address,
+      //   VRF: vrf.address
+      // },
     });
 
     let ecKeys = [];
@@ -78,7 +78,7 @@ describe("Beacon Tests", function () {
       ecKeys = ecKeys.concat(keys);
       i++;
     }
-    randomizer = await Randomizer.deploy([signers[0].address, signers[0].address], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]);
+    randomizer = await Randomizer.deploy([signers[0].address, signers[0].address, vrf.address, lib.address], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]);
     await randomizer.deployed();
     vrfHelper.init(vrf, randomizer);
 
@@ -239,7 +239,7 @@ describe("Beacon Tests", function () {
 
   it("developer receives rest of deposit if client deposit is less than developer fee [ @skip-on-coverage ]", async function () {
     await randomizer.connect(signers[0]).setConfigUint(5, ethers.utils.parseEther("1"));
-    const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("6") });
     await deposit.wait();
     const req = await testCallback.makeRequest();
     // Get request data

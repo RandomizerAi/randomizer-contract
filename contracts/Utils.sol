@@ -6,7 +6,7 @@
 
 pragma solidity ^0.8.17;
 import "./Admin.sol";
-import "./lib/Internals.sol";
+// import "./lib/Internals.sol";
 // Import the gas handler for the desired network to deploy to
 import "./NetworkHelper.sol";
 
@@ -39,7 +39,7 @@ contract Utils is Admin, NetworkHelper {
         bytes32[3] memory _values
     ) internal view returns (address[3] memory) {
         return
-            Internals._replaceNonSubmitters(
+            IInternals(internals)._replaceNonSubmitters(
                 _request,
                 _beacons,
                 _values,
@@ -77,27 +77,35 @@ contract Utils is Admin, NetworkHelper {
 
     function _softChargeClient(
         uint128 id,
-        bool payDev,
+        bool payDao,
         address client,
         uint256 fee,
         uint256 beaconFee
     ) internal {
+        uint256 daoFee;
         uint256 devFee;
         uint256 deposit = ethDeposit[client];
         // Nested ifs save some gas
         if (deposit > 0) {
             if (deposit > fee) {
-                if (payDev) {
-                    // Only pay developer if client has enough ETH left after paying fee
-                    devFee = deposit >= fee + beaconFee
+                if (payDao) {
+                    // Pay contract owner (dao) first, then dev
+                    daoFee = deposit >= fee + beaconFee
                         ? beaconFee
                         : deposit - fee;
-                    _chargeClient(client, developer, devFee);
+                    _chargeClient(client, owner, daoFee);
+                    // Only pay dev if the deposit has enough left after paying dao and sender
+                    if (deposit > fee + daoFee) {
+                        devFee = deposit >= fee + daoFee + beaconFee
+                            ? beaconFee
+                            : deposit - daoFee - fee;
+                        _chargeClient(client, developer, devFee);
+                    }
                 }
-            } else if (deposit > 0) {
+            } else {
                 fee = deposit;
             }
-            requestToFeePaid[id] += fee + devFee;
+            requestToFeePaid[id] += fee + devFee + daoFee;
             _chargeClient(client, msg.sender, fee);
         }
     }

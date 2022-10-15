@@ -31,6 +31,9 @@ contract Store {
     uint256 internal _status;
 
     // Protocol addresses
+    address public internals;
+    address public vrf;
+    address public owner;
     address public developer;
     address public proposedDeveloper;
     address public sequencer;

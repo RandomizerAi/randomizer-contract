@@ -1,9 +1,9 @@
 {
   "name": "randomizer-contract",
   "scripts": {
-    "set-network:arbitrum": "cp ./gas-handler-contracts/Arbitrum.sol ./contracts/NetworkHelper.sol",
-    "set-network:zksync": "cp ./gas-handler-contracts/Generic.sol ./contracts/NetworkHelper.sol",
-    "set-network:ethereum": "cp ./gas-handler-contracts/Ethereum.sol ./contracts/NetworkHelper.sol"
+    "set-network:arbitrum": "cp ./hardhat.config.eth.js ./hardhat.config.js && cp ./gas-handler-contracts/Arbitrum.sol ./contracts/NetworkHelper.sol",
+    "set-network:zksync": "cp ./hardhat.config.zksync.js ./hardhat.config.js && cp ./gas-handler-contracts/Generic.sol ./contracts/NetworkHelper.sol",
+    "set-network:ethereum": "cp ./hardhat.config.eth.js ./hardhat.config.js && cp ./gas-handler-contracts/Ethereum.sol ./contracts/NetworkHelper.sol"
   },
   "devDependencies": {
     "@matterlabs/hardhat-zksync-deploy": "^0.5.1",

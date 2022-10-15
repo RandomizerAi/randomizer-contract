@@ -7,7 +7,6 @@ pragma solidity ^0.8.17;
 
 import "./lib/Structs.sol";
 import "./Utils.sol";
-import "./lib/VRF.sol";
 
 contract Optimistic is Utils {
     error NotDisputeable();
@@ -39,11 +38,11 @@ contract Optimistic is Utils {
 
         address beacon = accounts.beacons[beaconPos];
 
-        Internals.DisputeReturnData memory cd = Internals._dispute(
+        DisputeReturnData memory cd = IInternals(internals)._dispute(
             packed.id,
             seed,
             packed.vrf,
-            Internals.DisputeCallVars({
+            DisputeCallVars({
                 publicKeys: sBeacon[beacon].publicKey,
                 feePaid: requestToFeePaid[packed.id],
                 clientDeposit: ethDeposit[accounts.client],
@@ -51,7 +50,7 @@ contract Optimistic is Utils {
                 beacon: beacon,
                 client: accounts.client
             }),
-            address(VRF)
+            vrf
         );
 
         // Iterate through beaconsToRemove and remove them

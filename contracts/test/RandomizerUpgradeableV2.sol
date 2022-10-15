@@ -7,8 +7,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 /// @custom:oz-upgrades-unsafe-allow external-library-linking
 contract RandomizerUpgradeableV2 is Initializable, Randomizer {
     function initialize(
-        address[2] memory _addresses,
-        uint256[7] memory _configUints,
+        address[4] memory _addresses,
+        uint256[] memory _configUints,
         address[] memory _beacons,
         uint256[] memory _beaconPublicKeys,
         uint256[] memory _gasEstimates

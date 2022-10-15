@@ -2,17 +2,7 @@
 pragma solidity ^0.8.17;
 import "./Structs.sol";
 
-interface IVRF {
-    function fastVerify(
-        uint256[2] memory _publicKey, //Y-x, Y-y
-        uint256[4] memory _proof, //pi, which is D, a.k.a. gamma-x, gamma-y, c, s
-        bytes memory _message, //alpha string
-        uint256[2] memory _uPoint, //U-x, U-y
-        uint256[4] memory _vComponents //s*H -x, s*H -y, c*Gamma -x, c*Gamma -y
-    ) external pure returns (bool);
-}
-
-library Internals {
+contract Internals {
     event ChargeEth(
         address indexed from,
         address indexed to,
@@ -30,23 +20,6 @@ library Internals {
         uint128 id;
         bool vrfFailed;
         uint256 ethToSender;
-    }
-
-    struct DisputeCallVars {
-        uint256[2] publicKeys;
-        uint256 feePaid;
-        uint256 clientDeposit;
-        uint256 collateral;
-        address beacon;
-        address client;
-    }
-
-    struct DisputeReturnData {
-        bool vrfFailed;
-        address beaconToRemove;
-        uint256 ethToSender;
-        uint256 feeRefunded;
-        uint256 newClientDeposit;
     }
 
     struct SCanCompleteData {
@@ -71,7 +44,7 @@ library Internals {
         uint128 _request,
         address[3] memory _beacons,
         bytes32[3] memory _values,
-        address[] storage beacons
+        address[] memory beacons
     ) external view returns (address[3] memory) {
         bytes32 random = keccak256(
             abi.encode(

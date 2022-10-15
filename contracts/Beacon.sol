@@ -6,12 +6,9 @@
 
 pragma solidity ^0.8.17;
 
-import "./Utils.sol";
-import "./lib/VRF.sol";
 import "./Optimistic.sol";
 
-/// @custom:oz-upgrades-unsafe-allow external-library-linking
-contract Beacon is Utils, Optimistic {
+contract Beacon is Optimistic {
     // Errors exclusive to Beacon.sol
     error BeaconExists();
     error BeaconDoesNotExist(address beacon);
@@ -111,7 +108,7 @@ contract Beacon is Utils, Optimistic {
 
     /// @notice Unregisters the beacon (callable by beacon or owner). Returns staked ETH to beacon.
     function unregisterBeacon(address _beacon) external {
-        if (msg.sender != _beacon && msg.sender != owner())
+        if (msg.sender != _beacon && msg.sender != owner)
             revert NotOwnerOrBeacon();
 
         if (beaconIndex[_beacon] == 0) revert NotABeacon();
@@ -257,7 +254,7 @@ contract Beacon is Utils, Optimistic {
 
         if (!optimistic) {
             if (
-                !VRF.fastVerify(
+                !IVRF(vrf).fastVerify(
                     sBeacon[beacon].publicKey,
                     packed.vrf.proof,
                     abi.encodePacked(seed),
@@ -289,13 +286,6 @@ contract Beacon is Utils, Optimistic {
         else emit SubmitRandom(packed.id, beacon);
 
         if (submissionsCount < 2) {
-            //             address[] memory _addresses,
-            // uint256[] memory _data,
-            // bytes32[] memory _rsAndSeed,
-            // uint256 gasAtStart,
-            // uint256 submissionsCount,
-            // uint256 beaconPos,
-            // bytes12[] reqValues
             _processRandomSubmission(
                 accounts,
                 packed,

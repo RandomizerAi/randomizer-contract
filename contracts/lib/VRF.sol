@@ -10,7 +10,7 @@ import "./EllipticCurve.sol";
  * It supports the _SECP256K1_SHA256_TAI_ cipher suite, i.e. the aforementioned algorithms using `SHA256` and the `Secp256k1` curve.
  * @author Witnet Foundation
  */
-library VRF {
+contract VRF {
     /**
      * Secp256k1 parameters
      */

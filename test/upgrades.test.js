@@ -17,17 +17,17 @@ describe("Upgrades", function () {
     const Internals = await ethers.getContractFactory("Internals");
     const lib = await Internals.deploy();
     const Randomizer = await ethers.getContractFactory("RandomizerUpgradeable", {
-      libraries: {
-        Internals: lib.address,
-        VRF: vrf.address
-      },
+      //      libraries: {
+      //        Internals: lib.address,
+      //        VRF: vrf.address
+      //      },
     });
 
     const RandomizerV2 = await ethers.getContractFactory("RandomizerUpgradeableV2", {
-      libraries: {
-        Internals: lib.address,
-        VRF: vrf.address
-      },
+      //      libraries: {
+      //        Internals: lib.address,
+      //        VRF: vrf.address
+      //      },
     });
 
 
@@ -39,7 +39,7 @@ describe("Upgrades", function () {
       i++;
     }
 
-    const randomizer = await upgrades.deployProxy(Randomizer, [[signers[0].address, signers[0].address], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000]], { unsafeAllow: ["external-library-linking"] });
+    const randomizer = await upgrades.deployProxy(Randomizer, [[signers[0].address, signers[0].address, vrf.address, lib.address], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000]], { unsafeAllow: ["external-library-linking"] });
 
     // It should not yet have newFunction()
     try {
@@ -67,16 +67,16 @@ describe("Upgrades", function () {
     const lib = await Internals.deploy();
     const signers = await ethers.getSigners();
     const Randomizer = await ethers.getContractFactory('RandomizerUpgradeableV2', {
-      libraries: {
-        Internals: lib.address,
-        VRF: vrf.address
-      },
+      //      libraries: {
+      //        Internals: lib.address,
+      //        VRF: vrf.address
+      //      },
     });
     const RandomizerV2 = await ethers.getContractFactory("RandomizerUpgradeable", {
-      libraries: {
-        Internals: lib.address,
-        VRF: vrf.address
-      },
+      //      libraries: {
+      //        Internals: lib.address,
+      //        VRF: vrf.address
+      //      },
     });
     let ecKeys = [];
     let i = 0;
@@ -85,7 +85,7 @@ describe("Upgrades", function () {
       ecKeys = ecKeys.concat(keys);
       i++;
     }
-    const randomizer = await upgrades.deployProxy(Randomizer, [[signers[0].address, signers[0].address], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000]], { unsafeAllow: ["external-library-linking"] });
+    const randomizer = await upgrades.deployProxy(Randomizer, [[signers[0].address, signers[0].address, vrf.address, lib.address], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000]], { unsafeAllow: ["external-library-linking"] });
 
     // It should have newFunction()
     try {

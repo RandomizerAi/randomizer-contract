@@ -60,3 +60,47 @@ struct SBeacon {
     uint8 consecutiveSubmissions;
     uint64 pending;
 }
+
+interface IVRF {
+    function fastVerify(
+        uint256[2] memory _publicKey, //Y-x, Y-y
+        uint256[4] memory _proof, //pi, which is D, a.k.a. gamma-x, gamma-y, c, s
+        bytes memory _message, //alpha string
+        uint256[2] memory _uPoint, //U-x, U-y
+        uint256[4] memory _vComponents //s*H -x, s*H -y, c*Gamma -x, c*Gamma -y
+    ) external pure returns (bool);
+}
+
+struct DisputeCallVars {
+    uint256[2] publicKeys;
+    uint256 feePaid;
+    uint256 clientDeposit;
+    uint256 collateral;
+    address beacon;
+    address client;
+}
+
+struct DisputeReturnData {
+    bool vrfFailed;
+    address beaconToRemove;
+    uint256 ethToSender;
+    uint256 feeRefunded;
+    uint256 newClientDeposit;
+}
+
+interface IInternals {
+    function _replaceNonSubmitters(
+        uint128 _request,
+        address[3] memory _beacons,
+        bytes32[3] memory _values,
+        address[] memory beacons
+    ) external view returns (address[3] memory);
+
+    function _dispute(
+        uint128 id,
+        bytes32 seed,
+        SFastVerifyData memory vrfData,
+        DisputeCallVars memory callVars,
+        address vrf
+    ) external returns (DisputeReturnData memory);
+}

@@ -11,5 +11,8 @@ artifacts-zk
 cache-zk
 
 /contracts/GasHandler.sol
+/contracts/NetworkHelper.sol
 
 .openzeppelin
+
+hardhat.config.js

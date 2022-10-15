@@ -6,7 +6,7 @@
 
 pragma solidity ^0.8.17;
 
-import "./Beacon.sol";
+import "./Utils.sol";
 
 contract Client is Utils {
     // Errors exclusive to Client.sol
@@ -80,9 +80,10 @@ contract Client is Utils {
         uint256 gasEstimate = _optimistic
             ? gasEstimates[GKEY_OPT_SUBMIT_TOTAL]
             : gasEstimates[GKEY_SUBMIT_TOTAL];
+
         return
             ((gasEstimate + _callbackGasLimit) * _getGasPrice()) +
-            (configUints[CKEY_BEACON_FEE] * 4); //  3 beacon premium fees, 1 dev fee
+            (configUints[CKEY_BEACON_FEE] * 5); //  3 beacon premium fees, dao fee, dev fee
     }
 
     /// @notice Requests a random value with on-chain VRF validation

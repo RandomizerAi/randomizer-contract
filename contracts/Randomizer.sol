@@ -9,9 +9,9 @@
 pragma solidity ^0.8.17;
 
 import "./Client.sol";
+import "./Beacon.sol";
 
 contract Randomizer is Client, Beacon {
-    // Errors exclusive to Beacon.sol
     error NotYetRenewable(
         uint256 height,
         uint256 expirationHeight,
@@ -25,8 +25,8 @@ contract Randomizer is Client, Beacon {
     /// @dev To be called only once on deployment of RandomizerStatic (in constructor) or RandomizerUpgradeable (in initialize()).
     function init(
         // Developer, Sequencer
-        address[2] memory _addresses,
-        uint256[7] memory _configUints,
+        address[4] memory _addresses,
+        uint256[] memory _configUints,
         address[] memory _beacons,
         uint256[] memory _beaconPublicKeys,
         uint256[] memory _gasEstimates
@@ -38,8 +38,11 @@ contract Randomizer is Client, Beacon {
         _transferOwnership(_addresses[0]);
         developer = _addresses[0];
         sequencer = _addresses[1];
+        vrf = _addresses[2];
+        internals = _addresses[3];
 
-        for (uint256 i = 0; i < 7; i++) {
+        uint256 len = _configUints.length;
+        for (uint256 i = 0; i < len; i++) {
             configUints[i] = _configUints[i];
         }
 

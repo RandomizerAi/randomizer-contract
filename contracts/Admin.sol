@@ -6,9 +6,8 @@
 pragma solidity ^0.8.17;
 
 import "./Store.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract Admin is OwnableUpgradeable, Store {
+contract Admin is Store {
     uint256 internal constant _NOT_ENTERED = 1;
     uint256 internal constant _ENTERED = 2;
 
@@ -99,13 +98,17 @@ contract Admin is OwnableUpgradeable, Store {
     );
     event UpdateSequencer(address oldSequencer, address newSequencer);
 
-    error SenderNotDeveloper();
-    error SenderNotProposedDeveloper();
-    error SenderNotDeveloperOrProposed();
+    event OwnershipTransferred(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
+
+    error Unauthorized();
+    error NewOwnerIsZero();
 
     /// @notice The developer can propose a new address to be the developer.
     function proposeDeveloper(address _proposedDeveloper) external {
-        if (msg.sender != developer) revert SenderNotDeveloper();
+        if (msg.sender != developer) revert Unauthorized();
 
         emit ProposeTransferDeveloper(_proposedDeveloper);
         proposedDeveloper = _proposedDeveloper;
@@ -113,8 +116,7 @@ contract Admin is OwnableUpgradeable, Store {
 
     /// @notice The proposed developer can accept the developer role.
     function acceptDeveloper() external {
-        if (msg.sender != proposedDeveloper)
-            revert SenderNotProposedDeveloper();
+        if (msg.sender != proposedDeveloper) revert Unauthorized();
 
         emit AcceptTransferDeveloper(developer, msg.sender);
         developer = msg.sender;
@@ -124,14 +126,14 @@ contract Admin is OwnableUpgradeable, Store {
     /// @notice The developer or proposed developer can cancel the new developer address proposal.
     function cancelProposeDeveloper() external {
         if (msg.sender != developer && msg.sender != proposedDeveloper)
-            revert SenderNotDeveloperOrProposed();
+            revert Unauthorized();
 
         emit CancelTransferDeveloper(proposedDeveloper);
         proposedDeveloper = address(0);
     }
 
     function setSequencer(address _sequencer) external {
-        if (msg.sender != developer) revert SenderNotDeveloper();
+        if (msg.sender != developer) revert Unauthorized();
 
         emit UpdateSequencer(sequencer, _sequencer);
         sequencer = _sequencer;
@@ -153,5 +155,39 @@ contract Admin is OwnableUpgradeable, Store {
 
     function getGasEstimate(uint256 key) external view returns (uint256) {
         return gasEstimates[key];
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        _checkOwner();
+        _;
+    }
+
+    /**
+     * @dev Throws if the sender is not the owner.
+     */
+    function _checkOwner() internal view virtual {
+        if (owner != msg.sender) revert Unauthorized();
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) external virtual onlyOwner {
+        if (newOwner == address(0)) revert NewOwnerIsZero();
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = owner;
+        owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
     }
 }

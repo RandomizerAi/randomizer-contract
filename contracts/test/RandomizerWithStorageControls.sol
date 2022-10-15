@@ -5,8 +5,8 @@ import "../Randomizer.sol";
 contract RandomizerWithStorageControls is Randomizer {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
-        address[2] memory _addresses,
-        uint256[7] memory _configUints,
+        address[4] memory _addresses,
+        uint256[] memory _configUints,
         address[] memory _beacons,
         uint256[] memory _beaconPublicKeys,
         uint256[] memory _gasEstimates

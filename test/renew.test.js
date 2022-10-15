@@ -38,14 +38,14 @@ describe("Renew", function () {
     const Internals = await ethers.getContractFactory("Internals");
     lib = await Internals.deploy();
     const Randomizer = await ethers.getContractFactory("RandomizerWithStorageControls", {
-      libraries: {
-        Internals: lib.address,
-        VRF: vrf.address
-      }
+      //      libraries: {
+      //        Internals: lib.address,
+      //        VRF: vrf.address
+      //      }
     });
 
     sequencer = signers[7];
-    randomizer = await Randomizer.deploy([signers[7].address, signers[7].address], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]);
+    randomizer = await Randomizer.deploy([signers[7].address, signers[7].address, vrf.address, lib.address], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]);
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(randomizer.address);
 
@@ -246,12 +246,12 @@ describe("Renew", function () {
     // Deploy randomizer with 1-strike removal
 
     const Randomizer2 = await ethers.getContractFactory("RandomizerStatic", {
-      libraries: {
-        Internals: lib.address,
-        VRF: vrf.address
-      }
+      //      libraries: {
+      //        Internals: lib.address,
+      //        VRF: vrf.address
+      //      }
     });
-    const randomizer2 = await Randomizer2.deploy([ethers.constants.AddressZero, ethers.constants.AddressZero], ["500000000000000000", 50, 600, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address], [ecKeys[0], ecKeys[1], ecKeys[2], ecKeys[3], ecKeys[4], ecKeys[5], ecKeys[6], ecKeys[7], ecKeys[8], ecKeys[9]], [570000, 90000, 65000, 21000, 21000, 21000]);
+    const randomizer2 = await Randomizer2.deploy([ethers.constants.AddressZero, ethers.constants.AddressZero, vrf.address, lib.address], ["500000000000000000", 50, 600, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address], [ecKeys[0], ecKeys[1], ecKeys[2], ecKeys[3], ecKeys[4], ecKeys[5], ecKeys[6], ecKeys[7], ecKeys[8], ecKeys[9]], [570000, 90000, 65000, 21000, 21000, 21000]);
     const testCallback2 = await (await ethers.getContractFactory("TestCallback")).deploy(randomizer2.address);
 
     await randomizer2.clientDeposit(testCallback2.address, { value: ethers.utils.parseEther("50") });
@@ -508,7 +508,7 @@ describe("Renew", function () {
 
     // Sets the collateral to a little over the renew gas price so that the collateral is less than the total charge but more than the renew fee 
     let renewGas = await randomizer.connect(signers[8]).estimateGas.renewRequest(data.addresses, data.rawUints, request.seed, false);
-    const collateral = ethers.BigNumber.from(renewGas).mul(await ethers.provider.getGasPrice()).sub(20000000000000);
+    const collateral = ethers.BigNumber.from(renewGas).mul(await ethers.provider.getGasPrice()).sub(30000000000000);
     await randomizer._debug_setCollateral(selectedSigners[1].address, collateral);
 
     const signerOldDeposit = await randomizer.getBeaconStakeEth(selectedSigners[1].address);

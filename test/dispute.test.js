@@ -77,7 +77,7 @@ describe("Optimistic VRF Disputes", function () {
     const signer = selectedSigners[0];
 
     const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
-    data.uints[data.uints.length - 9] = "11111111111111111111111111111111";
+    data.uints[data.uints.length - 10] = "11111111111111111111111111111111";
     const submitTx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
 
     const events = (await submitTx.wait()).logs;
@@ -117,10 +117,10 @@ describe("Optimistic VRF Disputes", function () {
     const Internals = await ethers.getContractFactory("Internals");
     const lib = await Internals.deploy();
     const Randomizer = await ethers.getContractFactory("RandomizerWithStorageControls", {
-      libraries: {
-        Internals: lib.address,
-        VRF: vrf.address
-      },
+      // libraries: {
+      //   Internals: lib.address,
+      //   VRF: vrf.address
+      // },
     });
 
     let ecKeys = [];
@@ -130,7 +130,7 @@ describe("Optimistic VRF Disputes", function () {
       ecKeys = ecKeys.concat(keys);
       i++;
     }
-    randomizer = await Randomizer.deploy([signers[6].address, signers[6].address], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]);
+    randomizer = await Randomizer.deploy([signers[6].address, signers[6].address, vrf.address, lib.address], ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]);
     await randomizer.deployed();
     vrfHelper.init(vrf, randomizer);
     const TestCallback = await ethers.getContractFactory("OptimisticTestCallback");
