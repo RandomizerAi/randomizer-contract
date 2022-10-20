@@ -5,10 +5,6 @@ interface ArbSys {
     function arbBlockNumber() external view returns (uint256);
 }
 
-interface ArbGasInfo {
-    function getMinimumGasPrice() external view returns (uint256);
-}
-
 contract NetworkHelper {
     function _seed(uint256 id) internal view returns (bytes32) {
         return
@@ -28,5 +24,9 @@ contract NetworkHelper {
         uint256 maxFee = block.basefee + (block.basefee / 4);
         uint256 gasPrice = tx.gasprice < maxFee ? tx.gasprice : maxFee;
         return gasPrice;
+    }
+
+    function _blockNumber() internal view returns (uint256) {
+        return ArbSys(address(100)).arbBlockNumber();
     }
 }

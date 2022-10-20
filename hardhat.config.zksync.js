@@ -30,19 +30,10 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
       },
       experimental: {
         dockerImage: "matterlabs/zksolc",
         tag: "v1.2.0"
-      },
-      libraries: {
-        "contracts/lib/VRF.sol": {
-          VRF: process.env.ZKSYNC_VRF_ADDRESS,
-        },
-        "contracts/lib/Internals.sol": {
-          Internals: process.env.ZKSYNC_INTERNALS_ADDRESS,
-        }
       }
     },
   },

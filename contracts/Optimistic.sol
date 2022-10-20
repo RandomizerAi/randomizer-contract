@@ -3,6 +3,7 @@
 /// @title Randomizer Optimistic Service
 /// @author Deanpress (https://github.com/deanpress)
 /// @notice Optimistic VRF functions for Randomizer
+
 pragma solidity ^0.8.17;
 
 import "./lib/Structs.sol";
@@ -41,6 +42,7 @@ contract Optimistic is Utils {
         DisputeReturnData memory cd = IInternals(internals)._dispute(
             packed.id,
             seed,
+            msg.sender,
             packed.vrf,
             DisputeCallVars({
                 publicKeys: sBeacon[beacon].publicKey,
@@ -62,26 +64,24 @@ contract Optimistic is Utils {
             ethCollateral[beacon] = 0;
             if (sBeacon[beacon].exists) {
                 _removeBeacon(beacon);
-                emit RemoveBeacon(beacon, sBeacon[beacon].strikes);
+                emit UnregisterBeacon(beacon, true, sBeacon[beacon].strikes);
             }
-            // Delete the old request and generate a new one with the same parameters (except for new seed, beacons, and block data)
+            // Delete the old request and generate a new one with the same parameters (except for new block data)
             delete optRequestDisputeWindow[packed.id];
             delete requestToProofs[packed.id][beaconPos];
             delete requestToVrfHashes[packed.id][beaconPos];
 
             // Replace the beacon in the request and emit RequestBeacon for the new beacon
-            packed.data.height = block.number;
-            packed.data.timestamp = block.timestamp;
-            address randomBeacon = _randomBeacon(seed, accounts.beacons);
-            accounts.beacons[beaconPos] = randomBeacon;
-            requestToHash[packed.id] = _generateRequestHash(
+            bytes32 _beaconSeed = _seed(packed.id);
+            _requestBeacon(
                 packed.id,
+                beaconPos,
+                seed,
+                _beaconSeed,
                 accounts,
                 packed.data,
-                seed,
                 true
             );
-            emit RequestBeacon(packed.id, randomBeacon, packed.data.timestamp);
         } else {
             revert ProofNotInvalid();
         }
@@ -172,10 +172,11 @@ contract Optimistic is Utils {
         uint256 completeTimestamp = _window[1] +
             ((_expirationSeconds / 2) * _multiplier);
         if (
-            block.number < completeHeight || block.timestamp < completeTimestamp
+            _blockNumber() < completeHeight ||
+            block.timestamp < completeTimestamp
         )
             revert NotYetCompletableBySender(
-                block.number,
+                _blockNumber(),
                 completeHeight,
                 block.timestamp,
                 completeTimestamp
@@ -198,13 +199,13 @@ contract Optimistic is Utils {
         uint256 gasAtStart,
         uint256 _beaconFee
     ) internal {
-        if (_status == _ENTERED) revert ReentrancyGuard();
-        _status = _ENTERED;
+        if (_status == STATUS_ENTERED) revert ReentrancyGuard();
+        _status = STATUS_ENTERED;
         // Final beacon submission logic (callback & complete)
 
         // Set dispute window time
         uint256[2] memory disputeWindow = [
-            block.number + configUints[CKEY_EXPIRATION_BLOCKS],
+            _blockNumber() + configUints[CKEY_EXPIRATION_BLOCKS],
             block.timestamp + configUints[CKEY_EXPIRATION_SECONDS]
         ];
         optRequestDisputeWindow[id] = disputeWindow;
@@ -220,6 +221,6 @@ contract Optimistic is Utils {
 
         emit OptimisticReady(id, disputeWindow[0], disputeWindow[1]);
 
-        _status = _NOT_ENTERED;
+        _status = STATUS_NOT_ENTERED;
     }
 }

@@ -27,6 +27,25 @@ contract Store {
     uint256 constant GKEY_SUBMIT_TOTAL = 5;
     uint256 constant GKEY_OPT_SUBMIT_TOTAL = 6;
 
+    // AuthAction event types
+    uint8 constant AUTH_TYPE_OWNER = 0;
+    uint8 constant AUTH_TYPE_DEV = 1;
+
+    uint8 constant AUTH_ACTION_PROPOSE = 0;
+    uint8 constant AUTH_ACTION_ACCEPT = 1;
+    uint8 constant AUTH_ACTION_CANCEL = 2;
+
+    // UpdateUint event types
+    uint8 constant UINT_TYPE_CONFIG = 0;
+    uint8 constant UINT_TYPE_GAS = 1;
+
+    // DepositEth event types
+    uint8 constant DEPOSIT_TYPE_BEACON = 0;
+    uint8 constant DEPOSIT_TYPE_CLIENT = 1;
+
+    uint256 internal constant STATUS_NOT_ENTERED = 1;
+    uint256 internal constant STATUS_ENTERED = 2;
+
     // Re-entrancy guard for final beacon submit
     uint256 internal _status;
 
@@ -34,6 +53,7 @@ contract Store {
     address public internals;
     address public vrf;
     address public owner;
+    address public proposedOwner;
     address public developer;
     address public proposedDeveloper;
     address public sequencer;

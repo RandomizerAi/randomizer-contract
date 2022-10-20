@@ -19,4 +19,8 @@ contract NetworkHelper {
     function _getGasPrice() internal view returns (uint256) {
         return tx.gasprice;
     }
+
+    function _blockNumber() internal view returns (uint256) {
+        return block.number;
+    }
 }

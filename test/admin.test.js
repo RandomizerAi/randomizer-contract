@@ -84,33 +84,78 @@ describe("Admin", function () {
 
   it("propose, cancel and accept developer", async function () {
     try {
-      await randomizer.connect(signers[1]).proposeDeveloper(signers[1].address);
+      await randomizer.connect(signers[0]).cancelProposeAuth(1);
     } catch (e) {
       expect(e).to.match(/Unauthorized/g);
     }
-    await randomizer.connect(signers[0]).proposeDeveloper(signers[1].address);
+    try {
+      await randomizer.connect(signers[1]).proposeAuth(1, signers[1].address);
+    } catch (e) {
+      expect(e).to.match(/Unauthorized/g);
+    }
+    await randomizer.connect(signers[0]).proposeAuth(1, signers[1].address);
     expect(await randomizer.proposedDeveloper()).to.equal(signers[1].address);
 
     try {
-      await randomizer.connect(signers[2]).cancelProposeDeveloper();
+      await randomizer.connect(signers[2]).cancelProposeAuth(1);
     } catch (e) {
       expect(e).to.match(/Unauthorized/g);
     }
 
-    await randomizer.cancelProposeDeveloper();
+
+    await randomizer.cancelProposeAuth(1);
     expect(await randomizer.proposedDeveloper()).to.equal(ethers.constants.AddressZero);
-    await randomizer.connect(signers[0]).proposeDeveloper(signers[1].address);
+
+    await randomizer.connect(signers[0]).proposeAuth(1, signers[1].address);
 
     try {
-      await randomizer.connect(signers[2]).acceptDeveloper();
+      await randomizer.connect(signers[2]).acceptAuth(1);
     } catch (e) {
       expect(e).to.match(/Unauthorized/g);
     }
 
-    await randomizer.connect(signers[1]).acceptDeveloper();
+    await randomizer.connect(signers[1]).acceptAuth(1);
 
     expect(await randomizer.developer()).to.equal(signers[1].address);
     expect(await randomizer.proposedDeveloper()).to.equal(ethers.constants.AddressZero);
+
+  });
+
+  it("propose, cancel and accept owner", async function () {
+    try {
+      await randomizer.connect(signers[0]).cancelProposeAuth(0);
+    } catch (e) {
+      expect(e).to.match(/Unauthorized/g);
+    }
+
+    try {
+      await randomizer.connect(signers[1]).proposeAuth(0, signers[1].address);
+    } catch (e) {
+      expect(e).to.match(/Unauthorized/g);
+    }
+    await randomizer.connect(signers[0]).proposeAuth(0, signers[1].address);
+    expect(await randomizer.proposedOwner()).to.equal(signers[1].address);
+
+    try {
+      await randomizer.connect(signers[2]).cancelProposeAuth(0);
+    } catch (e) {
+      expect(e).to.match(/Unauthorized/g);
+    }
+
+    await randomizer.cancelProposeAuth(0);
+    expect(await randomizer.proposedOwner()).to.equal(ethers.constants.AddressZero);
+    await randomizer.connect(signers[0]).proposeAuth(0, signers[1].address);
+
+    try {
+      await randomizer.connect(signers[2]).acceptAuth(0);
+    } catch (e) {
+      expect(e).to.match(/Unauthorized/g);
+    }
+
+    await randomizer.connect(signers[1]).acceptAuth(0);
+
+    expect(await randomizer.owner()).to.equal(signers[1].address);
+    expect(await randomizer.proposedOwner()).to.equal(ethers.constants.AddressZero);
 
   });
 

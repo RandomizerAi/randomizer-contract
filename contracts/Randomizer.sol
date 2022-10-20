@@ -31,25 +31,38 @@ contract Randomizer is Client, Beacon {
         uint256[] memory _beaconPublicKeys,
         uint256[] memory _gasEstimates
     ) internal {
+        _status = STATUS_NOT_ENTERED;
         require(
             _beaconPublicKeys.length == _beacons.length * 2,
             "BEACON_LENGTH"
         );
-        _transferOwnership(_addresses[0]);
+        owner = _addresses[0];
+        emit AuthTransferAction(
+            AUTH_ACTION_ACCEPT,
+            AUTH_TYPE_OWNER,
+            address(0),
+            _addresses[0]
+        );
         developer = _addresses[0];
+        emit AuthTransferAction(
+            AUTH_ACTION_ACCEPT,
+            AUTH_TYPE_DEV,
+            address(0),
+            _addresses[0]
+        );
         sequencer = _addresses[1];
+        emit UpdateSequencer(address(0), sequencer);
         vrf = _addresses[2];
         internals = _addresses[3];
 
-        uint256 len = _configUints.length;
-        for (uint256 i = 0; i < len; i++) {
+        uint256 uintsLength = _configUints.length;
+        for (uint256 i = 0; i < uintsLength; i++) {
             configUints[i] = _configUints[i];
         }
 
-        // Beacon.add(store, address(0));
         beacons.push(address(0));
-        uint256 length = _beacons.length;
-        for (uint256 i; i < length; i++) {
+        uint256 beaconsLength = _beacons.length;
+        for (uint256 i; i < beaconsLength; i++) {
             beaconIndex[_beacons[i]] = beacons.length;
             beacons.push(_beacons[i]);
             sBeacon[_beacons[i]] = SBeacon(
@@ -63,17 +76,39 @@ contract Randomizer is Client, Beacon {
                 0
             );
         }
-
-        require(_gasEstimates.length <= 16, "GAS_ESTIMATES_LENGTH");
-        for (uint256 i; i < length; i++) {
+        uint256 gasLength = _gasEstimates.length;
+        require(gasLength <= 16, "GAS_ESTIMATES_LENGTH");
+        for (uint256 i; i < gasLength; i++) {
             gasEstimates[i] = _gasEstimates[i];
         }
-
-        _status = _NOT_ENTERED;
     }
 
-    function getResult(uint128 _request) external view returns (bytes32) {
-        return results[_request];
+    /// @notice Returns request data (result, data hash, fees paid and refunded, submitted vrf hashes)
+    function getRequest(uint128 _request)
+        external
+        view
+        returns (
+            bytes32 result,
+            bytes32 dataHash,
+            uint256[2] memory fees,
+            bytes32[3] memory vrfHashes
+        )
+    {
+        return (
+            results[_request],
+            requestToHash[_request],
+            [requestToFeePaid[_request], requestToFeeRefunded[_request]],
+            requestToVrfHashes[_request]
+        );
+    }
+
+    /// @notice Returns the total amount paid and refunded for a request
+    function getFeeStats(uint128 _request)
+        external
+        view
+        returns (uint256[2] memory)
+    {
+        return [requestToFeePaid[_request], requestToFeeRefunded[_request]];
     }
 
     function renewRequest(
@@ -135,11 +170,11 @@ contract Randomizer is Client, Beacon {
             }
 
             if (
-                block.number < _expirationBlocks ||
+                _blockNumber() < _expirationBlocks ||
                 block.timestamp < _expirationSeconds
             )
                 revert NotYetRenewable(
-                    block.number,
+                    _blockNumber(),
                     _expirationBlocks,
                     block.timestamp,
                     _expirationSeconds
@@ -200,14 +235,15 @@ contract Randomizer is Client, Beacon {
             ) {
                 // Remove beacon from beacons
                 _removeBeacon(beaconsToStrike[i]);
-                emit RemoveBeacon(
+                emit UnregisterBeacon(
                     beaconsToStrike[i],
+                    true,
                     sBeacon[beaconsToStrike[i]].strikes
                 );
             }
         }
 
-        packed.data.height = block.number;
+        packed.data.height = _blockNumber();
         packed.data.timestamp = block.timestamp;
 
         requestToHash[packed.id] = _generateRequestHash(

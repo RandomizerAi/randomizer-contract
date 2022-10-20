@@ -21,4 +21,8 @@ contract NetworkHelper {
         uint256 gasPrice = tx.gasprice < maxFee ? tx.gasprice : maxFee;
         return gasPrice;
     }
+
+    function _blockNumber() internal view returns (uint256) {
+        return block.number;
+    }
 }

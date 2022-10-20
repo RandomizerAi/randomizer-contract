@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: BSL 1.1
+
+/// @title Randomizer Internals Service
+/// @author Deanpress (https://github.com/deanpress)
+/// @notice Randomizer Internals functions that were split from the main contract to save deployment gas.
+
 pragma solidity ^0.8.17;
 import "./Structs.sol";
 
@@ -36,8 +41,6 @@ contract Internals {
         uint256 currentTimestamp,
         uint256 completableTimestamp
     );
-
-    // error NotCompleteable();
 
     /// @dev Replaces all non-submitting beacons from a request (called when a request is renewed)
     function _replaceNonSubmitters(
@@ -102,25 +105,10 @@ contract Internals {
         return newSelectedBeacons;
     }
 
-    function _verify(
-        uint256[2] memory publicKeys,
-        SFastVerifyData memory vrfData,
-        bytes32 seed,
-        address vrf
-    ) private pure returns (bool) {
-        return
-            IVRF(vrf).fastVerify(
-                publicKeys,
-                vrfData.proof,
-                abi.encodePacked(seed),
-                vrfData.uPoint,
-                vrfData.vComponents
-            );
-    }
-
     function _dispute(
         uint128 id,
         bytes32 seed,
+        address sender,
         SFastVerifyData memory vrfData,
         DisputeCallVars memory callVars,
         address vrf
@@ -134,10 +122,17 @@ contract Internals {
 
         // Run VRF Secp256k1 fastVerify method
         uint256 feeRefunded;
-        if (!_verify(callVars.publicKeys, vrfData, seed, vrf)) {
+        if (
+            !IVRF(vrf).fastVerify(
+                callVars.publicKeys,
+                vrfData.proof,
+                abi.encodePacked(seed),
+                vrfData.uPoint,
+                vrfData.vComponents
+            )
+        ) {
             // Manipulating beacons pay for all transaction fees to client so far.
             // Send full stake if beacon doesn't have enough.
-
             if (callVars.feePaid > 0 && callVars.collateral > 0) {
                 if (callVars.feePaid < callVars.collateral) {
                     callVars.collateral -= callVars.feePaid;
@@ -154,7 +149,7 @@ contract Internals {
                     vars.ethToSender += callVars.collateral;
                     emit ChargeEth(
                         callVars.beacon,
-                        msg.sender,
+                        sender,
                         vars.ethToSender,
                         2
                     );
@@ -186,40 +181,4 @@ contract Internals {
                 callVars.clientDeposit
             );
     }
-
-    // function _optimisticCanComplete(SCanCompleteData memory d) external view {
-    //     if (d.disputeWindow[0] == 0) {
-    //         revert NotCompleteable();
-    //     }
-    //     bool isBeaconOrSequencer;
-    //     if (msg.sender == d.sequencer) {
-    //         _checkCanComplete(d, 3);
-    //     } else {
-    //         for (uint256 i; i < 3; i++) {
-    //             if (d.beacons[i] == msg.sender) {
-    //                 _checkCanComplete(d, i);
-    //                 break;
-    //             }
-    //         }
-    //     }
-    // }
-
-    // function _optCanComplete(SCanCompleteData memory d, uint256 multiplier)
-    //     private
-    //     view
-    // {
-    //     uint256 completeHeight = d.disputeWindow[0] +
-    //         (d.expirationBlocks * multiplier);
-    //     uint256 completeTimestamp = d.disputeWindow[1] +
-    //         (multiplier * 5 minutes);
-    //     if (
-    //         block.number < completeHeight || block.timestamp < completeTimestamp
-    //     )
-    //         revert NotYetCompletableBySender(
-    //             block.number,
-    //             completeHeight,
-    //             block.timestamp,
-    //             completeTimestamp
-    //         );
-    // }
 }

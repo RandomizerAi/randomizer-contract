@@ -99,6 +99,7 @@ interface IInternals {
     function _dispute(
         uint128 id,
         bytes32 seed,
+        address sender,
         SFastVerifyData memory vrfData,
         DisputeCallVars memory callVars,
         address vrf

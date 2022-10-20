@@ -32,30 +32,17 @@ contract Beacon is Optimistic {
         return beacons;
     }
 
-    /// @notice Returns beacon details (collateral, strikes, pending count, consecutive successful submissions)
-    function getBeacon(address _beacon) external view returns (SBeacon memory) {
-        return sBeacon[_beacon];
-    }
-
-    /// @notice Returns the index of the beacon in the list of registered beacons
-    function getBeaconIndex(address _beacon)
+    /// @notice Returns beacon details (strikes, pending count, consecutive successful submissions, index in beacons list, stake)
+    function getBeacon(address _beacon)
         external
         view
-        returns (uint256 index)
+        returns (
+            SBeacon memory beacon,
+            uint256 ethStake,
+            uint256 index
+        )
     {
-        return beaconIndex[_beacon];
-    }
-
-    function getVrfHashes(uint128 _request)
-        external
-        view
-        returns (bytes32[3] memory)
-    {
-        return requestToVrfHashes[_request];
-    }
-
-    function getDataHash(uint128 _request) external view returns (bytes32) {
-        return requestToHash[_request];
+        return (sBeacon[_beacon], ethCollateral[_beacon], beaconIndex[_beacon]);
     }
 
     /// @notice Registers a new beacon
@@ -78,16 +65,7 @@ contract Beacon is Optimistic {
     /// @notice Stake ETH for a beacon
     function beaconStakeEth(address _beacon) external payable {
         ethCollateral[_beacon] += msg.value;
-        emit BeaconStakeEth(_beacon, msg.value);
-    }
-
-    /// @notice Returns the beacon staked ETH
-    function getBeaconStakeEth(address _beacon)
-        external
-        view
-        returns (uint256)
-    {
-        return ethCollateral[_beacon];
+        emit DepositEth(DEPOSIT_TYPE_BEACON, _beacon, msg.value);
     }
 
     /// @notice Unstake ETH from sender account
@@ -101,7 +79,11 @@ contract Beacon is Optimistic {
                 revert BeaconHasPending(sBeacon[msg.sender].pending);
 
             _removeBeacon(msg.sender);
-            emit UnregisterBeacon(msg.sender, sBeacon[msg.sender].strikes);
+            emit UnregisterBeacon(
+                msg.sender,
+                false,
+                sBeacon[msg.sender].strikes
+            );
         }
         _transferEth(msg.sender, _amount);
     }
@@ -118,7 +100,7 @@ contract Beacon is Optimistic {
         uint256 collateral = ethCollateral[_beacon];
 
         _removeBeacon(_beacon);
-        emit UnregisterBeacon(_beacon, sBeacon[_beacon].strikes);
+        emit UnregisterBeacon(_beacon, false, sBeacon[_beacon].strikes);
 
         if (collateral > 0) {
             // Remove collateral
@@ -205,7 +187,6 @@ contract Beacon is Optimistic {
             SPackedSubmitData memory packed
         ) = _getAccountsAndPackedData(_addressData, _uintData);
 
-        // Run VRF Secp256k1 fastVerify method
         _submissionStep(
             msg.sender,
             beaconPos,
@@ -322,8 +303,8 @@ contract Beacon is Optimistic {
         uint256 gasAtStart
     ) private {
         // Process final submission with ReentrancyGuard
-        if (_status == _ENTERED) revert ReentrancyGuard();
-        _status = _ENTERED;
+        if (_status == STATUS_ENTERED) revert ReentrancyGuard();
+        _status = STATUS_ENTERED;
 
         // Final beacon submission logic (callback & complete)
         _processResult(
@@ -356,7 +337,7 @@ contract Beacon is Optimistic {
         delete requestToHash[packed.id];
         delete requestToVrfHashes[packed.id];
 
-        _status = _NOT_ENTERED;
+        _status = STATUS_NOT_ENTERED;
     }
 
     function _updateBeaconSubmissionCount(address _beacon) private {
@@ -382,34 +363,19 @@ contract Beacon is Optimistic {
     ) private {
         // Second to last requests final beacon
         if (submissionsCount == 1) {
-            bytes32 lastBeaconSeed;
-
-            lastBeaconSeed = keccak256(
+            bytes32 lastBeaconSeed = keccak256(
                 abi.encodePacked(reqValues[0], reqValues[1])
             );
 
-            address randomBeacon = _randomBeacon(
-                lastBeaconSeed,
-                accounts.beacons
-            );
-
-            sBeacon[randomBeacon].pending++;
-
-            accounts.beacons[2] = randomBeacon;
-
-            // Set new height and timestamp so there's a submission window before renewable for third beacon
-            packed.data.height = block.number;
-            packed.data.timestamp = block.timestamp;
-
-            requestToHash[packed.id] = _generateRequestHash(
+            _requestBeacon(
                 packed.id,
+                2,
+                seed,
+                lastBeaconSeed,
                 accounts,
                 packed.data,
-                seed,
                 optimistic
             );
-
-            emit RequestBeacon(packed.id, randomBeacon, packed.data.timestamp);
         }
 
         // 62k offset for charge
@@ -443,10 +409,10 @@ contract Beacon is Optimistic {
         if (
             msg.sender != beacon &&
             (block.timestamp < sequencerSubmitTime ||
-                block.number < sequencerSubmitBlock)
+                _blockNumber() < sequencerSubmitBlock)
         )
             revert SequencerSubmissionTooEarly(
-                block.number,
+                _blockNumber(),
                 sequencerSubmitBlock,
                 block.timestamp,
                 sequencerSubmitTime

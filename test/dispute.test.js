@@ -149,7 +149,7 @@ describe("Optimistic VRF Disputes", function () {
     const { vrf, signer, request, data, selectedSigners } = await createAndFillOneOptimisticRequest();
 
     const hash = await randomizer.gammaToHash(vrf.proof[0], vrf.proof[1])
-    const storedHashes = await randomizer.getVrfHashes(request.id);
+    const storedHashes = (await randomizer.getRequest(request.id)).vrfHashes;
     const storedHash = storedHashes[request.beacons.indexOf(signer.address)];
     expect(hash).to.equal(storedHash);
 
@@ -166,16 +166,16 @@ describe("Optimistic VRF Disputes", function () {
     const { parsed, signer, request, selectedSigners, data } = await createAndFillFalseOptimisticRequest();
 
     const hash = await randomizer.gammaToHash(parsed.args.proof[0], parsed.args.proof[1])
-    const storedHash = (await randomizer.getVrfHashes(request.id))[request.beacons.indexOf(signer.address)];
+    const storedHash = (await randomizer.getRequest(request.id)).vrfHashes[request.beacons.indexOf(signer.address)];
     expect(hash).to.equal(storedHash);
 
-    const oldStake = await randomizer.getBeaconStakeEth(selectedSigners[1].address);
-    const oldDeposit = await randomizer.clientBalanceOf(testCallback.address);
-    const oldManipulatorStake = await randomizer.getBeaconStakeEth(selectedSigners[0].address);
+    const oldStake = (await randomizer.getBeacon(selectedSigners[1].address)).ethStake;
+    const oldDeposit = (await randomizer.clientBalanceOf(testCallback.address))[0];
+    const oldManipulatorStake = (await randomizer.getBeacon(selectedSigners[0].address)).ethStake;
     await randomizer.connect(selectedSigners[1]).dispute(request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed);
-    const newStake = await randomizer.getBeaconStakeEth(selectedSigners[1].address);
-    const newDeposit = await randomizer.clientBalanceOf(testCallback.address);
-    const newManipulatorStake = await randomizer.getBeaconStakeEth(selectedSigners[0].address);
+    const newStake = (await randomizer.getBeacon(selectedSigners[1].address)).ethStake;
+    const newDeposit = (await randomizer.clientBalanceOf(testCallback.address))[0];
+    const newManipulatorStake = (await randomizer.getBeacon(selectedSigners[0].address)).ethStake;
     expect(newStake.gt(oldStake)).to.be.true;
     expect(newDeposit.gt(oldDeposit)).to.be.true;
     expect(newManipulatorStake.lt(oldManipulatorStake)).to.be.true;
@@ -215,7 +215,7 @@ describe("Optimistic VRF Disputes", function () {
     await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(Number(window[0]) + (20 * i) - Number(currentBlock)), ethers.utils.hexValue(60)]);
     await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(2), ethers.utils.hexValue(60)]);
     await randomizer.connect(selectedSigners[i]).completeOptimistic(data.addresses, data.rawUints, request.seed);
-    const result = await randomizer.getResult(request.id);
+    const result = (await randomizer.getRequest(request.id)).result;
     expect(result).to.not.equal(ethers.constants.HashZero);
   }
 
@@ -240,7 +240,7 @@ describe("Optimistic VRF Disputes", function () {
       await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(Number(window[0]) + (20 * 4) - Number(currentBlock)), ethers.utils.hexValue(60)]);
       await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(2), ethers.utils.hexValue(60)]);
       await randomizer.connect(signers[7]).completeOptimistic(data.addresses, data.rawUints, request.seed);
-      const result = await randomizer.getResult(request.id);
+      const result = (await randomizer.getRequest(request.id)).result;
       expect(result).to.not.equal(ethers.constants.HashZero);
     }
     await completeWithNonBeacon();
@@ -260,7 +260,7 @@ describe("Optimistic VRF Disputes", function () {
       const currentBlock = await ethers.provider.getBlockNumber();
       await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(Number(window[0]) + (20 * 4) - Number(currentBlock)), ethers.utils.hexValue(60)]);
       await randomizer.connect(signers[6]).completeOptimistic(data.addresses, data.rawUints, request.seed);
-      const result = await randomizer.getResult(request.id);
+      const result = (await randomizer.getRequest(request.id)).result;
       expect(result).to.not.equal(ethers.constants.HashZero);
     }
     await completeWithSequencer();

@@ -35,9 +35,9 @@ async function main() {
   const wallet = new Wallet(process.env.PRIVATE_KEY);
   const deployer = new Deployer(hre, wallet);
 
-  const artifact = await deployer.loadArtifact("Main");
+  const artifact = await deployer.loadArtifact("RandomizerStatic");
 
-  const args = [[wallet.address, wallet.address, process.env.ZKSYNC_INTERNALS_ADDRESS, process.env.ZKSYNC_VRF_ADDRESS], [ethers.utils.parseEther("0.0005"), 20, 300, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], addresses, ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]];
+  const args = [[wallet.address, wallet.address, process.env.ZKSYNC_VRF_ADDRESS, process.env.ZKSYNC_INTERNALS_ADDRESS], [ethers.utils.parseEther("0.0005"), 20, 300, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], addresses, ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]];
   // const args = [];
   const randomizer = await deployer.deploy(artifact, args);
 

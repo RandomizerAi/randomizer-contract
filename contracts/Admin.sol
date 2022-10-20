@@ -8,9 +8,6 @@ pragma solidity ^0.8.17;
 import "./Store.sol";
 
 contract Admin is Store {
-    uint256 internal constant _NOT_ENTERED = 1;
-    uint256 internal constant _ENTERED = 2;
-
     /// @notice Emits an event with the final random value
     /// @param id request id
     /// @param result result value
@@ -27,8 +24,8 @@ contract Admin is Store {
         uint256 ethToCaller
     );
 
-    event BeaconStakeEth(address indexed beacon, uint256 amount);
-    event ClientDeposit(address indexed client, uint256 amount);
+    event DepositEth(uint8 _type, address indexed account, uint256 amount);
+
     event ClientWithdrawTo(
         address indexed client,
         address indexed to,
@@ -45,8 +42,11 @@ contract Admin is Store {
 
     event WithdrawEth(address indexed to, uint256 amount);
     event RegisterBeacon(address indexed beacon);
-    event UnregisterBeacon(address indexed beacon, uint8 strikes);
-    event RemoveBeacon(address indexed beacon, uint8 strikes);
+    event UnregisterBeacon(
+        address indexed beacon,
+        bool indexed kicked,
+        uint8 strikes
+    );
 
     /// @notice Emits an event that contains all data needed for a beacon to submit a random number.
     /// @param request request event data (id, ethReserved, beaconFee, height, timestamp, expirationSeconds, expirationBlocks, callbackGasLimit, client, beacons, lastBeaconSeed)
@@ -76,6 +76,7 @@ contract Admin is Store {
         bytes32 result,
         bytes txData
     );
+
     event OptimisticReady(
         uint128 indexed id,
         uint256 completeHeight,
@@ -83,53 +84,99 @@ contract Admin is Store {
     );
 
     // Admin events
-    event ProposeTransferDeveloper(address proposedDeveloper);
-    event AcceptTransferDeveloper(address lastDeveloper, address newDeveloper);
-    event CancelTransferDeveloper(address proposedDeveloper);
-    event UpdateConfigUint(
+    event AuthTransferAction(
+        uint8 indexed _action,
+        uint8 indexed _type,
+        address _old,
+        address _new
+    );
+
+    event UpdateUint(
+        uint8 indexed _type,
         uint256 indexed key,
         uint256 oldValue,
         uint256 newValue
     );
-    event UpdateGasEstimate(
-        uint256 indexed key,
-        uint256 oldValue,
-        uint256 newValue
-    );
+
     event UpdateSequencer(address oldSequencer, address newSequencer);
 
-    event OwnershipTransferred(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
-
     error Unauthorized();
-    error NewOwnerIsZero();
 
     /// @notice The developer can propose a new address to be the developer.
-    function proposeDeveloper(address _proposedDeveloper) external {
-        if (msg.sender != developer) revert Unauthorized();
+    function proposeAuth(uint8 _type, address _proposed) external {
+        if (
+            (_type == 1 && msg.sender != developer) ||
+            (_type == 0 && msg.sender != owner) ||
+            (_type != 0 && _type != 1)
+        ) revert Unauthorized();
 
-        emit ProposeTransferDeveloper(_proposedDeveloper);
-        proposedDeveloper = _proposedDeveloper;
+        emit AuthTransferAction(
+            AUTH_ACTION_PROPOSE,
+            _type,
+            msg.sender,
+            _proposed
+        );
+
+        if (_type == 1) {
+            proposedDeveloper = _proposed;
+        } else if (_type == 0) {
+            proposedOwner = _proposed;
+        }
     }
 
-    /// @notice The proposed developer can accept the developer role.
-    function acceptDeveloper() external {
-        if (msg.sender != proposedDeveloper) revert Unauthorized();
+    /// @notice The proposed address can accept the _type role.
+    function acceptAuth(uint8 _type) external {
+        if (
+            (_type == 1 && msg.sender != proposedDeveloper) ||
+            (_type == 0 && msg.sender != proposedOwner) ||
+            (_type != 0 && _type != 1)
+        ) revert Unauthorized();
 
-        emit AcceptTransferDeveloper(developer, msg.sender);
-        developer = msg.sender;
-        proposedDeveloper = address(0);
+        emit AuthTransferAction(
+            AUTH_ACTION_ACCEPT,
+            _type,
+            _type == 1 ? developer : owner,
+            msg.sender
+        );
+
+        if (_type == 1) {
+            developer = msg.sender;
+            proposedDeveloper = address(0);
+        } else if (_type == 0) {
+            owner = msg.sender;
+            proposedOwner = address(0);
+        }
     }
 
-    /// @notice The developer or proposed developer can cancel the new developer address proposal.
-    function cancelProposeDeveloper() external {
-        if (msg.sender != developer && msg.sender != proposedDeveloper)
-            revert Unauthorized();
+    /// @notice The current or last auth can cancel the new auth proposal.
+    function cancelProposeAuth(uint8 _type) external {
+        if (
+            (_type == 1 &&
+                ((msg.sender != developer && msg.sender != proposedDeveloper) ||
+                    proposedDeveloper == address(0))) ||
+            (_type == 0 &&
+                ((msg.sender != owner && msg.sender != proposedOwner) ||
+                    proposedOwner == address(0))) ||
+            (_type != 0 && _type != 1)
+        ) revert Unauthorized();
 
-        emit CancelTransferDeveloper(proposedDeveloper);
-        proposedDeveloper = address(0);
+        if (_type == 1) {
+            emit AuthTransferAction(
+                AUTH_ACTION_CANCEL,
+                _type,
+                developer,
+                proposedDeveloper
+            );
+            proposedDeveloper = address(0);
+        } else if (_type == 0) {
+            emit AuthTransferAction(
+                AUTH_ACTION_CANCEL,
+                _type,
+                owner,
+                proposedOwner
+            );
+            proposedOwner = address(0);
+        }
     }
 
     function setSequencer(address _sequencer) external {
@@ -140,12 +187,12 @@ contract Admin is Store {
     }
 
     function setConfigUint(uint256 key, uint256 _value) external onlyOwner {
-        emit UpdateConfigUint(key, configUints[key], _value);
+        emit UpdateUint(UINT_TYPE_CONFIG, key, configUints[key], _value);
         configUints[key] = _value;
     }
 
     function setGasEstimate(uint256 key, uint256 _value) external onlyOwner {
-        emit UpdateGasEstimate(key, gasEstimates[key], _value);
+        emit UpdateUint(UINT_TYPE_GAS, key, gasEstimates[key], _value);
         gasEstimates[key] = _value;
     }
 
@@ -170,24 +217,5 @@ contract Admin is Store {
      */
     function _checkOwner() internal view virtual {
         if (owner != msg.sender) revert Unauthorized();
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) external virtual onlyOwner {
-        if (newOwner == address(0)) revert NewOwnerIsZero();
-        _transferOwnership(newOwner);
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Internal function without access restriction.
-     */
-    function _transferOwnership(address newOwner) internal virtual {
-        address oldOwner = owner;
-        owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
     }
 }

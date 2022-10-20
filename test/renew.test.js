@@ -66,7 +66,7 @@ describe("Renew", function () {
     // Deposit
     const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
     await deposit.wait();
-    expect(await randomizer.clientBalanceOf(testCallback.address)).to.equal(ethers.utils.parseEther("5"));
+    expect((await randomizer.clientBalanceOf(testCallback.address))[0]).to.equal(ethers.utils.parseEther("5"));
 
     // Request
     let request = await makeRequest(testCallback);
@@ -126,7 +126,7 @@ describe("Renew", function () {
     await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, false);
 
     // Store request with the 1 signature
-    const oldSigs = await randomizer.getVrfHashes(request.id);
+    const oldSigs = (await randomizer.getRequest(request.id)).vrfHashes;
 
     // Skip blocks and renew request
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
@@ -140,7 +140,7 @@ describe("Renew", function () {
 
     const newBeacons = newReq.beacons;
 
-    const newSigs = await randomizer.getVrfHashes(1);
+    const newSigs = (await randomizer.getRequest(1)).vrfHashes;
 
 
     // Beacons should be renewed except for the first one
@@ -209,7 +209,7 @@ describe("Renew", function () {
         oldReq = request;
       }
     }
-    const oldSigs = await randomizer.getVrfHashes(1);
+    const oldSigs = (await randomizer.getRequest(1)).vrfHashes;
 
 
     expect(oldReq.beacons[2]).to.not.equal(ethers.constants.AddressZero);
@@ -227,7 +227,7 @@ describe("Renew", function () {
     const newReq = await randomizer.interface.parseLog(renewRes.logs[renewRes.logs.length - 1]).args.request;
     const newBeacons = newReq.beacons;
 
-    const newSigs = await randomizer.getVrfHashes(1);
+    const newSigs = (await randomizer.getRequest(1)).vrfHashes;
 
     // Beacons should be renewed except for the first one
     expect(oldReq.beacons[2]).to.not.equal(newReq.beacons[2]);
@@ -263,29 +263,29 @@ describe("Renew", function () {
     // Stake 1 eth for beacon
     await randomizer2.connect(selectedSigners[1]).beaconStakeEth(selectedSigners[1].address, { value: ethers.utils.parseEther("1") });
 
-    expect(ethers.BigNumber.from(await randomizer2.getBeaconStakeEth(selectedSigners[1].address))).to.equal(ethers.utils.parseEther("1"));
+    expect(ethers.BigNumber.from((await randomizer2.getBeacon(selectedSigners[1].address)).ethStake)).to.equal(ethers.utils.parseEther("1"));
 
     // Make signature
     const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
     await randomizer2.connect(selectedSigners[0])['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(selectedSigners[0].address), data.addresses, data.uints, request.seed, false);
 
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
-    const oldClientBalanceOf = ethers.BigNumber.from(await randomizer2.clientBalanceOf(request.client));
+    const oldClientBalanceOf = ethers.BigNumber.from((await randomizer2.clientBalanceOf(request.client))[0]);
 
     const renewUintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
-    const beaconStakeOfRenewer = ethers.BigNumber.from(await randomizer2.getBeaconStakeEth(selectedSigners[1].address));
+    const beaconStakeOfRenewer = ethers.BigNumber.from((await randomizer2.getBeacon(selectedSigners[1].address)).ethStake);
     await randomizer2.connect(selectedSigners[0]).renewRequest(data.addresses, renewUintData, request.seed, false);
 
-    const newBeaconStakeOfRenewer = ethers.BigNumber.from(await randomizer2.getBeaconStakeEth(selectedSigners[1].address));
+    const newBeaconStakeOfRenewer = ethers.BigNumber.from((await randomizer2.getBeacon(selectedSigners[1].address)).ethStake);
 
     // Check that beacon is removed
-    expect(ethers.BigNumber.from(await randomizer2.getBeaconStakeEth(selectedSigners[1].address)).lt(ethers.utils.parseEther("1"))).to.equal(true);
+    expect(ethers.BigNumber.from((await randomizer2.getBeacon(selectedSigners[1].address)).ethStake).lt(ethers.utils.parseEther("1"))).to.equal(true);
 
     // Check that ETH balance of wallet that called renewRequest has increased
     expect(beaconStakeOfRenewer.gte(newBeaconStakeOfRenewer)).to.equal(true);
 
     // Check that the ETH deposit of request.client has increased
-    const newClientBalanceOf = ethers.BigNumber.from(await randomizer2.clientBalanceOf(request.client));
+    const newClientBalanceOf = ethers.BigNumber.from((await randomizer2.clientBalanceOf(request.client))[0]);
 
     expect(oldClientBalanceOf.lt(newClientBalanceOf)).to.equal(true);
 
@@ -469,9 +469,9 @@ describe("Renew", function () {
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
 
     // Renew the request
-    const clientOldDeposit = await randomizer.clientBalanceOf(testCallback.address);
+    const clientOldDeposit = (await randomizer.clientBalanceOf(testCallback.address))[0];
 
-    const signerOldDeposit = await randomizer.getBeaconStakeEth(selectedSigners[1].address);
+    const signerOldDeposit = (await randomizer.getBeacon(selectedSigners[1].address)).ethStake;
     const renew = await randomizer.connect(signers[8]).renewRequest(data.addresses, data.rawUints, request.seed, false);
     const receipt = await renew.wait();
     // Get logs from receipt
@@ -482,8 +482,8 @@ describe("Renew", function () {
     }
 
 
-    const clientNewDeposit = await randomizer.clientBalanceOf(testCallback.address);
-    const signerNewDeposit = await randomizer.getBeaconStakeEth(selectedSigners[1].address);
+    const clientNewDeposit = (await randomizer.clientBalanceOf(testCallback.address))[0];
+    const signerNewDeposit = (await randomizer.getBeacon(selectedSigners[1].address)).ethStake;
     expect(clientNewDeposit.gte(clientOldDeposit.add(retry.args.ethToClient))).to.be.true;
     expect(signerNewDeposit.lte(signerOldDeposit.sub(retry.args.ethToClient.add(retry.args.ethToCaller)))).to.be.true;
   });
@@ -495,7 +495,7 @@ describe("Renew", function () {
     const selectedSigners = signers.filter(signer => request.beacons.includes(signer.address));
 
     const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
-    const clientOriginalDeposit = await randomizer.clientBalanceOf(testCallback.address);
+    const clientOriginalDeposit = (await randomizer.clientBalanceOf(testCallback.address))[0];
 
     await randomizer.connect(selectedSigners[1]).beaconStakeEth(selectedSigners[1].address, { value: ethers.utils.parseEther("1") });
 
@@ -504,14 +504,14 @@ describe("Renew", function () {
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
 
     // Renew the request
-    const clientOldDeposit = await randomizer.clientBalanceOf(testCallback.address);
+    const clientOldDeposit = (await randomizer.clientBalanceOf(testCallback.address))[0];
 
     // Sets the collateral to a little over the renew gas price so that the collateral is less than the total charge but more than the renew fee 
     let renewGas = await randomizer.connect(signers[8]).estimateGas.renewRequest(data.addresses, data.rawUints, request.seed, false);
     const collateral = ethers.BigNumber.from(renewGas).mul(await ethers.provider.getGasPrice()).sub(30000000000000);
     await randomizer._debug_setCollateral(selectedSigners[1].address, collateral);
 
-    const signerOldDeposit = await randomizer.getBeaconStakeEth(selectedSigners[1].address);
+    const signerOldDeposit = (await randomizer.getBeacon(selectedSigners[1].address)).ethStake;
     const renew = await randomizer.connect(signers[8]).renewRequest(data.addresses, data.rawUints, request.seed, false);
     const receipt = await renew.wait();
     const chargeEvents = receipt.logs.filter(event => randomizer.interface.parseLog(event).name === "ChargeEth");
@@ -528,8 +528,8 @@ describe("Renew", function () {
     }
 
 
-    const clientNewDeposit = await randomizer.clientBalanceOf(testCallback.address);
-    const signerNewDeposit = await randomizer.getBeaconStakeEth(selectedSigners[1].address);
+    const clientNewDeposit = (await randomizer.clientBalanceOf(testCallback.address))[0];
+    const signerNewDeposit = (await randomizer.getBeacon(selectedSigners[1].address)).ethStake;
     expect(retry.args.ethToClient.gt(0)).to.be.true;
     expect(retry.args.ethToCaller.gt(0)).to.be.true;
     expect(clientNewDeposit.gte(clientOldDeposit.add(retry.args.ethToClient))).to.be.true;
@@ -552,7 +552,7 @@ describe("Renew", function () {
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
 
     // Renew the request
-    const clientOldDeposit = await randomizer.clientBalanceOf(testCallback.address);
+    const clientOldDeposit = (await randomizer.clientBalanceOf(testCallback.address))[0];
 
     const renew = await randomizer.connect(signers[8]).renewRequest(data.addresses, data.rawUints, request.seed, false);
     const receipt = await renew.wait();
@@ -583,9 +583,9 @@ describe("Renew", function () {
     await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
 
     // Renew the request
-    const clientOldDeposit = await randomizer.clientBalanceOf(testCallback.address);
+    const clientOldDeposit = (await randomizer.clientBalanceOf(testCallback.address))[0];
 
-    const senderOldDeposit = await randomizer.getBeaconStakeEth(signers[8].address);
+    const senderOldDeposit = (await randomizer.getBeacon(signers[8].address)).ethStake;
     const renew = await randomizer.connect(signers[8]).renewRequest(data.addresses, data.rawUints, request.seed, false);
     const receipt = await renew.wait();
     // Get logs from receipt
@@ -595,10 +595,10 @@ describe("Renew", function () {
     expect(chargeEvents.length).to.equal(1);
     expect(charge.args.amount).to.equal(ethers.utils.parseUnits("10", "wei"))
 
-    const senderNewDeposit = await randomizer.getBeaconStakeEth(signers[8].address);
+    const senderNewDeposit = (await randomizer.getBeacon(signers[8].address)).ethStake;
 
-    const clientNewDeposit = await randomizer.clientBalanceOf(testCallback.address);
-    const signerNewDeposit = await randomizer.getBeaconStakeEth(selectedSigners[1].address);
+    const clientNewDeposit = (await randomizer.clientBalanceOf(testCallback.address))[0];
+    const signerNewDeposit = (await randomizer.getBeacon(selectedSigners[1].address)).ethStake;
     expect(clientNewDeposit.eq(clientOldDeposit)).to.be.true;
     expect(signerNewDeposit.eq("0")).to.be.true;
     expect(senderNewDeposit.eq(senderOldDeposit.add(retry.args.ethToCaller))).to.be.true;
@@ -613,7 +613,7 @@ describe("Renew", function () {
 
     // Unregister beacons
     for (const signer of signers) {
-      if ((await randomizer.getBeacons()).includes(signer.address) && ethers.BigNumber.from((await randomizer.getBeacon(signer.address)).pending).eq(0)) {
+      if ((await randomizer.getBeacons()).includes(signer.address) && ethers.BigNumber.from((await randomizer.getBeacon(signer.address)).beacon.pending).eq(0)) {
         const tx = await randomizer.connect(signer).unregisterBeacon(signer.address);
         await tx.wait();
       }
@@ -654,7 +654,7 @@ describe("Renew", function () {
     // beaconUnstakeEth on first selectedSigner
     // Subtract minStakeEth from beaconStakeEth
     const minStakeEth = await randomizer.getConfigUint(0);
-    const beaconStakeEth = await randomizer.getBeaconStakeEth(selectedSigners[0].address);
+    const beaconStakeEth = (await randomizer.getBeacon(selectedSigners[0].address)).ethStake;
     const beaconStakeEthMinusMinStakeEth = ethers.BigNumber.from(beaconStakeEth).sub(minStakeEth);
     await randomizer.connect(selectedSigners[0]).beaconUnstakeEth(beaconStakeEthMinusMinStakeEth);
     // Mine 20 blocks with 45 seconds per block
@@ -691,7 +691,7 @@ describe("Renew", function () {
     const renew2 = await renewTx2.wait();
     // Expect event "RemoveBeacon" to be emitted by renew
     expect(renew2.events).to.have.lengthOf(4);
-    expect(renew2.events[0].event).to.equal("RemoveBeacon");
+    expect(renew2.events[0].event).to.equal("UnregisterBeacon");
     // Expect event "BeaconRemoved" to have correct data
     expect(renew2.events[0].args.beacon).to.equal(selectedSigners[0].address);
     // Get beacons

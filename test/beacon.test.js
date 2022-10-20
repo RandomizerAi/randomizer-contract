@@ -96,17 +96,17 @@ describe("Beacon Tests", function () {
     const res = await req.wait();
     const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     const selectedSigner = signers.filter(signer => request.beacons[0] == signer.address)[0];
-    const beacon = await randomizer.getBeacon(selectedSigner.address);
+    const beacon = (await randomizer.getBeacon(selectedSigner.address)).beacon;
 
     expect(beacon.pending).to.equal(ethers.BigNumber.from(1));
 
-    await expect(randomizer.connect(selectedSigner).beaconUnstakeEth(await randomizer.getBeaconStakeEth(selectedSigner.address))).to.be.revertedWith(`BeaconHasPending(${ethers.BigNumber.from(1)})`);
+    await expect(randomizer.connect(selectedSigner).beaconUnstakeEth((await randomizer.getBeacon(selectedSigner.address)).ethStake)).to.be.revertedWith(`BeaconHasPending(${ethers.BigNumber.from(1)})`);
     await expect(randomizer.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.be.revertedWith(`BeaconHasPending(${ethers.BigNumber.from(1)})`);
     await expect(randomizer.connect(signers[7]).unregisterBeacon(selectedSigner.address)).to.be.revertedWith(`NotOwnerOrBeacon`);
     await signAndCallback(request);
 
     await expect(randomizer.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.not.be.reverted;
-    pending = (await randomizer.getBeacon(selectedSigner.address)).pending.toNumber();
+    pending = ((await randomizer.getBeacon(selectedSigner.address)).beacon).pending.toNumber();
     expect(pending).to.equal(0);
   });
 
@@ -158,8 +158,8 @@ describe("Beacon Tests", function () {
     let beacons = await randomizer.getBeacons();
     expect(beacons.length).to.equal(7);
     // beaconIndex[beacons[1]] is 1
-    expect(await randomizer.getBeaconIndex(beacons[1])).to.equal(1);
-    expect(await randomizer.getBeaconIndex(beacons[beacons.length - 1])).to.equal(beacons.length - 1);
+    expect((await randomizer.getBeacon(beacons[1])).index).to.equal(1);
+    expect((await randomizer.getBeacon(beacons[beacons.length - 1])).index).to.equal(beacons.length - 1);
     await randomizer.beaconStakeEth(signers[0].address, { value: ethers.utils.parseEther("5") });
     const publicKeys = vrfHelper.getVrfPublicKeys(signers[0].address);
     await randomizer.registerBeacon(signers[0].address, publicKeys);
@@ -167,19 +167,19 @@ describe("Beacon Tests", function () {
 
     // Iterate through beacons and check that the indices match in randomizer.getBeaconIndex(beacon)
     for (let i = 0; i < newBeacons.length; i++) {
-      expect(await randomizer.getBeaconIndex(newBeacons[i])).to.equal(i);
+      expect((await randomizer.getBeacon(newBeacons[i])).index).to.equal(i);
     }
 
     // The previously last beacon is now second-to-last
-    expect(await randomizer.getBeaconIndex(beacons[beacons.length - 1])).to.equal(newBeacons.length - 2);
+    expect((await randomizer.getBeacon(beacons[beacons.length - 1])).index).to.equal(newBeacons.length - 2);
     beacons = newBeacons;
     expect(beacons.length).to.equal(8);
-    expect(await randomizer.getBeaconIndex(beacons[7])).to.equal(7);
-    expect(await randomizer.getBeaconIndex(signers[0].address)).to.equal(7);
+    expect((await randomizer.getBeacon(beacons[7])).index).to.equal(7);
+    expect((await randomizer.getBeacon(signers[0].address)).index).to.equal(7);
     await randomizer.unregisterBeacon(signers[6].address);
     // The last beacon's index is now 6
-    expect(await randomizer.getBeaconIndex(newBeacons[7])).to.equal(6);
-    expect(await randomizer.getBeaconIndex(newBeacons[6])).to.equal(0);
+    expect((await randomizer.getBeacon(newBeacons[7])).index).to.equal(6);
+    expect((await randomizer.getBeacon(newBeacons[6])).index).to.equal(0);
     beacons = await randomizer.getBeacons();
     expect(beacons.length).to.equal(7);
   });
@@ -193,11 +193,11 @@ describe("Beacon Tests", function () {
     const beacons = await randomizer.getBeacons();
     expect(beacons.length).to.equal(7);
     // beaconIndex[beacons[1]] is 1
-    expect(await randomizer.getBeaconIndex(beacons[1])).to.equal(1);
+    expect((await randomizer.getBeacon(beacons[1])).index).to.equal(1);
     const tx = await randomizer.unregisterBeacon(beacons[2]);
     await tx.wait();
     const beacons2 = await randomizer.getBeacons();
-    expect(await randomizer.getBeaconIndex(beacons[6])).to.equal(2);
+    expect((await randomizer.getBeacon(beacons[6])).index).to.equal(2);
     expect(beacons2.length).to.equal(6);
   });
 
@@ -205,12 +205,12 @@ describe("Beacon Tests", function () {
     const beacons = await randomizer.getBeacons();
     expect(beacons.length).to.equal(7);
     const secondToLastBeacon = beacons[beacons.length - 2];
-    const secondToLastBeaconIndex = await randomizer.getBeaconIndex(secondToLastBeacon);
+    const secondToLastBeaconIndex = (await randomizer.getBeacon(secondToLastBeacon)).index;
     const tx = await randomizer.unregisterBeacon(beacons[6]);
     await tx.wait();
     const beacons2 = await randomizer.getBeacons();
     expect(beacons2.length).to.equal(6);
-    expect(await randomizer.getBeaconIndex(secondToLastBeacon)).to.equal(secondToLastBeaconIndex);
+    expect((await randomizer.getBeacon(secondToLastBeacon)).index).to.equal(secondToLastBeaconIndex);
   });
 
   it("beacon receives rest of deposit if submit tx fee is greater than client deposit [ @skip-on-coverage ]", async function () {
@@ -221,20 +221,20 @@ describe("Beacon Tests", function () {
     const res = await req.wait();
     const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
     const selectedSigner = signers.filter(signer => request.beacons[0] == signer.address)[0];
-    const oldStake = await randomizer.getBeaconStakeEth(selectedSigner.address);
+    const oldStake = (await randomizer.getBeacon(selectedSigner.address)).ethStake;
     await randomizer.connect(signers[9])._debug_setClientDeposit(testCallback.address, ethers.utils.parseUnits("5", "wei"));
 
     const data = await vrfHelper.getSubmitData(selectedSigner.address, request);
     const tx = await randomizer.connect(selectedSigner)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(selectedSigner.address), data.addresses, data.uints, request.seed, false);
     const receipt = await tx.wait();
-    const newStake = await randomizer.getBeaconStakeEth(selectedSigner.address);
+    const newStake = (await randomizer.getBeacon(selectedSigner.address)).ethStake;
     const chargeEvents = receipt.events.filter(e => e.event == "ChargeEth");
     expect(chargeEvents.length).to.equal(1);
     expect(chargeEvents[0].args.amount).to.equal(ethers.utils.parseUnits("5", "wei"));
     expect(chargeEvents[0].args.from).to.equal(testCallback.address);
     expect(chargeEvents[0].args.to).to.equal(selectedSigner.address);
     expect(newStake.eq(oldStake.add(5))).to.be.true;
-    expect((await randomizer.clientBalanceOf(testCallback.address)).toNumber()).to.equal(0);
+    expect((await randomizer.clientBalanceOf(testCallback.address))[0].toNumber()).to.equal(0);
   });
 
   it("developer receives rest of deposit if client deposit is less than developer fee [ @skip-on-coverage ]", async function () {
@@ -262,14 +262,14 @@ describe("Beacon Tests", function () {
     request.height = log.blockNumber;
     request.timestamp = event.timestamp;
 
-    const oldStake = await randomizer.getBeaconStakeEth(request.beacons[2]);
+    const oldStake = (await randomizer.getBeacon(request.beacons[2])).ethStake;
     const newData = await vrfHelper.getSubmitData(request.beacons[2], request);
 
 
     await randomizer.connect(signers[9])._debug_setClientDeposit(testCallback.address, ethers.utils.parseEther("2"));
     const tx = await randomizer.connect(finalBeacon)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](2, newData.addresses, newData.uints, request.seed, false);
     const receipt = await tx.wait();
-    const newStake = await randomizer.getBeaconStakeEth(request.beacons[2]);
+    const newStake = (await randomizer.getBeacon(request.beacons[2])).ethStake;
     const chargeEvents = receipt.events.filter(e => e.event == "ChargeEth");
     const submitterReward = receipt.effectiveGasPrice.mul(receipt.gasUsed).add(request.beaconFee);
     expect(chargeEvents.length).to.equal(2);
@@ -278,7 +278,7 @@ describe("Beacon Tests", function () {
     expect(chargeEvents[1].args.from).to.equal(testCallback.address);
     expect(chargeEvents[1].args.to).to.equal(finalBeacon.address);
     expect(newStake.eq(oldStake.add(chargeEvents[1].args.amount))).to.be.true;
-    expect((await randomizer.clientBalanceOf(testCallback.address)).eq(0)).to.be.true;
+    expect(((await randomizer.clientBalanceOf(testCallback.address))[0]).eq(0)).to.be.true;
 
     expect(chargeEvents[0].args.amount.gt(0)).to.be.true;
     expect(chargeEvents[0].args.amount.lt(request.beaconFee)).to.be.true;

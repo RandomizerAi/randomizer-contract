@@ -4,7 +4,7 @@ async function main() {
   const Randomizer = await ethers.getContractFactory("RandomizerUpgradeable");
   const randomizer = Randomizer.attach(process.env.CONTRACT_ADDRESS_ARBITRUM);
   console.log("Getting result");
-  console.log(await randomizer.getResult(23));
+  console.log((await randomizer.getRequest(23))).result;
 }
 
 main()

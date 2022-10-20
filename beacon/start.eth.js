@@ -36,7 +36,7 @@ const submitRandom = async function (signer, id, request) {
 
     const checkIfSubmitted = async () => {
       try {
-        const result = await randomizer.getResult(id);
+        const result = (await randomizer.getRequest(id)).result;
         if (result == "0x0000000000000000000000000000000000000000000000000000000000000000") {
           const reqSigs = await randomizer.getRequestSignatures(id);
           const indexOfBeacon = request.beacons.indexOf(address);

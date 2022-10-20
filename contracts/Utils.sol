@@ -65,6 +65,30 @@ contract Utils is Admin, NetworkHelper {
         beacons.pop();
     }
 
+    function _requestBeacon(
+        uint128 _id,
+        uint256 _beaconPos,
+        bytes32 _seed,
+        bytes32 _beaconSeed,
+        SAccounts memory _accounts,
+        SRandomUintData memory _data,
+        bool _optimistic
+    ) internal {
+        _data.height = _blockNumber();
+        _data.timestamp = block.timestamp;
+        address randomBeacon = _randomBeacon(_beaconSeed, _accounts.beacons);
+        sBeacon[randomBeacon].pending++;
+        _accounts.beacons[_beaconPos] = randomBeacon;
+        requestToHash[_id] = _generateRequestHash(
+            _id,
+            _accounts,
+            _data,
+            _seed,
+            _optimistic
+        );
+        emit RequestBeacon(_id, randomBeacon, _data.timestamp);
+    }
+
     function _chargeClient(
         address _from,
         address _to,
@@ -77,7 +101,7 @@ contract Utils is Admin, NetworkHelper {
 
     function _softChargeClient(
         uint128 id,
-        bool payDao,
+        bool payOwner,
         address client,
         uint256 fee,
         uint256 beaconFee
@@ -88,7 +112,7 @@ contract Utils is Admin, NetworkHelper {
         // Nested ifs save some gas
         if (deposit > 0) {
             if (deposit > fee) {
-                if (payDao) {
+                if (payOwner) {
                     // Pay contract owner (dao) first, then dev
                     daoFee = deposit >= fee + beaconFee
                         ? beaconFee
@@ -110,7 +134,7 @@ contract Utils is Admin, NetworkHelper {
         }
     }
 
-    /// @dev Gets BEACONS_PER_REQUEST number of random beacons for a request
+    /// @dev Gets random beacons for a request
     function _randomBeacons(bytes32 _random)
         internal
         returns (address[3] memory)
@@ -291,7 +315,6 @@ contract Utils is Admin, NetworkHelper {
         requestToHash[id] = generatedHash;
 
         // Emit event with new request data
-
         emit Request(
             id,
             SRequestEventData(
@@ -302,8 +325,8 @@ contract Utils is Admin, NetworkHelper {
                 data.expirationSeconds,
                 data.callbackGasLimit,
                 optimistic,
-                accounts.client,
-                accounts.beacons,
+                client,
+                selectedBeacons,
                 seed
             )
         );

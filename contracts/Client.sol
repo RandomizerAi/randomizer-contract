@@ -22,37 +22,20 @@ contract Client is Utils {
         uint256 requiredAmount
     );
 
-    /// @notice Gets the ETH balance of the client contract (used for paying for requests)
-    function clientBalanceOf(address _client) external view returns (uint256) {
-        return ethDeposit[_client];
+    /// @notice Gets the ETH balance and amount reserved of the client contract (used for paying for requests)
+    /// @dev Reserved amounts are based on an estimate per request so clients can't make more requests than they can fund.
+    function clientBalanceOf(address _client)
+        external
+        view
+        returns (uint256 deposit, uint256 reserved)
+    {
+        return (ethDeposit[_client], ethReserved[_client]);
     }
 
     /// @notice Deposits ETH for the client contract
     function clientDeposit(address _client) external payable {
         ethDeposit[_client] += msg.value;
-        emit ClientDeposit(_client, msg.value);
-    }
-
-    /// @notice Gets the amount of ETH reserved for a client's pending requests
-    /// @dev Reserved amounts are based on an estimate per request so clients can't make more requests than they can fund.
-    function getEthReserved(address _client) external view returns (uint256) {
-        return ethReserved[_client];
-    }
-
-    function getFeePaid(uint128 _request) external view returns (uint256) {
-        return requestToFeePaid[_request];
-    }
-
-    function getFeeRefunded(uint128 _request) external view returns (uint256) {
-        return requestToFeeRefunded[_request];
-    }
-
-    function getFeeStats(uint128 _request)
-        external
-        view
-        returns (uint256[2] memory)
-    {
-        return [requestToFeePaid[_request], requestToFeeRefunded[_request]];
+        emit DepositEth(DEPOSIT_TYPE_CLIENT, _client, msg.value);
     }
 
     /// @notice Withdraws client ETH to a different receiver
@@ -136,7 +119,7 @@ contract Client is Utils {
         SRandomUintData memory data = SRandomUintData({
             ethReserved: estimateFee,
             beaconFee: configUints[CKEY_BEACON_FEE],
-            height: block.number,
+            height: _blockNumber(),
             timestamp: block.timestamp,
             expirationBlocks: configUints[CKEY_EXPIRATION_BLOCKS],
             expirationSeconds: configUints[CKEY_EXPIRATION_SECONDS],

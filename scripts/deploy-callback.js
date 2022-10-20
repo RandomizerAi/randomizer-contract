@@ -8,21 +8,16 @@ async function main() {
   const TestCallback = await hre.ethers.getContractFactory("TestCallback");
   const testCallback = await TestCallback.deploy(randomizerAddress);
 
-  const Randomizer = await hre.ethers.getContractFactory("Randomizer", {
-    libraries: {
-      VRF: process.env.VRF_ADDRESS,
-      Internals: process.env.LIB_ADDRESS
-    }
-  });
+  const Randomizer = await hre.ethers.getContractFactory("Randomizer");
   const randomizer = Randomizer.attach(randomizerAddress);
 
   await testCallback.deployed();
 
   console.log("testCallback deployed to:", testCallback.address);
 
-  const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("0.1") });
+  const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("0.05") });
   await deposit.wait();
-  console.log("deposited 0.1 ETH to:", testCallback.address);
+  console.log("deposited 0.05 ETH to:", testCallback.address);
 }
 
 

@@ -102,7 +102,7 @@ describe("Optimistic Tests", function () {
         uint256 _callbackGasLimit,
         uint256 _numberOfBeacons,
         bytes32 _seed */
-    expect(await randomizer.clientBalanceOf(testCallback.address)).to.equal(ethers.utils.parseEther("5"));
+    expect((await randomizer.clientBalanceOf(testCallback.address))[0]).to.equal(ethers.utils.parseEther("5"));
     const tx = await testCallback.makeRequest();
     const res = await tx.wait();
     const request = randomizer.interface.parseLog(res.logs[0]).args.request;
@@ -134,7 +134,7 @@ describe("Optimistic Tests", function () {
         uint256 _callbackGasLimit,
         uint256 _numberOfBeacons,
         bytes32 _seed */
-    expect(await randomizer.clientBalanceOf(testCallback.address)).to.equal(ethers.utils.parseEther("5"));
+    expect((await randomizer.clientBalanceOf(testCallback.address))[0]).to.equal(ethers.utils.parseEther("5"));
 
     for (let i = 1; i < 3; i++) {
       let req = await testCallback.makeRequest();
@@ -149,7 +149,7 @@ describe("Optimistic Tests", function () {
       for (const signer of selectedSigners) {
         const data = await vrfHelper.getSubmitData(signer.address, request);
         await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
-        const sigs = await randomizer.getVrfHashes(request.id);
+        const sigs = (await randomizer.getRequest(request.id)).vrfHashes;
         let signed = false;
         expect(sigs.length).to.equal(3);
         for (const sig of sigs) {
@@ -208,15 +208,15 @@ describe("Optimistic Tests", function () {
 
     // check that beacon returns 99 consecutiveSubmissions and 2 strikes
     let beacon = await randomizer.getBeacon(signer.address);
-    expect(beacon.strikes).to.equal(2);
-    expect(beacon.consecutiveSubmissions).to.equal(99);
+    expect(beacon[0].strikes).to.equal(2);
+    expect(beacon[0].consecutiveSubmissions).to.equal(99);
 
 
     const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
     await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed, true);
     beacon = await randomizer.getBeacon(signer.address);
-    expect(beacon.strikes).to.equal(0);
-    expect(beacon.consecutiveSubmissions).to.equal(0);
+    expect(beacon[0].strikes).to.equal(0);
+    expect(beacon[0].consecutiveSubmissions).to.equal(0);
   });
 
   it("accept optimistic random submissions from beacons and finally callback", async function () {
@@ -267,7 +267,7 @@ describe("Optimistic Tests", function () {
       const requestHash = await randomizer.gammaToHash(proof[0], proof[1]);
       const index = request.beacons.indexOf(signer.address);
       localSignatures[index] = requestHash;
-      const requestSignatures = await randomizer.getVrfHashes(request.id);
+      const requestSignatures = (await randomizer.getRequest(request.id)).vrfHashes;
       expect(requestSignatures).to.include(requestHash);
 
       const requestEventRaw = res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
@@ -363,7 +363,7 @@ describe("Optimistic Tests", function () {
       const receipt = await tx.wait();
       const receiptBlockBaseFee = (await ethers.provider.getBlock(receipt.blockNumber)).baseFeePerGas;
       const gasPaid = receiptBlockBaseFee.mul(receipt.gasUsed).add(request.beaconFee);
-      const beaconStake = await randomizer.getBeaconStakeEth(signer.address);
+      const beaconStake = (await randomizer.getBeacon(signer.address)).ethStake;
       expect(beaconStake.gte(gasPaid)).to.be.true;
       const requestEventRaw = receipt.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
       if (requestEventRaw) {
@@ -384,11 +384,11 @@ describe("Optimistic Tests", function () {
     await randomizer.connect(selectedSigners[0]).completeOptimistic(data.addresses, data.rawUints, request.seed);
 
 
-    const result = await randomizer.getResult(request.id);
+    const result = (await randomizer.getRequest(request.id)).result;
     expect(result).to.not.equal(ethers.constants.HashZero);
     const receiptBlockBaseFee = (await ethers.provider.getBlock(receipt.blockNumber)).baseFeePerGas;
     const minFee = receiptBlockBaseFee.mul(receipt.gasUsed).add(request.beaconFee);
-    const balance = await randomizer.getBeaconStakeEth(finalSigner.address);
+    const balance = (await randomizer.getBeacon(finalSigner.address)).ethStake;
     expect(balance.gte(minFee)).to.be.true;
   });
 
@@ -398,31 +398,31 @@ describe("Optimistic Tests", function () {
     const req = await testCallback.makeRequest();
     const res = await req.wait();
     const request = { ...randomizer.interface.parseLog(res.logs[0]).args.request, id: randomizer.interface.parseLog(res.logs[0]).args.id, height: res.logs[0].blockNumber };
-    let ethReserved = await randomizer.getEthReserved(testCallback.address);
+    let ethReserved = (await randomizer.clientBalanceOf(testCallback.address))[1];
     expect(ethReserved.gt(0)).to.be.true;
     try {
       await testCallback.randomizerWithdraw(ethers.utils.parseEther("5"));
       expect(true).to.be.false;
     } catch (e) {
-      expect(e.message).to.include(`WithdrawingTooMuch(${ethers.utils.parseEther("5").toString()}, ${ethers.utils.parseEther("5").sub(await randomizer.getEthReserved(testCallback.address)).toString()})`);
+      expect(e.message).to.include(`WithdrawingTooMuch(${ethers.utils.parseEther("5").toString()}, ${ethers.utils.parseEther("5").sub((await randomizer.clientBalanceOf(testCallback.address))[1].toString())})`);
     }
 
     await signAndCallback(request);
-    ethReserved = await randomizer.getEthReserved(testCallback.address);
+    ethReserved = (await randomizer.clientBalanceOf(testCallback.address))[1];
     expect(ethReserved.eq(0)).to.be.true;
     try {
       await testCallback.randomizerWithdraw(ethers.utils.parseEther("5"));
       expect(true).to.be.false;
     } catch (e) {
-      expect(e.message).to.include(`WithdrawingTooMuch(${ethers.utils.parseEther("5").toString()}, ${(await randomizer.clientBalanceOf(testCallback.address)).toString()})`);
+      expect(e.message).to.include(`WithdrawingTooMuch(${ethers.utils.parseEther("5").toString()}, ${(await randomizer.clientBalanceOf(testCallback.address))[0].toString()})`);
     }
-    const remaining = await randomizer.clientBalanceOf(testCallback.address);
+    const remaining = (await randomizer.clientBalanceOf(testCallback.address))[0];
     try {
       await testCallback.randomizerWithdraw(remaining);
     } catch (e) {
       expect(true).to.be.false(e);
     }
-    expect((await randomizer.clientBalanceOf(testCallback.address)).eq(0)).to.be.true;
+    expect(((await randomizer.clientBalanceOf(testCallback.address))[0]).eq(0)).to.be.true;
   });
 
   it("complete optimistic submitRandom even if the callback reverts", async function () {
@@ -441,7 +441,7 @@ describe("Optimistic Tests", function () {
     expect(callbackFailedEvent.name).to.equal("CallbackFailed");
     expect(callbackFailedEvent.args.id).to.equal(request.id);
     // Except getResult(request.id) to return not be bytes32(0)
-    const result = await randomizer.getResult(request.id);
+    const result = (await randomizer.getRequest(request.id)).result;
     expect(result).to.not.equal(ethers.constants.HashZero);
   });
 
@@ -461,7 +461,7 @@ describe("Optimistic Tests", function () {
     expect(callbackFailedEvent.name).to.equal("CallbackFailed");
     expect(callbackFailedEvent.args.id).to.equal(request.id);
     // Except getResult(request.id) to return not be bytes32(0)
-    const result = await randomizer.getResult(request.id);
+    const result = (await randomizer.getRequest(request.id)).result;
     expect(result).to.not.equal(ethers.constants.HashZero);
   });
 

@@ -162,7 +162,7 @@ describe("Sequencer", function () {
     expect(callbackFailedEvent.name).to.equal("CallbackFailed");
     expect(callbackFailedEvent.args.id).to.equal(request.id);
     // Except getResult(request.id) to return not be bytes32(0)
-    const result = await randomizer.getResult(request.id);
+    const result = (await randomizer.getRequest(request.id)).result;
     expect(result).to.not.equal(ethers.constants.HashZero);
 
   });

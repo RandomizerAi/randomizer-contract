@@ -59,7 +59,7 @@ module.exports = {
     disambiguatePaths: false,
     runOnCompile: true,
     strict: true,
-    except: ['RandomizerUpgradeable']
+    // except: ['RandomizerUpgradeable']
     // only: [':Randomizer$'],
   },
   gasReporter: {
