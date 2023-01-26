@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
 interface IRandomizer {
@@ -6,7 +6,7 @@ interface IRandomizer {
 
     function clientWithdrawTo(address _to, uint256 _amount) external;
 
-    function requestToFeePaid(uint128 _request) external returns (uint256);
+    function requestToFeePaid(uint256 _request) external returns (uint256);
 }
 
 contract TestCallbackWithRevert {
@@ -23,7 +23,7 @@ contract TestCallbackWithRevert {
         randomizer = _randomizer;
     }
 
-    function randomizerCallback(uint128 _id, bytes32 value) external {
+    function randomizerCallback(uint256 _id, bytes32 value) external {
         revert("Revert");
     }
 

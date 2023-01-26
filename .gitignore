@@ -1,18 +1,11 @@
 node_modules
-.env
-coverage
-coverage.json
-typechain
 
 #Hardhat files
 cache
 artifacts
-artifacts-zk
 cache-zk
-
-/contracts/GasHandler.sol
-/contracts/NetworkHelper.sol
-
-.openzeppelin
+artifacts-zk
+.env
 
 hardhat.config.js
+contracts/libraries/LibNetwork.sol

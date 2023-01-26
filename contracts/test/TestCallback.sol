@@ -1,16 +1,12 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
 interface IRandomizer {
-    function request(uint256 _callbackGasLimit, bool optimistic)
-        external
-        returns (uint256);
-
     function request(uint256 _callbackGasLimit) external returns (uint256);
 
     function clientWithdrawTo(address _to, uint256 _amount) external;
 
-    function requestToFeePaid(uint128 _request) external returns (uint256);
+    function requestToFeePaid(uint256 _request) external returns (uint256);
 }
 
 contract TestCallback {
@@ -27,7 +23,7 @@ contract TestCallback {
         randomizer = _randomizer;
     }
 
-    function randomizerCallback(uint128 _id, bytes32 value) external {
+    function randomizerCallback(uint256 _id, bytes32 value) external {
         require(msg.sender == randomizer);
         result = value;
         id = _id;
@@ -41,11 +37,7 @@ contract TestCallback {
     }
 
     function makeRequest() external returns (uint256) {
-        return IRandomizer(randomizer).request(1000000);
-    }
-
-    function makeOptRequest() external returns (uint256) {
-        return IRandomizer(randomizer).request(1000000, true);
+        return IRandomizer(randomizer).request(100000);
     }
 
     function makeRequestWithGasTooLow() external returns (uint256) {

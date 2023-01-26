@@ -1,17 +1,15 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
 interface IRandomizer {
-    function request(uint256 _callbackGasLimit, bool)
-        external
-        returns (uint256);
+    function request(uint256 _callbackGasLimit) external returns (uint256);
 
     function clientWithdrawTo(address _to, uint256 _amount) external;
 
-    function requestToFeePaid(uint128 _request) external returns (uint256);
+    function requestToFeePaid(uint256 _request) external returns (uint256);
 }
 
-contract OptimisticTestCallbackWithTooMuchGas {
+contract TestCallbackWithTooMuchGas {
     address public randomizer;
     bytes32 public result;
     uint256 public id;
@@ -26,7 +24,7 @@ contract OptimisticTestCallbackWithTooMuchGas {
         randomizer = _randomizer;
     }
 
-    function randomizerCallback(uint128 _id, bytes32 value) external {
+    function randomizerCallback(uint256 _id, bytes32 value) external {
         // Keep running this until it runs out of gas
         while (true) {
             i = keccak256(abi.encodePacked(i, _id, value));
@@ -34,6 +32,6 @@ contract OptimisticTestCallbackWithTooMuchGas {
     }
 
     function makeRequest() external returns (uint256) {
-        return IRandomizer(randomizer).request(100000, true);
+        return IRandomizer(randomizer).request(100000);
     }
 }

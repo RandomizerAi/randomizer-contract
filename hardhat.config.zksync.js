@@ -4,7 +4,6 @@ require('hardhat-contract-sizer');
 require('hardhat-gas-reporter');
 require("@matterlabs/hardhat-zksync-deploy");
 require("@matterlabs/hardhat-zksync-solc");
-require('@openzeppelin/hardhat-upgrades');
 
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -30,10 +29,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-      },
-      experimental: {
-        dockerImage: "matterlabs/zksolc",
-        tag: "v1.2.0"
+        runs: 99999
       }
     },
   },

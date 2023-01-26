@@ -1,8 +1,12 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 const vrfHelper = require("./helpers.js");
-
-// const hre = require("hardhat");
+const { deployDiamond } = require('../scripts/deploy.js')
+const randomizerAbi = require("../abi/Randomizer.json").abi;
+const {
+  getSelectors,
+  FacetCutAction,
+} = require('../scripts/libraries/diamond.js');
 
 describe("Sequencer", function () {
   let signers;
@@ -29,16 +33,7 @@ describe("Sequencer", function () {
       ArbGas.bytecode,
     ]);
     signers = await ethers.getSigners();
-    const VRF = await ethers.getContractFactory("VRF");
-    vrf = await VRF.deploy();
-    const Internals = await ethers.getContractFactory("Internals");
-    const lib = await Internals.deploy();
-    const Randomizer = await ethers.getContractFactory("RandomizerWithStorageControls", {
-      //      libraries: {
-      //        Internals: lib.address,
-      //        VRF: vrf.address
-      //      },
-    });
+
 
     let ecKeys = [];
     let i = 0;
@@ -48,12 +43,24 @@ describe("Sequencer", function () {
       i++;
     }
     sequencer = signers[6];
-    randomizer = await Randomizer.deploy([signers[0].address, sequencer.address, vrf.address, lib.address], ["500000000000000000", 40, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]);
-    await randomizer.deployed();
-    vrfHelper.init(vrf, randomizer);
+    const diamondAddress = await deployDiamond([signers[6].address, signers[6].address, ["500000000000000000", 40, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]])
+    const diamondCutFacet = await ethers.getContractAt('DiamondCutFacet', diamondAddress)
+    const StorageControlFacet = await ethers.getContractFactory('StorageControlFacet')
+    const storageControlFacet = await StorageControlFacet.deploy()
+    await storageControlFacet.deployed()
+    const selectors = getSelectors(storageControlFacet)
+    tx = await diamondCutFacet.diamondCut(
+      [{
+        facetAddress: storageControlFacet.address,
+        action: FacetCutAction.Add,
+        functionSelectors: selectors
+      }],
+      ethers.constants.AddressZero, '0x', { gasLimit: 800000 })
+
+    randomizer = await ethers.getContractAt(randomizerAbi, diamondAddress);
+    vrfHelper.init(randomizer);
     const TestCallback = await ethers.getContractFactory("TestCallback");
     testCallback = await TestCallback.deploy(randomizer.address);
-
   });
 
   const signAndCallback = async (request, client) => {
@@ -65,7 +72,6 @@ describe("Sequencer", function () {
     let i = 0;
     for (const signer of selectedSigners) {
 
-      // await randomizer.testCharge(testCallback.address, signer.address, 1);
       const data = await vrfHelper.getSubmitData(signer.address, request);
 
       // abi.encode and sign the data as the signer
@@ -83,7 +89,7 @@ describe("Sequencer", function () {
 
       try {
         const someSigner = signers.find(signer => !request.beacons.includes(signer.address) && signer.address !== sequencer.address);
-        await randomizer.connect(someSigner)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v, false);
+        await randomizer.connect(someSigner)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v);
         expect(true).to.be.false;
       } catch (e) {
         expect(e.message).to.match(/SenderNotBeaconOrSequencer/);
@@ -95,7 +101,7 @@ describe("Sequencer", function () {
 
       if (i === 0) {
         try {
-          await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v, false);
+          await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v);
           expect(true).to.be.false;
         } catch (e) {
           expect(e.message).to.match(/SequencerSubmissionTooEarly/);
@@ -105,7 +111,7 @@ describe("Sequencer", function () {
       }
 
 
-      const tx = await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8,bool)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v, false);
+      const tx = await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v);
 
       const res = await tx.wait();
 
@@ -119,6 +125,7 @@ describe("Sequencer", function () {
         expect(selectedFinalBeacon).to.not.equal(ethers.constants.AddressZero);
         request.beacons = [request.beacons[0], request.beacons[1], selectedFinalBeacon];
         request.timestamp = requestEvent.args.timestamp;
+        request.seed = requestEvent.args.seed;
         request.height = requestEventRaw.blockNumber;
       }
     }
@@ -140,12 +147,11 @@ describe("Sequencer", function () {
 
     await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(blocksRemaining), ethers.utils.hexValue(Math.ceil(secondsRemaining / blocksRemaining))]);
 
-    const tx = await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8,bool)'](2, data.addresses, data.uints, rsAndSeed, sig.v, false);
+    const tx = await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8)'](2, data.addresses, data.uints, rsAndSeed, sig.v);
     return await tx.wait();
   }
 
 
-  // TODO
   it("submit random as sequencer on behalf of a selected beacon", async function () {
     const TestCallbackWithTooMuchGas = await ethers.getContractFactory("TestCallbackWithTooMuchGas");
     const testCallbackWithTooMuchGas = await TestCallbackWithTooMuchGas.deploy(randomizer.address);

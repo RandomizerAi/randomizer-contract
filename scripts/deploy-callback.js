@@ -1,23 +1,22 @@
 const hre = require("hardhat");
+const randomizerAbi = require('../abi/Randomizer.json').abi;
 
 async function main() {
 
-  const randomizerAddress = process.env.CONTRACT_ADDRESS_ARBITRUM;
+  const randomizerAddress = process.env.CONTRACT_ADDRESS;
 
 
   const TestCallback = await hre.ethers.getContractFactory("TestCallback");
   const testCallback = await TestCallback.deploy(randomizerAddress);
-
-  const Randomizer = await hre.ethers.getContractFactory("Randomizer");
-  const randomizer = Randomizer.attach(randomizerAddress);
-
   await testCallback.deployed();
 
   console.log("testCallback deployed to:", testCallback.address);
 
-  const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("0.05") });
+  const randomizer = await ethers.getContractAt(randomizerAbi, randomizerAddress);
+
+  const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("0.1") });
   await deposit.wait();
-  console.log("deposited 0.05 ETH to:", testCallback.address);
+  console.log("deposited ETH to:", testCallback.address);
 }
 
 
