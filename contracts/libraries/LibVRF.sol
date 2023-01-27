@@ -8,7 +8,7 @@ import "../libraries/EllipticCurve.sol";
  * @notice Library verifying VRF proofs using the `Secp256k1` curve and the `SHA256` hash function.
  * @dev This library follows the algorithms described in [VRF-draft-04](https://tools.ietf.org/pdf/draft-irtf-cfrg-vrf-04) and [RFC6979](https://tools.ietf.org/html/rfc6979).
  * It supports the _SECP256K1_SHA256_TAI_ cipher suite, i.e. the aforementioned algorithms using `SHA256` and the `Secp256k1` curve.
- * @author Witnet Foundation with changes by @deanpress
+ * @author Witnet Foundation (with changes by @deanpress)
  */
 
 library LibVRF {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 /// @title Randomizer Admin Functions
-/// @author Deanpress (https://github.com/deanpress)
+/// @author Dean van Dugteren (https://github.com/deanpress)
 /// @notice Administrative functions, variables, and constants used by Randomizer.
 
 pragma solidity ^0.8.17;

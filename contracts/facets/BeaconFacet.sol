@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSL 1.1
 /// @title Randomizer Beacon Service
-/// @author Deanpress (https://github.com/deanpress)
+/// @author Dean van Dugteren (https://github.com/deanpress)
 /// @notice Beacon management functions (registration, staking, submitting random values etc)
 
 pragma solidity ^0.8.17;
