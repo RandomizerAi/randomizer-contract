@@ -45,6 +45,11 @@ module.exports = {
       url: "https://rinkeby.arbitrum.io/rpc",
       accounts: [process.env.PRIVATE_KEY]
     },
+    bscTestnet: {
+      url: "https://data-seed-prebsc-1-s3.binance.org:8545",
+      accounts: [process.env.PRIVATE_KEY],
+      chainId: 97
+    },
     ganache: {
       url: "http://127.0.0.1:7545",
       chainId: 1337

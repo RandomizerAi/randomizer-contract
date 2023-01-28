@@ -6,7 +6,7 @@ pragma solidity ^0.8.17;
  * @dev Library providing arithmetic operations over elliptic curves.
  * This library does not check whether the inserted points belong to the curve
  * `isOnCurve` function should be used by the library user to check the aforementioned statement.
- * Modified for Randomizer by @deanpress
+ * Modified for Randomizer by deanpress
  * @author Witnet Foundation
  */
 library EllipticCurve {
