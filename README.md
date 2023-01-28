@@ -68,11 +68,15 @@ Below are some important Randomizer functions for your dapp:
 
 ### Development
 
-The easiest way to test your smart contract's `randomizerCallback()` function in Hardhat or another local testing environment, is to set the randomizer address in your contract to a wallet address of your own, then call `randomizerCallback(uint256 id, bytes32 value)` with your desired id and value.
+The quickest way to test your smart contract's `randomizerCallback()` function in Hardhat or another local testing environment, is to set the Randomizer address in your contract to a wallet address of your own, then calling `randomizerCallback(uint256 id, bytes32 value)` with that wallet using your desired id and value.
 
 ### Using this Hardhat project
 
-To use this Hardhat project, fork it and run `yarn set-network:[network]` (`ethereum`, `arbitrum`, or `generic`) to copy the correct library from `network-contracts` to `contracts`. See the tests for reference.
+To use this Hardhat project, git clone it and run `yarn set-network:[network]` (`ethereum`, `arbitrum`, or `generic`) to copy the correct network library (for gas/block calculations) from `network-contracts` to `contracts`. For example: `yarn set-network:ethereum`.
+
+Tests will only pass 100% if the network is set to ethereum since some tests utilize EIP-1559 (a fee system not present in arbitrum).
+
+See the tests for reference.
 
 ## License
 
@@ -84,8 +88,8 @@ See [LICENSE](./LICENSE) for details.
 
 ### Audits
 
-* [Peckshield](./audits/PeckShield-Audit-Report-Randomizer-v1.0.pdf)
-* [MythX](./audits/Randomizer-MythX-Report.pdf)
+- [Peckshield](./audits/PeckShield-Audit-Report-Randomizer-v1.0.pdf)
+- [MythX](./audits/Randomizer-MythX-Report.pdf)
 
 ### Disclaimer
 
