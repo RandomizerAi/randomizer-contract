@@ -22,7 +22,7 @@ describe("Request & Submit", function () {
     for (const signer of selectedSigners) {
       // await randomizer.testCharge(testCallback.address, signer.address, 1);
       const data = await vrfHelper.getSubmitData(signer.address, request);
-      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed);
+      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed);
 
       const res = await tx.wait();
 
@@ -44,7 +44,7 @@ describe("Request & Submit", function () {
 
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
     const data = await vrfHelper.getSubmitData(finalSigner.address, request);
-    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(finalSigner.address), data.addresses, data.uints, request.seed);
+    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(finalSigner.address), data.addresses, data.uints, request.seed);
     return await tx.wait();
   }
 
@@ -65,7 +65,7 @@ describe("Request & Submit", function () {
         // },
       ],
     });
-    const ArbGas = await ethers.getContractFactory("ArbGasInfo");
+    const ArbGas = await ethers.getContractFactory("contracts/test/ArbGasInfo.sol:ArbGasInfo");
     await network.provider.send("hardhat_setCode", [
       "0x000000000000000000000000000000000000006C",
       ArbGas.bytecode,
@@ -80,7 +80,7 @@ describe("Request & Submit", function () {
       ecKeys = ecKeys.concat(keys);
       i++;
     }
-    diamondAddress = await deployDiamond([signers[0].address, signers[0].address, ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3, 99], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [90000, 95000, 85000, 810000, 3500]])
+    diamondAddress = await deployDiamond([signers[0].address, signers[0].address, ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3, 99, 1, 45], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [90000, 95000, 85000, 810000, 3500]])
     const diamondCutFacet = await ethers.getContractAt('DiamondCutFacet', diamondAddress)
     const StorageControlFacet = await ethers.getContractFactory('StorageControlFacet')
     const storageControlFacet = await StorageControlFacet.deploy()
@@ -126,8 +126,8 @@ describe("Request & Submit", function () {
     expect(request.beacons.length).to.equal(3);
 
     const genHash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(
-      ['uint256', 'bytes32', 'address', 'address[3]', 'uint256', 'uint256', 'uint256[2]', 'uint256', 'uint256', 'uint256'],
-      [id, request.seed, request.client, request.beacons, request.ethReserved, request.beaconFee, [request.height, request.timestamp], request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit]
+      ['uint256', 'bytes32', 'address', 'address[3]', 'uint256', 'uint256', 'uint256[2]', 'uint256', 'uint256', 'uint256', 'uint256'],
+      [id, request.seed, request.client, request.beacons, request.ethReserved, request.beaconFee, [request.height, request.timestamp], request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.minConfirmations]
     ));
     const realHash = (await randomizer.getRequest(id)).dataHash;
     expect(genHash).to.equal(realHash);
@@ -175,7 +175,7 @@ describe("Request & Submit", function () {
 
 
     try {
-      await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32)'](2, data.addresses, data.uints, request.seed);
+      await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](2, data.addresses, data.uints, request.seed);
       expect(true).to.equal(false, "Transaction should have reverted");
     } catch (e) {
       expect(e).to.match(/BeaconNotSelected.*/g);
@@ -200,7 +200,7 @@ describe("Request & Submit", function () {
 
 
     try {
-      await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32)'](2, data.addresses, data.uints, request.seed);
+      await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](2, data.addresses, data.uints, request.seed);
       expect(true).to.equal(false, "Transaction should have reverted");
     } catch (e) {
       expect(e).to.match(/BeaconNotSelected.*/g);
@@ -236,11 +236,11 @@ describe("Request & Submit", function () {
           request.seed
         );
 
-        let uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
+        let uintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.minConfirmations];
         uintData = uintData.concat(proof, params[0], params[1]);
 
         const addressData = [request.client].concat(request.beacons);
-        const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32)'](selectedBeacons.indexOf(signer.address), addressData, uintData, message);
+        const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](selectedBeacons.indexOf(signer.address), addressData, uintData, message);
         const sigs = (await randomizer.getRequest(request.id)).vrfHashes;
         let signed = false;
         expect(sigs.length).to.equal(2);
@@ -274,7 +274,7 @@ describe("Request & Submit", function () {
 
 
     try {
-      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32)'](selectedBeacons.indexOf(signer.address), data.addresses, data.uints, request.seed);
+      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](selectedBeacons.indexOf(signer.address), data.addresses, data.uints, request.seed);
       expect(true).to.equal(false, "Transaction should have reverted");
     } catch (e) {
       expect(e).to.match(/RequestDataMismatch.*/g);
@@ -304,7 +304,7 @@ describe("Request & Submit", function () {
 
 
     const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
-    await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32)'](selectedBeacons.indexOf(signer.address), data.addresses, data.uints, request.seed);
+    await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](selectedBeacons.indexOf(signer.address), data.addresses, data.uints, request.seed);
     beacon = await randomizer.beacon(signer.address);
     expect(beacon.strikes).to.equal(0);
     expect(beacon.consecutiveSubmissions).to.equal(0);
@@ -351,11 +351,11 @@ describe("Request & Submit", function () {
       const verify = await randomizer.fastVerify(publicKeys, proof, message, params[0], params[1]);
       expect(verify).to.be.true;
 
-      let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
+      let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.minConfirmations];
       uintData = uintData.concat(proof, params[0], params[1]);
       const addressData = [request.client].concat(request.beacons);
       // const bytesData = [sig.r, sig.s];
-      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(signer.address), addressData, uintData, message);
+      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), addressData, uintData, message);
       const res = await tx.wait();
       // const requestEvent = res.logs.find(log => randomizer.interface.parseLog(log).name === "Request");
       let requestHash = ethers.utils.solidityKeccak256(["uint256", "uint256"], [proof[0], proof[1]]);
@@ -420,11 +420,11 @@ describe("Request & Submit", function () {
       newMessage
     );
 
-    let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
+    let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.minConfirmations];
     uintData = uintData.concat(proof, params[0], params[1]);
     const addressData = [request.client].concat(request.beacons);
 
-    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(finalSigner.address), addressData, uintData, newMessage);
+    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(finalSigner.address), addressData, uintData, newMessage);
     await tx.wait();
 
     const callbackResult = await testCallback.result();
@@ -465,7 +465,7 @@ describe("Request & Submit", function () {
 
       const beaconStake = (await randomizer.beacon(signer.address)).ethStake;
       const gasPrice = await getGasPrice();
-      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32)'](selectedBeacons.indexOf(signer.address), data.addresses, data.uints, request.seed, { gasPrice });
+      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](selectedBeacons.indexOf(signer.address), data.addresses, data.uints, request.seed, { gasPrice });
       const receipt = await tx.wait();
       const gasPaid = gasPrice.mul(receipt.cumulativeGasUsed);
 
@@ -492,7 +492,7 @@ describe("Request & Submit", function () {
     const data = await vrfHelper.getSubmitData(finalSigner.address, request);
     const finalGasPrice = await getGasPrice();
     const beaconStake = (await randomizer.beacon(finalSigner.address)).ethStake;
-    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(finalSigner.address), data.addresses, data.uints, request.seed, { gasPrice: finalGasPrice });
+    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(finalSigner.address), data.addresses, data.uints, request.seed, { gasPrice: finalGasPrice });
     const receipt = await tx.wait();
     const gasPaid = finalGasPrice.mul(receipt.cumulativeGasUsed);
     const newBeaconStake = (await randomizer.beacon(finalSigner.address)).ethStake;
@@ -593,7 +593,7 @@ describe("Request & Submit", function () {
     });
 
     const data1 = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
-    await randomizer.connect(selectedSigners[0])['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(selectedSigners[0].address), data1.addresses, data1.uints, request.seed);
+    await randomizer.connect(selectedSigners[0])['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(selectedSigners[0].address), data1.addresses, data1.uints, request.seed);
 
     for (const otherSigner of signers.filter(fSigner => !request.beacons.includes(fSigner.address))) {
       if ((await randomizer.beacons()).includes(otherSigner.address)) {
@@ -603,7 +603,7 @@ describe("Request & Submit", function () {
 
     const data2 = await vrfHelper.getSubmitData(selectedSigners[1].address, request);
     try {
-      await randomizer.connect(selectedSigners[1])['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(selectedSigners[1].address), data2.addresses, data2.uints, request.seed);
+      await randomizer.connect(selectedSigners[1])['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(selectedSigners[1].address), data2.addresses, data2.uints, request.seed);
       expect(true).to.be.false;
     } catch (e) {
       expect(e).to.match(/NotEnoughBeaconsAvailable/g);
@@ -678,14 +678,14 @@ describe("Request & Submit", function () {
       const verify = await randomizer.fastVerify(publicKeys, proof, message, params[0], params[1]);
       expect(verify).to.be.true;
 
-      let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
+      let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.minConfirmations];
       uintData = uintData.concat(proof, params[0], params[1]);
       const addressData = [request.client].concat(request.beacons);
       // const bytesData = [sig.r, sig.s];
       // Get signer eth balance
       const signerBalance = await signer.getBalance();
       const signerStake = (await randomizer.beacon(signer.address)).ethStake;
-      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(signer.address), addressData, uintData, message, { gasPrice: await getGasPrice() });
+      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), addressData, uintData, message, { gasPrice: await getGasPrice() });
       const res = await tx.wait();
       // Get new signer eth balance
       const newSignerBalance = await signer.getBalance();
@@ -761,7 +761,7 @@ describe("Request & Submit", function () {
       newMessage
     );
 
-    let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
+    let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.minConfirmations];
     uintData = uintData.concat(proof, params[0], params[1]);
     const addressData = [request.client].concat(request.beacons);
 
@@ -782,7 +782,7 @@ describe("Request & Submit", function () {
     // Get finalSigner ETH balance
     const finalSignerBalance = await ethers.provider.getBalance(finalSigner.address);
 
-    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(finalSigner.address), addressData, uintData, newMessage, { gasPrice: await getGasPrice() });
+    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(finalSigner.address), addressData, uintData, newMessage, { gasPrice: await getGasPrice() });
     await tx.wait();
 
     // Get total gas fee paid in tx

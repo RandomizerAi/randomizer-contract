@@ -27,7 +27,7 @@ describe("Sequencer", function () {
         // },
       ],
     });
-    const ArbGas = await ethers.getContractFactory("ArbGasInfo");
+    const ArbGas = await ethers.getContractFactory("contracts/test/ArbGasInfo.sol:ArbGasInfo");
     await network.provider.send("hardhat_setCode", [
       "0x000000000000000000000000000000000000006C",
       ArbGas.bytecode,
@@ -43,7 +43,7 @@ describe("Sequencer", function () {
       i++;
     }
     sequencer = signers[6];
-    const diamondAddress = await deployDiamond([signers[6].address, signers[6].address, ["500000000000000000", 40, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]])
+    const diamondAddress = await deployDiamond([signers[6].address, signers[6].address, ["500000000000000000", 40, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3, 99, 1, 45], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]])
     const diamondCutFacet = await ethers.getContractAt('DiamondCutFacet', diamondAddress)
     const StorageControlFacet = await ethers.getContractFactory('StorageControlFacet')
     const storageControlFacet = await StorageControlFacet.deploy()
@@ -89,7 +89,7 @@ describe("Sequencer", function () {
 
       try {
         const someSigner = signers.find(signer => !request.beacons.includes(signer.address) && signer.address !== sequencer.address);
-        await randomizer.connect(someSigner)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v);
+        await randomizer.connect(someSigner)['submitRandom(uint256,address[4],uint256[19],bytes32[3],uint8)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v);
         expect(true).to.be.false;
       } catch (e) {
         expect(e.message).to.match(/SenderNotBeaconOrSequencer/);
@@ -101,7 +101,7 @@ describe("Sequencer", function () {
 
       if (i === 0) {
         try {
-          await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v);
+          await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[19],bytes32[3],uint8)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v);
           expect(true).to.be.false;
         } catch (e) {
           expect(e.message).to.match(/SequencerSubmissionTooEarly/);
@@ -111,7 +111,7 @@ describe("Sequencer", function () {
       }
 
 
-      const tx = await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v);
+      const tx = await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[19],bytes32[3],uint8)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, rsAndSeed, sig.v);
 
       const res = await tx.wait();
 
@@ -147,7 +147,7 @@ describe("Sequencer", function () {
 
     await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(blocksRemaining), ethers.utils.hexValue(Math.ceil(secondsRemaining / blocksRemaining))]);
 
-    const tx = await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[18],bytes32[3],uint8)'](2, data.addresses, data.uints, rsAndSeed, sig.v);
+    const tx = await randomizer.connect(sequencer)['submitRandom(uint256,address[4],uint256[19],bytes32[3],uint8)'](2, data.addresses, data.uints, rsAndSeed, sig.v);
     return await tx.wait();
   }
 

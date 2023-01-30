@@ -25,7 +25,7 @@ describe("Beacon Tests", function () {
     for (const signer of selectedSigners) {
       // await randomizer.testCharge(testCallback.address, signer.address, 1);
       const data = await vrfHelper.getSubmitData(signer.address, request);
-      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed);
+      const tx = await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed);
 
       const res = await tx.wait();
       const requestEventRaw = res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon");
@@ -43,7 +43,7 @@ describe("Beacon Tests", function () {
     }
     const finalSigner = signers.filter(signer => selectedFinalBeacon == signer.address)[0];
     const data = await vrfHelper.getSubmitData(finalSigner.address, request);
-    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(finalSigner.address), data.addresses, data.uints, request.seed);
+    const tx = await randomizer.connect(finalSigner)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(finalSigner.address), data.addresses, data.uints, request.seed);
     await tx.wait();
 
     const callbackResult = await testCallback.result();
@@ -68,7 +68,7 @@ describe("Beacon Tests", function () {
         // },
       ],
     });
-    const ArbGas = await ethers.getContractFactory("ArbGasInfo");
+    const ArbGas = await ethers.getContractFactory("contracts/test/ArbGasInfo.sol:ArbGasInfo");
     await network.provider.send("hardhat_setCode", [
       "0x000000000000000000000000000000000000006C",
       ArbGas.bytecode,
@@ -82,7 +82,7 @@ describe("Beacon Tests", function () {
       ecKeys = ecKeys.concat(keys);
       i++;
     }
-    diamondAddress = await deployDiamond([signers[0].address, signers[0].address, ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]])
+    diamondAddress = await deployDiamond([signers[0].address, signers[0].address, ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3, 99, 1, 45], [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]])
     const diamondCutFacet = await ethers.getContractAt('DiamondCutFacet', diamondAddress)
     const StorageControlFacet = await ethers.getContractFactory('StorageControlFacet')
     const storageControlFacet = await StorageControlFacet.deploy()
@@ -242,7 +242,7 @@ describe("Beacon Tests", function () {
     await storageController.connect(signers[9])._debug_setClientDeposit(testCallback.address, ethers.utils.parseUnits("5", "wei"));
 
     const data = await vrfHelper.getSubmitData(selectedSigner.address, request);
-    const tx = await randomizer.connect(selectedSigner)['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(selectedSigner.address), data.addresses, data.uints, request.seed);
+    const tx = await randomizer.connect(selectedSigner)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(selectedSigner.address), data.addresses, data.uints, request.seed);
     const receipt = await tx.wait();
     const newStake = (await randomizer.beacon(selectedSigner.address)).ethStake;
     const chargeEvents = receipt.events.filter(e => e.event == "ChargeEth");
@@ -266,8 +266,8 @@ describe("Beacon Tests", function () {
     const data = await vrfHelper.getSubmitData(selectedSigners[0].address, request);
     const data2 = await vrfHelper.getSubmitData(selectedSigners[1].address, request);
 
-    await randomizer.connect(selectedSigners[0])['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(selectedSigners[0].address), data.addresses, data.uints, request.seed);
-    const reqTx = await randomizer.connect(selectedSigners[1])['submitRandom(uint256,address[4],uint256[18],bytes32)'](request.beacons.indexOf(selectedSigners[1].address), data2.addresses, data2.uints, request.seed);
+    await randomizer.connect(selectedSigners[0])['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(selectedSigners[0].address), data.addresses, data.uints, request.seed);
+    const reqTx = await randomizer.connect(selectedSigners[1])['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(selectedSigners[1].address), data2.addresses, data2.uints, request.seed);
     // Get final beacon
     const reqReceipt = await reqTx.wait();
     const log = reqReceipt.logs.find(log => randomizer.interface.parseLog(log).name == "RequestBeacon");
@@ -284,7 +284,7 @@ describe("Beacon Tests", function () {
 
 
     await storageController.connect(signers[9])._debug_setClientDeposit(testCallback.address, ethers.utils.parseEther("2"));
-    const tx = await randomizer.connect(finalBeacon)['submitRandom(uint256,address[4],uint256[18],bytes32)'](2, newData.addresses, newData.uints, request.seed);
+    const tx = await randomizer.connect(finalBeacon)['submitRandom(uint256,address[4],uint256[19],bytes32)'](2, newData.addresses, newData.uints, request.seed);
     const receipt = await tx.wait();
     const newStake = (await randomizer.beacon(request.beacons[2])).ethStake;
     const chargeEvents = receipt.events.filter(e => e.event == "ChargeEth");

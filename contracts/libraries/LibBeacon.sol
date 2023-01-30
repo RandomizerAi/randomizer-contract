@@ -44,7 +44,8 @@ library LibBeacon {
                     [data.height, data.timestamp],
                     data.expirationBlocks,
                     data.expirationSeconds,
-                    data.callbackGasLimit
+                    data.callbackGasLimit,
+                    data.minConfirmations
                 )
             );
     }
@@ -66,7 +67,7 @@ library LibBeacon {
     /// @param _accounts address array containing client and beacon addresses
     /// @param _data uint256 array containing request data
     /// @return SAccounts struct and SPackedSubmitData struct
-    function _getAccountsAndPackedData(address[4] calldata _accounts, uint256[18] calldata _data)
+    function _getAccountsAndPackedData(address[4] calldata _accounts, uint256[19] calldata _data)
         internal
         pure
         returns (SAccounts memory, SPackedSubmitData memory)
@@ -84,7 +85,7 @@ library LibBeacon {
     /// @notice Unpacks the packed request data from calldata
     /// @param _data uint256 array containing packed request data
     /// @return SPackedSubmitData struct
-    function _resolveUintVrfData(uint256[18] calldata _data)
+    function _resolveUintVrfData(uint256[19] calldata _data)
         internal
         pure
         returns (SPackedSubmitData memory)
@@ -92,11 +93,20 @@ library LibBeacon {
         return
             SPackedSubmitData(
                 uint256(_data[0]),
-                SRandomUintData(_data[1], _data[2], _data[3], _data[4], _data[5], _data[6], _data[7]),
+                SRandomUintData(
+                    _data[1],
+                    _data[2],
+                    _data[3],
+                    _data[4],
+                    _data[5],
+                    _data[6],
+                    _data[7],
+                    _data[8]
+                ),
                 SFastVerifyData(
-                    [_data[8], _data[9], _data[10], _data[11]],
-                    [_data[12], _data[13]],
-                    [_data[14], _data[15], _data[16], _data[17]]
+                    [_data[9], _data[10], _data[11], _data[12]],
+                    [_data[13], _data[14]],
+                    [_data[15], _data[16], _data[17], _data[18]]
                 )
             );
     }
@@ -104,11 +114,20 @@ library LibBeacon {
     /// @notice Unpacks the request data from calldata
     /// @param _data uint256 array containing request data
     /// @return SPackedUintData struct
-    function _resolveUintData(uint256[8] calldata _data) internal pure returns (SPackedUintData memory) {
+    function _resolveUintData(uint256[9] calldata _data) internal pure returns (SPackedUintData memory) {
         return
             SPackedUintData(
                 uint256(_data[0]),
-                SRandomUintData(_data[1], _data[2], _data[3], _data[4], _data[5], _data[6], _data[7])
+                SRandomUintData(
+                    _data[1],
+                    _data[2],
+                    _data[3],
+                    _data[4],
+                    _data[5],
+                    _data[6],
+                    _data[7],
+                    _data[8]
+                )
             );
     }
 

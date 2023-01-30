@@ -330,6 +330,7 @@ contract Utils {
                 data.expirationBlocks,
                 data.expirationSeconds,
                 data.callbackGasLimit,
+                data.minConfirmations,
                 client,
                 selectedBeacons,
                 seed

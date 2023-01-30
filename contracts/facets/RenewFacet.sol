@@ -37,7 +37,7 @@ contract RenewFacet is Utils {
     /// @param _seed seed used for generating the request hash
     function renewRequest(
         address[4] calldata _addressData,
-        uint256[8] calldata _uintData,
+        uint256[9] calldata _uintData,
         bytes32 _seed
     ) external {
         // 20k gas offset for balance updates after fee calculation
@@ -60,8 +60,12 @@ contract RenewFacet is Utils {
         bytes10[2] memory hashes = s.requestToVrfHashes[packed.id];
 
         {
-            uint256 _expirationHeight = packed.data.height + packed.data.expirationBlocks;
-            uint256 _expirationTime = packed.data.timestamp + packed.data.expirationSeconds;
+            uint256 _expirationHeight = packed.data.height +
+                packed.data.expirationBlocks +
+                packed.data.minConfirmations;
+            uint256 _expirationTime = packed.data.timestamp +
+                packed.data.expirationSeconds +
+                packed.data.minConfirmations;
             if (msg.sender == s.sequencer) {
                 _expirationHeight += packed.data.expirationBlocks / 2;
                 _expirationTime += packed.data.expirationSeconds / 2;
@@ -155,6 +159,7 @@ contract RenewFacet is Utils {
             packed.data.expirationBlocks,
             packed.data.expirationSeconds,
             packed.data.callbackGasLimit,
+            packed.data.minConfirmations,
             accounts.client,
             accounts.beacons,
             _seed

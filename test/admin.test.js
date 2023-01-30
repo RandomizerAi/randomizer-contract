@@ -21,7 +21,7 @@ describe("Admin", function () {
         // },
       ],
     });
-    const ArbGas = await ethers.getContractFactory("ArbGasInfo");
+    const ArbGas = await ethers.getContractFactory("contracts/test/ArbGasInfo.sol:ArbGasInfo");
     await network.provider.send("hardhat_setCode", [
       "0x000000000000000000000000000000000000006C",
       ArbGas.bytecode,
@@ -155,7 +155,7 @@ describe("Admin", function () {
 
 
   it("return ArbGasInfo data", async function () {
-    const ArbGasInfo = await ethers.getContractFactory("ArbGasInfo");
+    const ArbGasInfo = await ethers.getContractFactory("contracts/test/ArbGasInfo.sol:ArbGasInfo");
     const arbGasInfo = await ArbGasInfo.deploy();
     await arbGasInfo.deployed();
     const gasInfo = await arbGasInfo.getPricesInWei();

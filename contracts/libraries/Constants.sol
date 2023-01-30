@@ -11,6 +11,8 @@ library Constants {
     uint256 constant CKEY_BEACON_FEE = 5;
     uint256 constant CKEY_MAX_STRIKES = 6;
     uint256 constant CKEY_MAX_CONSECUTIVE_SUBMISSIONS = 7;
+    uint256 constant CKEY_MIN_CONFIRMATIONS = 8;
+    uint256 constant CKEY_MAX_CONFIRMATIONS = 9;
 
     // Gas keys for estimateGas
     uint256 constant GKEY_OFFSET_SUBMIT = 0;

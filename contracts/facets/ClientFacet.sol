@@ -26,6 +26,12 @@ contract ClientFacet is Utils {
     /// @param maxLimit The maximum allowed callback gas limit
     error CallbackGasLimitOOB(uint256 inputLimit, uint256 minLimit, uint256 maxLimit);
 
+    /// @dev Error thrown when the request min confirmations are is out of bounds
+    /// @param inputLimit The confirmations input by the client
+    /// @param minLimit The minimum allowed confirmations
+    /// @param maxLimit The maximum allowed confirmations
+    error MinConfirmationsOOB(uint256 inputLimit, uint256 minLimit, uint256 maxLimit);
+
     /// @dev Error thrown when the client attempts to deposit too little ETH
     /// @param deposited The amount of ETH the client has deposited
     /// @param reserved The amount of ETH the client has reserved for requests
@@ -110,12 +116,22 @@ contract ClientFacet is Utils {
     /// @notice Requests a callback with a random value that has been validated with on-chain VRF
     /// @param _callbackGasLimit The gas limit for the callback function of the request
     /// @return id The request ID
-    function request(uint256 _callbackGasLimit) external returns (uint256 id) {
+    function request(uint256 _callbackGasLimit, uint256 _confirmations) external returns (uint256 id) {
         // Check if the callback gas limit is within the allowed range
         uint256 requestMinGasLimit = s.configUints[Constants.CKEY_REQUEST_MIN_GAS_LIMIT];
         uint256 requestMaxGasLimit = s.configUints[Constants.CKEY_REQUEST_MAX_GAS_LIMIT];
         if (_callbackGasLimit < requestMinGasLimit || _callbackGasLimit > requestMaxGasLimit)
             revert CallbackGasLimitOOB(_callbackGasLimit, requestMinGasLimit, requestMaxGasLimit);
+
+        if (
+            _confirmations > s.configUints[Constants.CKEY_MAX_CONFIRMATIONS] ||
+            _confirmations < s.configUints[Constants.CKEY_MIN_CONFIRMATIONS]
+        )
+            revert MinConfirmationsOOB(
+                _confirmations,
+                s.configUints[Constants.CKEY_MIN_CONFIRMATIONS],
+                s.configUints[Constants.CKEY_MAX_CONFIRMATIONS]
+            );
 
         // Calculate the estimated fee for the request
         uint256 _estimateFee = estimateFee(_callbackGasLimit);
@@ -141,7 +157,8 @@ contract ClientFacet is Utils {
             timestamp: block.timestamp,
             expirationBlocks: s.configUints[Constants.CKEY_EXPIRATION_BLOCKS],
             expirationSeconds: s.configUints[Constants.CKEY_EXPIRATION_SECONDS],
-            callbackGasLimit: _callbackGasLimit
+            callbackGasLimit: _callbackGasLimit,
+            minConfirmations: _confirmations
         });
 
         // Generate the request using the request data

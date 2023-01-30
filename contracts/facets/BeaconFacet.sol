@@ -32,6 +32,7 @@ contract BeaconFacet is Utils {
     );
     error SenderNotBeaconOrSequencer();
     error BlockhashUnavailable(uint256 blockNumber);
+    error MinHeightNotYetReached(uint256 blockNumber, uint256 minBlockNumber);
 
     /* Events */
 
@@ -197,7 +198,7 @@ contract BeaconFacet is Utils {
     function submitRandom(
         uint256 beaconPos,
         address[4] calldata _addressData,
-        uint256[18] calldata _uintData,
+        uint256[19] calldata _uintData,
         bytes32[3] calldata _rsAndSeed,
         uint8 _v
     ) external {
@@ -257,7 +258,7 @@ contract BeaconFacet is Utils {
     function submitRandom(
         uint256 beaconPos,
         address[4] calldata _addressData,
-        uint256[18] calldata _uintData,
+        uint256[19] calldata _uintData,
         bytes32 seed
     ) external {
         uint256 gasAtStart = gasleft();
@@ -414,8 +415,19 @@ contract BeaconFacet is Utils {
         // Check if the selected beacon is in the correct position in the beacon array
         if (_beacons[beaconPos] != _beacon) revert BeaconNotSelected();
 
-        // Check if the last two requests are valid (i.e. not the zero value)
-        if (beaconPos < 2 && reqValues[beaconPos] != bytes10(0)) revert BeaconValueExists();
+        // Checks for non-final beacons
+        if (beaconPos < 2) {
+            // Check if the first two requests are not zero
+            if (reqValues[beaconPos] != bytes10(0)) revert BeaconValueExists();
+
+            // Check if minConfirmations has passed for non-final beacons only.
+            // Final submitter does not need a minConfirmations check because
+            // it's only needed to secure the blockhash of the request height
+            // used to generate the seed for the final beacon.
+            uint256 heightAfterConfirmations = data.height + data.minConfirmations;
+            if (LibNetwork._blockNumber() < data.height + data.minConfirmations)
+                revert MinHeightNotYetReached(LibNetwork._blockNumber(), heightAfterConfirmations);
+        }
 
         if (msg.sender != _beacon) {
             // If not a beacon, the only other permitted sender is the sequencer

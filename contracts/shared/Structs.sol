@@ -30,6 +30,7 @@ struct SRandomUintData {
     uint256 expirationBlocks;
     uint256 expirationSeconds;
     uint256 callbackGasLimit;
+    uint256 minConfirmations;
 }
 
 struct SRequestEventData {
@@ -39,6 +40,7 @@ struct SRequestEventData {
     uint256 expirationBlocks;
     uint256 expirationSeconds;
     uint256 callbackGasLimit;
+    uint256 minConfirmations;
     address client;
     address[3] beacons;
     bytes32 seed;

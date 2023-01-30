@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 interface IRandomizer {
-    function request(uint256 _callbackGasLimit) external returns (uint256);
+    function request(uint256 _callbackGasLimit, uint256 _confirmations) external returns (uint256);
 
     function clientWithdrawTo(address _to, uint256 _amount) external;
 
@@ -37,14 +37,26 @@ contract TestCallback {
     }
 
     function makeRequest() external returns (uint256) {
-        return IRandomizer(randomizer).request(100000);
+        return IRandomizer(randomizer).request(100000, 1);
+    }
+
+    function makeRequestWithZeroConfirmations() external returns (uint256) {
+        return IRandomizer(randomizer).request(100000, 0);
+    }
+
+    function makeRequestWithTooManyConfirmations() external returns (uint256) {
+        return IRandomizer(randomizer).request(100000, 999);
+    }
+
+    function makeRequestWith15Confirmations() external returns (uint256) {
+        return IRandomizer(randomizer).request(100000, 15);
     }
 
     function makeRequestWithGasTooLow() external returns (uint256) {
-        return IRandomizer(randomizer).request(1);
+        return IRandomizer(randomizer).request(1, 1);
     }
 
     function makeRequestWithGasTooHigh() external returns (uint256) {
-        return IRandomizer(randomizer).request(999999999);
+        return IRandomizer(randomizer).request(999999999, 1);
     }
 }

@@ -72,7 +72,7 @@ const getSubmitData = async (privateKey, request) => {
   const vrf = await getVrfData(privateKey, request.seed);
 
   // create array of raw uints from request data
-  const rawUints = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit];
+  const rawUints = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.minConfirmations];
 
   // concatenate VRF proof and params with raw uints
   const uints = rawUints.concat(vrf.proof, vrf.params[0], vrf.params[1]);

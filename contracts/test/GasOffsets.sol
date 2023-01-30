@@ -78,6 +78,7 @@ contract GasOffsets {
             4,
             5,
             6,
+            7,
             address(0),
             [address(100), address(2), address(3)],
             keccak256(abi.encodePacked("asd"))
