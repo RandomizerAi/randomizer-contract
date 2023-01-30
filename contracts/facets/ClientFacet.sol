@@ -116,13 +116,11 @@ contract ClientFacet is Utils {
     /// @notice Requests a callback with a random value that has been validated with on-chain VRF
     /// @param _callbackGasLimit The gas limit for the callback function of the request
     /// @return id The request ID
-    function request(uint256 _callbackGasLimit, uint256 _confirmations) external returns (uint256 id) {
-        // Check if the callback gas limit is within the allowed range
-        uint256 requestMinGasLimit = s.configUints[Constants.CKEY_REQUEST_MIN_GAS_LIMIT];
-        uint256 requestMaxGasLimit = s.configUints[Constants.CKEY_REQUEST_MAX_GAS_LIMIT];
-        if (_callbackGasLimit < requestMinGasLimit || _callbackGasLimit > requestMaxGasLimit)
-            revert CallbackGasLimitOOB(_callbackGasLimit, requestMinGasLimit, requestMaxGasLimit);
+    function request(uint256 _callbackGasLimit) external returns (uint256 id) {
+        return _request(_callbackGasLimit, s.configUints[Constants.CKEY_MIN_CONFIRMATIONS]);
+    }
 
+    function request(uint256 _callbackGasLimit, uint256 _confirmations) external returns (uint256 id) {
         if (
             _confirmations > s.configUints[Constants.CKEY_MAX_CONFIRMATIONS] ||
             _confirmations < s.configUints[Constants.CKEY_MIN_CONFIRMATIONS]
@@ -132,6 +130,16 @@ contract ClientFacet is Utils {
                 s.configUints[Constants.CKEY_MIN_CONFIRMATIONS],
                 s.configUints[Constants.CKEY_MAX_CONFIRMATIONS]
             );
+
+        return _request(_callbackGasLimit, _confirmations);
+    }
+
+    function _request(uint256 _callbackGasLimit, uint256 _confirmations) private returns (uint256 id) {
+        // Check if the callback gas limit is within the allowed range
+        uint256 requestMinGasLimit = s.configUints[Constants.CKEY_REQUEST_MIN_GAS_LIMIT];
+        uint256 requestMaxGasLimit = s.configUints[Constants.CKEY_REQUEST_MAX_GAS_LIMIT];
+        if (_callbackGasLimit < requestMinGasLimit || _callbackGasLimit > requestMaxGasLimit)
+            revert CallbackGasLimitOOB(_callbackGasLimit, requestMinGasLimit, requestMaxGasLimit);
 
         // Calculate the estimated fee for the request
         uint256 _estimateFee = estimateFee(_callbackGasLimit);

@@ -23,9 +23,9 @@ async function main() {
   const libBeacon = await fs.readJson(path.join(__dirname, `../artifacts/contracts/libraries/LibBeacon.sol/LibBeacon.json`));
   if (libBeacon.abi) abi = abi.concat(libBeacon.abi);
 
-  // Remove duplicate values from abi that aren't submitRandom, requestRandom (overrides), estimateFee
+  // Remove duplicate values from abi that aren't submitRandom, request (overrides), estimateFee
   abi = abi.filter((item, index) => {
-    if (item.name === 'submitRandom' || item.name === 'requestRandom' || item.name === 'estimateFee') return true;
+    if (item.name === 'submitRandom' || item.name === 'request' || item.name === 'estimateFee') return true;
     return abi.findIndex((i) => i.name === item.name) === index;
   });
 
