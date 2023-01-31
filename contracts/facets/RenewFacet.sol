@@ -63,9 +63,7 @@ contract RenewFacet is Utils {
             uint256 _expirationHeight = packed.data.height +
                 packed.data.expirationBlocks +
                 packed.data.minConfirmations;
-            uint256 _expirationTime = packed.data.timestamp +
-                packed.data.expirationSeconds +
-                packed.data.minConfirmations;
+            uint256 _expirationTime = packed.data.timestamp + packed.data.expirationSeconds;
             if (msg.sender == s.sequencer) {
                 _expirationHeight += packed.data.expirationBlocks / 2;
                 _expirationTime += packed.data.expirationSeconds / 2;
