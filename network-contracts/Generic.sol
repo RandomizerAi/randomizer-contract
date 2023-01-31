@@ -16,6 +16,42 @@ library LibNetwork {
             );
     }
 
+    function _maxGasPriceAfterConfirmations(uint256 _confirmations)
+        internal
+        view
+        returns (uint256 maxGasPrice)
+    {
+        maxGasPrice = tx.gasprice;
+        // maxFee goes up by 12.5% per confirmation, calculate the max fee for the number of confirmations
+        if (_confirmations > 1) {
+            uint256 i = 0;
+            do {
+                maxGasPrice += maxGasPrice / 8;
+                unchecked {
+                    ++i;
+                }
+            } while (i < _confirmations);
+        }
+    }
+
+    function _maxGasPriceAfterConfirmations(uint256 _price, uint256 _confirmations)
+        internal
+        pure
+        returns (uint256 maxGasPrice)
+    {
+        maxGasPrice = _price + (_price / 4);
+        // maxFee goes up by 12.5% per confirmation, calculate the max fee for the number of confirmations
+        if (_confirmations > 1) {
+            uint256 i = 0;
+            do {
+                maxGasPrice += maxGasPrice / 8;
+                unchecked {
+                    ++i;
+                }
+            } while (i < _confirmations);
+        }
+    }
+
     function _gasPrice() internal view returns (uint256) {
         return tx.gasprice;
     }

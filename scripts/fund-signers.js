@@ -9,20 +9,20 @@ async function main() {
 
   // const funder = new hre.ethers.Wallet(process.env.PRIVATE_KEY, hre.ethers.provider);
   const funder = new hre.ethers.Wallet(process.env.PRIVATE_KEY, hre.ethers.provider);
-  // const sequencer = new hre.ethers.Wallet(process.env.PRIVATE_KEY, hre.ethers.provider);
-  // await funder.sendTransaction({
-  //   to: await sequencer.getAddress(),
-  //   value: ethers.utils.parseEther("1"),
-  // });
+  const sequencer = new hre.ethers.Wallet(process.env.PRIVATE_KEY, hre.ethers.provider);
+  await funder.sendTransaction({
+    to: await sequencer.getAddress(),
+    value: ethers.utils.parseEther("1"),
+  });
   for (let i = 1; i <= 10; i++) {
     const envVar = `SIGNER_${i}`;
     if (process.env[envVar]) {
       const wallet = new hre.ethers.Wallet(process.env[envVar], hre.ethers.provider);
       // Send some ether to the signer
-      // await contractOwner.sendTransaction({
-      //   to: await wallet.getAddress(),
-      //   value: ethers.utils.parseEther(process.env.MIN_STAKE).mul(5).toString(),
-      // });
+      await contractOwner.sendTransaction({
+        to: await wallet.getAddress(),
+        value: ethers.utils.parseEther(process.env.MIN_STAKE).mul(5).toString(),
+      });
       await randomizer.connect(wallet).beaconStakeEth(wallet.address, { value: ethers.utils.parseEther(process.env.MIN_STAKE).mul(2).toString() });
     }
   }

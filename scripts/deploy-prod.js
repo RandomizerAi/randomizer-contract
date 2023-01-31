@@ -30,7 +30,7 @@ async function main() {
 
   const env = process.env;
 
-  const diamondAddress = await deployDiamond([sequencer.address, env.TREASURY_ADDRESS, [ethers.utils.parseEther(env.MIN_STAKE), env.EXP_BLOCKS, env.EXP_SECONDS, env.REQ_MIN_GAS, env.REQ_MAX_GAS, ethers.utils.parseEther(env.BEACON_FEE), env.MAX_STRIKES, env.MAX_CONSEC_SUBMISSIONS, MIN_CONFIRMATIONS, MAX_CONFIRMATIONS], addresses, ecKeys, [env.SUBMIT_GAS_OFFSET, env.FINAL_SUBMIT_OFFSET, env.RENEW_OFFSET, env.TOTAL_SUBMIT, env.GAS_PER_BEACON]], true)
+  const diamondAddress = await deployDiamond([sequencer.address, env.TREASURY_ADDRESS, [ethers.utils.parseEther(env.MIN_STAKE), env.EXP_BLOCKS, env.EXP_SECONDS, env.REQ_MIN_GAS, env.REQ_MAX_GAS, ethers.utils.parseEther(env.BEACON_FEE), env.MAX_STRIKES, env.MAX_CONSEC_SUBMISSIONS, env.MIN_CONFIRMATIONS, env.MAX_CONFIRMATIONS], addresses, ecKeys, [env.SUBMIT_GAS_OFFSET, env.FINAL_SUBMIT_OFFSET, env.RENEW_OFFSET, env.TOTAL_SUBMIT, env.GAS_PER_BEACON]], true)
 
   const randomizer = await ethers.getContractAt(randomizerAbi, diamondAddress);
   console.log('Randomizer Diamond deployed to:', randomizer.address);
