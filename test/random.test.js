@@ -105,8 +105,10 @@ describe("Request & Submit", function () {
   it("get fee estimate in front-end", async function () {
     // Get provider gasPrice
     const gasPrice = await ethers.provider.getGasPrice();
-    const fee = await randomizer.estimateFeeUsingGasPrice(100000, gasPrice);
+    const fee = await randomizer.estimateFeeUsingGasPrice(100000, 1, gasPrice);
     expect(ethers.BigNumber.from(fee).isZero()).to.be.false;
+    const fee2 = await randomizer.estimateFeeUsingGasPrice(100000, 15, gasPrice);
+    expect(ethers.BigNumber.from(fee2).isZero()).to.be.false;
   });
 
   it("make deposit and a new random request", async function () {

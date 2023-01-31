@@ -424,9 +424,8 @@ contract BeaconFacet is Utils {
             // Final submitter does not need a minConfirmations check because
             // it's only needed to secure the blockhash of the request height
             // used to generate the seed for the final beacon.
-            uint256 heightAfterConfirmations = data.height + data.minConfirmations;
             if (LibNetwork._blockNumber() < data.height + data.minConfirmations)
-                revert MinHeightNotYetReached(LibNetwork._blockNumber(), heightAfterConfirmations);
+                revert MinHeightNotYetReached(LibNetwork._blockNumber(), data.height + data.minConfirmations);
         }
 
         if (msg.sender != _beacon) {

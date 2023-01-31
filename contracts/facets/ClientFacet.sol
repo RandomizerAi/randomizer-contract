@@ -88,12 +88,17 @@ contract ClientFacet is Utils {
     /// @param _callbackGasLimit The gas limit for the client's callback function
     /// @return esimateFee The estimated fee required for full request fulfillment
     /// @dev If your users pay for random requests, use this in your contract to calculate how much ETH a user should attach.
-    function estimateFee(uint256 _callbackGasLimit) public view returns (uint256 esimateFee) {
+    function estimateFee(uint256 _callbackGasLimit, uint256 _confirmations)
+        public
+        view
+        returns (uint256 esimateFee)
+    {
         return
             ((s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT] +
                 _callbackGasLimit +
                 ((s.gasEstimates[Constants.GKEY_GAS_PER_BEACON_SELECT] * (s.beacons.length - 1)) * 3)) *
-                LibNetwork._gasPrice()) + (s.configUints[Constants.CKEY_BEACON_FEE] * 5);
+                LibNetwork._maxGasPriceAfterConfirmations(_confirmations)) +
+            (s.configUints[Constants.CKEY_BEACON_FEE] * 5);
     }
 
     /// @notice Gets fee estimate for full request fulfillment using a manual gas price
@@ -101,16 +106,17 @@ contract ClientFacet is Utils {
     /// @param _gasPrice The gas price used for request fulfillment
     /// @return esimateFee The estimated fee required for full request fulfillment
     /// @dev If your users pay for random requests, use this in your contract to calculate how much ETH a user should attach.
-    function estimateFeeUsingGasPrice(uint256 _callbackGasLimit, uint256 _gasPrice)
-        external
-        view
-        returns (uint256)
-    {
+    function estimateFeeUsingGasPrice(
+        uint256 _callbackGasLimit,
+        uint256 _confirmations,
+        uint256 _gasPrice
+    ) external view returns (uint256) {
         return
             ((s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT] +
                 _callbackGasLimit +
                 ((s.gasEstimates[Constants.GKEY_GAS_PER_BEACON_SELECT] * (s.beacons.length - 1)) * 3)) *
-                _gasPrice) + (s.configUints[Constants.CKEY_BEACON_FEE] * 5);
+                LibNetwork._maxGasPriceAfterConfirmations(_gasPrice, _confirmations)) +
+            (s.configUints[Constants.CKEY_BEACON_FEE] * 5);
     }
 
     /// @notice Requests a callback with a random value that has been validated with on-chain VRF
@@ -142,7 +148,7 @@ contract ClientFacet is Utils {
             revert CallbackGasLimitOOB(_callbackGasLimit, requestMinGasLimit, requestMaxGasLimit);
 
         // Calculate the estimated fee for the request
-        uint256 _estimateFee = estimateFee(_callbackGasLimit);
+        uint256 _estimateFee = estimateFee(_callbackGasLimit, _confirmations);
 
         // Check if the client has enough ETH deposited to cover the estimated fee
         if (
