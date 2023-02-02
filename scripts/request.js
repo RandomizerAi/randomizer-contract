@@ -7,7 +7,7 @@ async function main() {
 
   const TestCallback = await hre.ethers.getContractFactory("TestCallback");
   const testCallback = TestCallback.attach(process.env.TESTCALLBACK_ADDRESS);
-  const flip = await testCallback.makeRequest({ gasLimit: 1000000 });
+  const flip = await testCallback.makeRequestWith15Confirmations({ gasLimit: 1000000 });
   const beforeFlip = Date.now();
   const receipt = await flip.wait();
   const flippedAt = Date.now();
@@ -20,13 +20,13 @@ async function main() {
   console.log(beforeFlip);
 
   let i = 0;
-  setInterval(async () => {
-    const flip = await testCallback.makeRequest({ gasLimit: 1000000 });
-    // Show flip event
-    const receipt = await flip.wait();
-    const logs = receipt.logs;
-    console.log(logs);
-  }, 10000);
+  // setInterval(async () => {
+  //   const flip = await testCallback.makeRequestWith15Confirmations({ gasLimit: 1000000 });
+  //   // Show flip event
+  //   const receipt = await flip.wait();
+  //   const logs = receipt.logs;
+  //   console.log(logs);
+  // }, 10000);
 
   testCallback.on("Callback", (id, value) => {
     console.log("Callback", (Date.now() - flippedAt));

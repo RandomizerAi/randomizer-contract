@@ -33,7 +33,7 @@ Portions of the Randomizer protocol contracts implement the following MIT licens
 /// @dev EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
 /// SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.18;
 
 import {LibDiamond} from "./libraries/LibDiamond.sol";
 import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
