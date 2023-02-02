@@ -435,7 +435,7 @@ contract BeaconFacet is Utils {
             uint256 sequencerSubmitTime = data.timestamp + (data.expirationSeconds / 2);
 
             // Calculate the earliest block number that the sequencer can submit on behalf of the beacon
-            uint256 sequencerSubmitBlock = data.height + (data.expirationBlocks / 2);
+            uint256 sequencerSubmitBlock = data.height + (data.expirationBlocks / 2) + data.minConfirmations;
 
             // Check if the sequencer is submitting too early
             if (block.timestamp < sequencerSubmitTime || LibNetwork._blockNumber() < sequencerSubmitBlock)

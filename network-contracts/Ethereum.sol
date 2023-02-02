@@ -9,7 +9,7 @@ library LibNetwork {
                     address(this),
                     id,
                     blockhash(block.number - 1),
-                    block.difficulty,
+                    block.prevrandao,
                     block.timestamp,
                     block.chainid
                 )

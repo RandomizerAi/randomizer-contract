@@ -19,6 +19,7 @@ library LibNetwork {
                 abi.encode(
                     address(this),
                     id,
+                    block.prevrandao,
                     _blockHash(blockNum - 1),
                     blockNum,
                     block.timestamp,
@@ -35,7 +36,7 @@ library LibNetwork {
         uint256 minPrice = ArbGasInfo(address(108)).getMinimumGasPrice();
         uint256 maxFee = minPrice + (minPrice / 4);
         maxGasPrice = tx.gasprice < maxFee ? tx.gasprice : maxFee;
-        // maxFee goes up by 12.5% per confirmation, calculate the max fee for the number of confirmations
+        // maxFee can go up by 12.5% per confirmation, calculate the max fee for the number of confirmations
         if (_confirmations > 1) {
             uint256 i = 0;
             do {
@@ -68,8 +69,7 @@ library LibNetwork {
     function _gasPrice() internal view returns (uint256) {
         uint256 minPrice = ArbGasInfo(address(108)).getMinimumGasPrice();
         uint256 maxFee = minPrice + (minPrice / 4);
-        uint256 gasPrice = tx.gasprice < maxFee ? tx.gasprice : maxFee;
-        return gasPrice;
+        return tx.gasprice < maxFee ? tx.gasprice : maxFee;
     }
 
     function _blockHash(uint256 blockNumber) internal view returns (bytes32) {

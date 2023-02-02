@@ -32,6 +32,11 @@ describe("Sequencer", function () {
       "0x000000000000000000000000000000000000006C",
       ArbGas.bytecode,
     ]);
+    const ArbSys = await ethers.getContractFactory("contracts/test/ArbSys.sol:ArbSys");
+    await network.provider.send("hardhat_setCode", [
+      "0x0000000000000000000000000000000000000064",
+      ArbSys.bytecode,
+    ]);
     signers = await ethers.getSigners();
 
 

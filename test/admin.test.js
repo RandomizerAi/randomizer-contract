@@ -26,6 +26,11 @@ describe("Admin", function () {
       "0x000000000000000000000000000000000000006C",
       ArbGas.bytecode,
     ]);
+    const ArbSys = await ethers.getContractFactory("contracts/test/ArbSys.sol:ArbSys");
+    await network.provider.send("hardhat_setCode", [
+      "0x0000000000000000000000000000000000000064",
+      ArbSys.bytecode,
+    ]);
     signers = await ethers.getSigners();
 
     let ecKeys = [];
@@ -160,5 +165,7 @@ describe("Admin", function () {
     await arbGasInfo.deployed();
     const gasInfo = await arbGasInfo.getPricesInWei();
     expect(gasInfo.length).to.equal(6);
+    const minGas = await arbGasInfo.getMinimumGasPrice();
+    expect(minGas).to.not.be.undefined;
   });
 });

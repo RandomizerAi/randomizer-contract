@@ -35,6 +35,10 @@ contract ArbGasInfo {
         return (AMT, AMT, AMT, AMT, AMT, AMT);
     }
 
+    function getMinimumGasPrice() public pure returns (uint256) {
+        return 1000000;
+    }
+
     // // return prices in ArbGas (per L2 tx, per L1 calldata unit, per storage allocation),
     // //       assuming the specified aggregator is used
     // function getPricesInArbGasWithAggregator(address aggregator) external view returns (uint, uint, uint) {
