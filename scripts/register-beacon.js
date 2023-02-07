@@ -13,7 +13,7 @@ async function main() {
     }
   }
   let i = 1;
-  while (i < addresses.length) {
+  while (i <= addresses.length) {
     // const randomKey = ethers.utils.hexlify(ethers.utils.randomBytes(32));
     // Turn randomKey into 0x hex string
 
