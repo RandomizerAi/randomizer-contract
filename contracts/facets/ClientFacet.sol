@@ -65,7 +65,7 @@ contract ClientFacet is Utils {
     }
 
     /// @notice Withdraws client ETH to a different receiver
-    /// @dev Your contract MUST call to this function to withdraw previously deposited funds.
+    /// @dev Your contract MUST be able to call this function to withdraw previously deposited funds.
     /// You can use this for refunding ETH if user paid for request.
     /// @param _to The address to withdraw ETH to
     /// @param _amount The amount of ETH to withdraw
@@ -99,6 +99,18 @@ contract ClientFacet is Utils {
                 ((s.gasEstimates[Constants.GKEY_GAS_PER_BEACON_SELECT] * (s.beacons.length - 1)) * 3)) *
                 LibNetwork._maxGasPriceAfterConfirmations(_confirmations)) +
             (s.configUints[Constants.CKEY_BEACON_FEE] * 5);
+    }
+
+    /// @notice Gets fee estimate for full request fulfillment
+    /// @param _callbackGasLimit The gas limit for the client's callback function
+    /// @return esimateFee The estimated fee required for full request fulfillment
+    /// @dev If your users pay for random requests, use this in your contract to calculate how much ETH a user should attach.
+    function estimateFee(uint256 _callbackGasLimit) public view returns (uint256 esimateFee) {
+        return
+            ((s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT] +
+                _callbackGasLimit +
+                ((s.gasEstimates[Constants.GKEY_GAS_PER_BEACON_SELECT] * (s.beacons.length - 1)) * 3)) *
+                LibNetwork._gasPrice()) + (s.configUints[Constants.CKEY_BEACON_FEE] * 5);
     }
 
     /// @notice Gets fee estimate for full request fulfillment using a manual gas price
