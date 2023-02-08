@@ -32,7 +32,7 @@ contract RenewFacet is Utils {
     }
 
     /// @notice Renew a request
-    /// @param _addressData array of addresses (client, beacon1, beacon2, beacon3)
+    /// @param _addressData array of addresses (client and beacons)
     /// @param _uintData array of uint256 data (request ID, SRandomUintData memory, SPackedUintData memory)
     /// @param _seed seed used for generating the request hash
     function renewRequest(

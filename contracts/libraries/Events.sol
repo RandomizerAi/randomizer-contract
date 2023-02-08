@@ -5,7 +5,7 @@ pragma solidity ^0.8.18;
 import "../shared/Structs.sol";
 
 library Events {
-    /// @notice Emits when ETH is charged from a client to a beacon
+    /// @notice Emits when ETH is charged between accounts
     /// @param chargeType 0: client to beacon, 1: beacon to client, 2: beacon to beacon
     /// @param from address of the sender
     /// @param to address of the recipient
@@ -15,7 +15,7 @@ library Events {
     /// @param account address of the client
     /// @param amount amount of ETH deposited
     event ClientDepositEth(address indexed account, uint256 amount);
-    /// @notice Emits when a beacon deposits ETH
+    /// @notice Emits when a beacon stakes ETH
     /// @param account address of the beacon
     /// @param amount amount of ETH deposited
     event BeaconDepositEth(address indexed account, uint256 amount);
@@ -24,7 +24,7 @@ library Events {
     /// @param kicked boolean indicating if the beacon was kicked or voluntarily unregistered
     /// @param strikes number of strikes the beacon had before being unregistered
     event UnregisterBeacon(address indexed beacon, bool indexed kicked, uint8 strikes);
-    /// @notice Emits when final beacon is selected for the request
+    /// @notice Emits when a final beacon is selected for a request
     /// @param id request id
     /// @param beacon address of the beacon added
     /// @param seed seed used for the random value generation

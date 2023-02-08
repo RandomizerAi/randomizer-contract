@@ -54,7 +54,7 @@ contract AdminFacet {
         return s.gasEstimates[key];
     }
 
-    /// @notice Returns the gas estimate values
+    /// @notice Returns all gas estimate values
     function gasEstimates() external view returns (uint256[16] memory) {
         return s.gasEstimates;
     }

@@ -36,7 +36,7 @@ contract BeaconFacet is Utils {
 
     /* Events */
 
-    /// @notice Emits an event when a random value is submitted
+    /// @notice Emits an event when a beacon submits a VRF value for a request
     /// @param id request id
     /// @param beacon address of the beacon that submitted the random value
     /// @param value the submitted random value
@@ -53,7 +53,7 @@ contract BeaconFacet is Utils {
         return s.beacons;
     }
 
-    /// @notice Returns beacon details (strikes, pending count, consecutive successful submissions, index in beacons list, stake)
+    /// @notice Returns beacon details (VRF keys, registered, strikes, consecutive successful submissions, pending requests, stake, index in beacons list)
     function beacon(address _beacon)
         external
         view
@@ -138,7 +138,7 @@ contract BeaconFacet is Utils {
         emit Events.BeaconDepositEth(_beacon, msg.value);
     }
 
-    /// @notice Unstake ETH from sender account
+    /// @notice Unstake ETH from sender's beacon
     function beaconUnstakeEth(uint256 _amount) external {
         // Decrease the beacon's ETH collateral by the specified amount
         s.ethCollateral[msg.sender] -= _amount;
@@ -189,12 +189,33 @@ contract BeaconFacet is Utils {
         }
     }
 
-    /// @notice Submit VRF data for a request on behalf of a beacon using signatures
+    /// @notice Submit VRF data as a beacon
     /// @param beaconPos The position of the beacon submitting the request
-    /// @param _addressData An array of addresses containing relevant address data for the request
-    /// @param _uintData An array of uint256 values containing relevant data for the request
-    /// @param _rsAndSeed An array of bytes32 values containing the signature data for the request
-    /// @param _v The recovery byte for the signature    // uint256[21] data:
+    /// @param _addressData An array of addresses containing the request beacons and the client
+    /// @param _uintData An array of uint256 values containing request data
+    /// @param seed The seed used to generate the VRF output
+    function submitRandom(
+        uint256 beaconPos,
+        address[4] calldata _addressData,
+        uint256[19] calldata _uintData,
+        bytes32 seed
+    ) external {
+        uint256 gasAtStart = gasleft();
+
+        (SAccounts memory accounts, SPackedSubmitData memory packed) = LibBeacon._getAccountsAndPackedData(
+            _addressData,
+            _uintData
+        );
+
+        _submissionStep(msg.sender, beaconPos, seed, gasAtStart, packed, accounts);
+    }
+
+    /// @notice Submit VRF data for a request on behalf of a beacon using signatures
+    /// @param beaconPos The position in the request of the beacon
+    /// @param _addressData An array of addresses containing the request beacons and the client
+    /// @param _uintData An array of uint256 values containing request data
+    /// @param _rsAndSeed An array of bytes32 values containing the request's seed and signature data
+    /// @param _v The recovery byte for the signature
     function submitRandom(
         uint256 beaconPos,
         address[4] calldata _addressData,
@@ -204,17 +225,6 @@ contract BeaconFacet is Utils {
     ) external {
         // Save the gas remaining at the start of the function execution
         uint256 gasAtStart = gasleft();
-
-        // uintData:
-        // 0 requestId
-        // 1 uint256 _ethReserved,
-        // 2 uint256 _beaconFee,
-        // 3 uint256 _blockNumber,
-        // 4 uint256 _blockTimestamp,
-        // 5 uint256 _expirationSeconds,
-        // 6 uint256 _expirationBlocks,
-        // 7 uint256 _callbackGasLimit,
-        // 8-17 VRF fastVerify uint256s (proof[4], uPoint[2], vComponents[4])
 
         // Retrieve the accounts and packed data for the given address and uint data
         (SAccounts memory accounts, SPackedSubmitData memory packed) = LibBeacon._getAccountsAndPackedData(
@@ -248,27 +258,6 @@ contract BeaconFacet is Utils {
 
         // Process the submission for the given beacon
         _submissionStep(_beacon, beaconPos, _rsAndSeed[2], gasAtStart, packed, accounts);
-    }
-
-    /// @notice Submit VRF data as a beacon
-    /// @param beaconPos The position of the beacon submitting the request
-    /// @param _addressData An array of addresses containing relevant address data for the request
-    /// @param _uintData An array of uint256 values containing relevant data for the request
-    /// @param seed The seed used to generate the VRF output
-    function submitRandom(
-        uint256 beaconPos,
-        address[4] calldata _addressData,
-        uint256[19] calldata _uintData,
-        bytes32 seed
-    ) external {
-        uint256 gasAtStart = gasleft();
-
-        (SAccounts memory accounts, SPackedSubmitData memory packed) = LibBeacon._getAccountsAndPackedData(
-            _addressData,
-            _uintData
-        );
-
-        _submissionStep(msg.sender, beaconPos, seed, gasAtStart, packed, accounts);
     }
 
     function _submissionStep(
@@ -371,15 +360,14 @@ contract BeaconFacet is Utils {
         s.beacon[_beacon] = memBeacon;
     }
 
-    /// @notice Processes a random submission by checking the last two requests
-    /// and generating a new seed value using their values and the request's blockhash.
-    /// If the final beacon request is successful, it charges the client a fee
-    /// based on the gas used and the beacon fee.
+    /// @notice Processes a random submission by checking the request's first two VRF hashes
+    /// and generating a new seed value using these hashes and the request's blockhash.
+    /// It also charges the client a fee based on the gas used and the beacon fee.
     function _processRandomSubmission(
-        SAccounts memory accounts, // A struct containing account data
-        SPackedSubmitData memory packed, // Data about the submission
+        SAccounts memory accounts, // A struct containing beacons and client addresses
+        SPackedSubmitData memory packed, // Data about the request/submission
         uint256 gasAtStart, // The amount of gas at the start of the function call
-        bytes10[2] memory reqValues // The last two requests
+        bytes10[2] memory reqValues // The first two VRF values submitted for this request
     ) private {
         // Check if the second to last request is valid and non-zero
         if (reqValues[0] != bytes10(0) && reqValues[1] != bytes10(0)) {
@@ -402,9 +390,9 @@ contract BeaconFacet is Utils {
         _softChargeClient(packed.id, accounts.client, fee);
     }
 
-    /// @notice Checks if a beacon can submit a random value. It checks the
-    /// selected beacon, the sender of the message, and the timestamps of the
-    /// submission. If any of these checks fail, the function reverts with an error.
+    /// @notice Checks if a beacon can submit a random value. It checks the request's
+    /// selected beacon, the sender of the message, and the timestamp/height of the
+    /// request. If any of these checks fail, the function reverts with an error.
     function _checkCanSubmit(
         address _beacon, // The address of the selected beacon
         address[3] memory _beacons, // The array of selected beacon addresses

@@ -19,8 +19,8 @@ contract Utils {
     error RequestDataMismatch(bytes32 givenHash, bytes32 expectedHash);
     error RequestNotFound(uint256 id);
 
-    /// @notice Emits an event that contains all data needed for a beacon to submit a random number.
-    /// @param request request event data (id, ethReserved, beaconFee, height, timestamp, expirationSeconds, expirationBlocks, callbackGasLimit, client, beacons, lastBeaconSeed)
+    /// @notice Emits an event on a new request that contains all data needed for a beacon to process it
+    /// @param request request data
     event Request(uint256 indexed id, SRequestEventData request);
 
     /// @dev Removes a beacon from the list of beacons
@@ -227,7 +227,6 @@ contract Utils {
         uint256 daoFee;
         uint256 seqFee;
         uint256 deposit = s.ethDeposit[client];
-        // Nested ifs save some gas
         if (deposit > 0) {
             if (deposit > fee) {
                 // If this is the final charge for the request,
@@ -253,7 +252,6 @@ contract Utils {
         uint256 fee
     ) internal {
         uint256 deposit = s.ethDeposit[client];
-        // Nested ifs save some gas
         if (deposit > 0) {
             if (deposit < fee) {
                 fee = deposit;
@@ -298,7 +296,6 @@ contract Utils {
         if (s.requestToHash[id] != generatedHash)
             revert RequestDataMismatch(generatedHash, s.requestToHash[id]);
 
-        // SRandomRequest storage request = requests[requestId];
         if (data.height == 0) revert RequestNotFound(id);
     }
 

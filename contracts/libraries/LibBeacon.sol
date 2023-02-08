@@ -54,7 +54,7 @@ library LibBeacon {
     /// @param gasAtStart gas used at the start of the function call
     /// @param _beaconFee beacon fee
     /// @param offset gas offset
-    /// @return uint256 fee charge
+    /// @return uint256 fee to be charged
     function _getFeeCharge(
         uint256 gasAtStart,
         uint256 _beaconFee,
@@ -82,7 +82,7 @@ library LibBeacon {
         return SAccounts(_data[0], [_data[1], _data[2], _data[3]]);
     }
 
-    /// @notice Unpacks the packed request data from calldata
+    /// @notice Unpacks the packed request and VRF data from calldata
     /// @param _data uint256 array containing packed request data
     /// @return SPackedSubmitData struct
     function _resolveUintVrfData(uint256[19] calldata _data)
