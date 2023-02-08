@@ -112,8 +112,8 @@ describe("Request & Submit", function () {
   it("revert on request with confirmations out of bounds", async function () {
     await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
 
-    await expect(testCallback.makeRequestWithTooManyConfirmations()).to.be.revertedWith("MinConfirmationsOOB(999, 1, 45)");
-    await expect(testCallback.makeRequestWithZeroConfirmations()).to.be.revertedWith("MinConfirmationsOOB(0, 1, 45)");
+    await expect(testCallback.makeRequestWithTooManyConfirmations()).to.be.revertedWith("ConfirmationsOOB(999, 1, 45)");
+    await expect(testCallback.makeRequestWithZeroConfirmations()).to.be.revertedWith("ConfirmationsOOB(0, 1, 45)");
   });
 
 
