@@ -34,7 +34,7 @@ module.exports = {
   },
   networks: {
     arbitrumMainnet: {
-      url: 'https://arb1.arbitrum.io/rpc',
+      url: process.env.PROVIDER_ARBITRUM || 'https://arb1.arbitrum.io/rpc',
       accounts: [process.env.PRIVATE_KEY]
     },
     arbGoerli: {

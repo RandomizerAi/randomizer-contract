@@ -11,7 +11,7 @@ interface IRandomizer {
     function requestToFeePaid(uint256 _request) external returns (uint256);
 }
 
-contract TestCallback {
+contract TestCallbackProduction {
     address public randomizer;
     bytes32 public result;
     uint256 public id;
