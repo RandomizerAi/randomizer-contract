@@ -22,6 +22,12 @@ The real-time module npm package is [@randomizer.ai/realtime-client](https://www
 - **Proof of Stake**: Beacons stake ETH for their position. If a beacon misses a request, their ETH stake is slashed for the collective fees already paid for the request, plus a reward to the caller of the Renew function. If they miss 3 out of 99 requests, the beacon is automatically unregistered from the protocol.
 - **Unpredictable**: a request's final beacon is selected using a seed generated with the VRF data of two previous pseudo-randomly selected beacons, and future block data. This new seed is then used by the randomly selected final beacon to generate the final VRF data for the result.
 
+## Addresses
+
+- Arbitrum One: `0x5b8bB80f2d72D0C85caB8fB169e8170A05C94bAF`
+
+- Arbitrum Goerli: `0x923096Da90a3b60eb7E12723fA2E1547BA9236Bc`
+
 ## Getting Started
 
 Visit [https://randomizer.ai/docs](https://randomizer.ai/docs) for a step-by-step tutorial on using Randomizer with your smart contract or web3 project.
@@ -62,8 +68,11 @@ function randomizerCallback(uint256 _id, bytes32 _value) external {
 Below are some important Randomizer functions for your dapp:
 
 - `request(callbackGasLimit)`: Makes a request for a random value and returns the request ID.
+- `request(callbackGasLimit, confirmations)`: Makes a request for a random value (with a callback after a number of block confirmations, max 40), and returns the request ID.
 - `estimateFee(callbackGasLimit)`: Estimates the fee for a request given a callback gas limit.
+- `estimateFee(callbackGasLimit, confirmations)`: Estimates the fee for a request given a callback gas limit with confirmations.
 - `estimateFeeUsingGasPrice(callbackGasLimit, gasPrice)`: Estimates the fee for a request given a callback gas limit and gas price (usable for front-ends).
+- `estimateFeeUsingConfirmationsAndGasPrice(callbackGasLimit, confirmations, gasPrice)`: Estimates the fee for a request given a callback gas limit, confirmations, and gas price (usable for front-ends).
 - `getFeeStats(requestID)`: Returns the total amount paid and refunded for a request (handy if your users pay for requests and you want your contract to refund the remainder).
 - `clientDeposit(address) payable`: Deposit attached ETH (`msg.value`) to Randomizer for the client contract. You can combine this with `estimateFee(callbackGasLimit)` to have your users attach the ETH fee themselves for the VRF request ([read more](https://randomizer.ai/docs#withdrawing)).
 - `clientWithdrawTo(address, amount)`: Integrate this function in your smart contract to withdraw deposited ETH from Randomizer to the designated address.

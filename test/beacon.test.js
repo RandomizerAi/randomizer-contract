@@ -122,9 +122,9 @@ describe("Beacon Tests", function () {
 
     expect(beacon.pending).to.equal(ethers.BigNumber.from(1));
 
-    await expect(randomizer.connect(selectedSigner).beaconUnstakeEth((await randomizer.beacon(selectedSigner.address)).ethStake)).to.be.revertedWith(`BeaconHasPending(${ethers.BigNumber.from(1)})`);
-    await expect(randomizer.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.be.revertedWith(`BeaconHasPending(${ethers.BigNumber.from(1)})`);
-    await expect(randomizer.connect(signers[7]).unregisterBeacon(selectedSigner.address)).to.be.revertedWith(`NotOwnerOrBeacon`);
+    await expect(randomizer.connect(selectedSigner).beaconUnstakeEth((await randomizer.beacon(selectedSigner.address)).ethStake)).to.be.revertedWithCustomError(randomizer, `BeaconHasPending`).withArgs(ethers.BigNumber.from(1));
+    await expect(randomizer.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.be.revertedWithCustomError(randomizer, `BeaconHasPending`).withArgs(ethers.BigNumber.from(1));
+    await expect(randomizer.connect(signers[7]).unregisterBeacon(selectedSigner.address)).to.be.revertedWithCustomError(randomizer, `NotOwnerOrBeacon`);
     await signAndCallback(request);
 
     await expect(randomizer.connect(selectedSigner).unregisterBeacon(selectedSigner.address)).to.not.be.reverted;
@@ -208,7 +208,7 @@ describe("Beacon Tests", function () {
 
   it("throw if beacon is registered without enough stake", async function () {
     const publicKeys = vrfHelper.getVrfPublicKeys(signers[0].address);
-    await expect(randomizer.registerBeacon(signers[0].address, publicKeys)).to.be.revertedWith("BeaconStakedEthTooLow(0, 500000000000000000)");
+    await expect(randomizer.registerBeacon(signers[0].address, publicKeys)).to.be.revertedWithCustomError(randomizer, "BeaconStakedEthTooLow").withArgs("0", "500000000000000000");
   });
 
   it("return all registered beacons with beacons and update indices on unregister", async function () {

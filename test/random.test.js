@@ -151,8 +151,8 @@ describe("Request & Submit", function () {
 
     // Parse the revert reason in receipt with randomizer interface
 
-    await expect(testCallback.makeRequestWithGasTooLow()).to.be.revertedWith("CallbackGasLimitOOB(1, 10000, 3000000)");
-    await expect(testCallback.makeRequestWithGasTooHigh()).to.be.revertedWith("CallbackGasLimitOOB(999999999, 10000, 3000000)");
+    await expect(testCallback.makeRequestWithGasTooLow()).to.be.revertedWithCustomError(randomizer, "CallbackGasLimitOOB").withArgs(1, 10000, 3000000);
+    await expect(testCallback.makeRequestWithGasTooHigh()).to.be.revertedWithCustomError(randomizer, "CallbackGasLimitOOB").withArgs(999999999, 10000, 3000000);
   });
 
   it("revert on request with insufficient funds", async function () {

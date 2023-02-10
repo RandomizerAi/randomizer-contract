@@ -1,10 +1,8 @@
-
-/* global ethers task */
 require("dotenv").config()
-require('@nomiclabs/hardhat-waffle')
 require('hardhat-gas-reporter');
 require('hardhat-contract-sizer');
 require('solidity-coverage')
+require("@nomicfoundation/hardhat-chai-matchers")
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html

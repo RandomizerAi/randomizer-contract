@@ -8,7 +8,7 @@ describe("Admin", function () {
   let signers;
   let randomizer;
   let diamondAddress;
-
+  let adminFacet;
   beforeEach(async function () {
     await network.provider.request({
       method: "hardhat_reset",
@@ -34,21 +34,18 @@ describe("Admin", function () {
     signers = await ethers.getSigners();
 
     let ecKeys = [];
-    let i = 0;
-    while (i < 6) {
+    let i = 1;
+    while (i < 7) {
       const keys = vrfHelper.getVrfPublicKeys(signers[i].address);
       ecKeys = ecKeys.concat(keys);
       i++;
     }
-    diamondAddress = await deployDiamond([signers[0].address, signers[0].address, ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3], [signers[0].address, signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]])
-
+    diamondAddress = await deployDiamond([signers[0].address, signers[0].address, ["500000000000000000", 20, 900, 10000, 3000000, ethers.utils.parseEther("0.00005"), 3, 99, 1, 45], [signers[1].address, signers[2].address, signers[3].address, signers[4].address, signers[5].address, signers[6].address], ecKeys, [570000, 90000, 65000, 21000, 21000, 21000, 21000]])
     randomizer = await ethers.getContractAt(randomizerAbi, diamondAddress);
-    vrfHelper.init(randomizer);
-    for (const signer of signers) {
-      await randomizer.beaconStakeEth(signer.address, { value: ethers.utils.parseEther("1") });
-      if (signer.address == signers[5].address) break;
-    }
+
+    adminFacet = await ethers.getContractAt('AdminFacet', diamondAddress)
   });
+
 
   it("set config and gas variables", async function () {
     this.timeout(100000);
@@ -71,24 +68,16 @@ describe("Admin", function () {
   });
 
   it("propose, cancel and accept ownership", async function () {
-    try {
-      await randomizer.connect(signers[1]).cancelProposeOwnership();
-    } catch (e) {
-      expect(e.message).to.match(/Unauthorized/g);
-    }
-    try {
-      await randomizer.connect(signers[1]).proposeOwnership(signers[1].address);
-    } catch (e) {
-      expect(e).to.match(/Unauthorized/g);
-    }
+
+    await expect(randomizer.connect(signers[1]).cancelProposeOwnership()).to.be.revertedWith(/Unauthorized/g);
+
+    await expect(randomizer.connect(signers[1]).proposeOwnership(signers[1].address)).to.be.revertedWith(/Unauthorized/g);
+
     await randomizer.connect(signers[0]).proposeOwnership(signers[1].address);
     expect(await randomizer.proposedOwner()).to.equal(signers[1].address);
 
-    try {
-      await randomizer.connect(signers[2]).cancelProposeOwnership();
-    } catch (e) {
-      expect(e).to.match(/Unauthorized/g);
-    }
+    await expect(randomizer.connect(signers[2]).cancelProposeOwnership()).to.be.revertedWith(/Unauthorized/g);
+
 
 
     await randomizer.cancelProposeOwnership();
@@ -96,11 +85,8 @@ describe("Admin", function () {
 
     await randomizer.connect(signers[0]).proposeOwnership(signers[1].address);
 
-    try {
-      await randomizer.connect(signers[2]).acceptOwnership();
-    } catch (e) {
-      expect(e).to.match(/Unauthorized/g);
-    }
+    await expect(randomizer.connect(signers[2]).acceptOwnership()).to.be.revertedWith(/Unauthorized/g);
+
 
     await randomizer.connect(signers[1]).acceptOwnership();
 
@@ -109,39 +95,16 @@ describe("Admin", function () {
   });
 
   it("propose, cancel and accept sequencer", async function () {
-    try {
-      await randomizer.connect(signers[1]).cancelProposeSequencer();
-    } catch (e) {
-      expect(e).to.match(/Unauthorized/g);
-    }
-    try {
-      await randomizer.connect(signers[1]).proposeSequencer(signers[1].address);
-    } catch (e) {
-      expect(e).to.match(/Unauthorized/g);
-    }
+    await expect(adminFacet.connect(signers[1]).cancelProposeSequencer({ gasLimit: 1000000 })).to.be.revertedWithCustomError(randomizer, "Unauthorized");
+    await expect(adminFacet.connect(signers[1]).proposeSequencer(signers[1].address, { gasLimit: 1000000 })).to.be.revertedWithCustomError(randomizer, "Unauthorized");
     await randomizer.connect(signers[0]).proposeSequencer(signers[1].address);
     expect(await randomizer.proposedSequencer()).to.equal(signers[1].address);
-
-    try {
-      await randomizer.connect(signers[2]).cancelProposeSequencer();
-    } catch (e) {
-      expect(e).to.match(/Unauthorized/g);
-    }
-
-
+    await expect(randomizer.connect(signers[2]).cancelProposeSequencer({ gasLimit: 1000000 })).to.be.revertedWithCustomError(randomizer, "Unauthorized");
     await randomizer.cancelProposeSequencer();
     expect(await randomizer.proposedSequencer()).to.equal(ethers.constants.AddressZero);
-
     await randomizer.connect(signers[0]).proposeSequencer(signers[1].address);
-
-    try {
-      await randomizer.connect(signers[2]).acceptSequencer();
-    } catch (e) {
-      expect(e).to.match(/Unauthorized/g);
-    }
-
+    await expect(randomizer.connect(signers[2]).acceptSequencer({ gasLimit: 100000 })).to.be.revertedWithCustomError(randomizer, "Unauthorized");
     await randomizer.connect(signers[1]).acceptSequencer();
-
     expect(await randomizer.sequencer()).to.equal(signers[1].address);
     expect(await randomizer.proposedSequencer()).to.equal(ethers.constants.AddressZero);
   });

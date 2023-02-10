@@ -12,7 +12,7 @@ const {
 // Hardhat doesn't support custom errors returned by delegatecall contracts, but solidity-coverage does
 // Test with yarn hardhat coverage --testfiles "test/random.test.ts"	
 
-describe("Request & Submit", function () {
+describe("Confirmations", function () {
 
   const signAndCallback = async (request, client) => {
     if (!client) client = testCallback;
@@ -112,8 +112,8 @@ describe("Request & Submit", function () {
   it("revert on request with confirmations out of bounds", async function () {
     await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
 
-    await expect(testCallback.makeRequestWithTooManyConfirmations()).to.be.revertedWith("ConfirmationsOOB(999, 1, 45)");
-    await expect(testCallback.makeRequestWithZeroConfirmations()).to.be.revertedWith("ConfirmationsOOB(0, 1, 45)");
+    await expect(testCallback.makeRequestWithTooManyConfirmations()).to.be.revertedWithCustomError(randomizer, "ConfirmationsOOB").withArgs(999, 1, 45);
+    await expect(testCallback.makeRequestWithZeroConfirmations()).to.be.revertedWithCustomError(randomizer, "ConfirmationsOOB").withArgs(0, 1, 45);
   });
 
 
@@ -159,7 +159,7 @@ describe("Request & Submit", function () {
       // Get current block
       if (selectedSigners.indexOf(signer) === 0) {
         const blockNumber = (await ethers.provider.getBlock()).number + 1;
-        await expect(randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), addressData, uintData, message)).to.be.revertedWith(`MinHeightNotYetReached(${blockNumber}, ${ethers.BigNumber.from(request.height).add(15).toString()})`);
+        await expect(randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), addressData, uintData, message)).to.be.revertedWithCustomError(randomizer, `MinHeightNotYetReached`).withArgs(blockNumber, ethers.BigNumber.from(request.height).add(15).toString());
         await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(15)]);
       }
 
@@ -282,7 +282,7 @@ describe("Request & Submit", function () {
     let uintData = [1, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.minConfirmations];
     uintData = uintData.concat(proof, params[0], params[1]);
     let blockNumber = await ethers.provider.getBlockNumber() + 1;
-    await expect(randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), addressData, uintData, message)).to.be.revertedWith(`MinHeightNotYetReached(${blockNumber}, ${ethers.BigNumber.from(request.height).add(15).toString()})`);
+    await expect(randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), addressData, uintData, message)).to.be.revertedWithCustomError(randomizer, `MinHeightNotYetReached`).withArgs(blockNumber, ethers.BigNumber.from(request.height).add(15).toString());
 
     const oldSeed = request.seed;
     await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(15)]);
@@ -309,7 +309,7 @@ describe("Request & Submit", function () {
     blockNumber = await ethers.provider.getBlockNumber() + 1;
     expect(request.seed).to.equal(oldSeed);
 
-    await expect(randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), addressData, uintData, message)).to.be.revertedWith(`MinHeightNotYetReached(${blockNumber}, ${ethers.BigNumber.from(request.height).add(15).toString()})`);
+    await expect(randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), addressData, uintData, message)).to.be.revertedWithCustomError(randomizer, `MinHeightNotYetReached`).withArgs(blockNumber, ethers.BigNumber.from(request.height).add(15).toString());
     await hre.network.provider.send("hardhat_mine", [ethers.utils.hexValue(15)]);
     res = await (await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed)).wait();
     const requestEvent = randomizer.interface.parseLog(res.logs.find(log => randomizer.interface.parseLog(log).name === "RequestBeacon"));
@@ -338,7 +338,7 @@ describe("Request & Submit", function () {
 
     const snapshotId = await hre.network.provider.send("evm_snapshot", []);
 
-    await expect(randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed)).to.be.not.revertedWith(`MinHeightNotYetReached(${blockNumber}, ${ethers.BigNumber.from(request.height).add(15).toString()})`);
+    await expect(randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed)).to.be.not.revertedWithCustomError(randomizer, `MinHeightNotYetReached`);
 
     await hre.network.provider.send("evm_revert", [snapshotId]);
 
