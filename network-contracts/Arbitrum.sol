@@ -34,7 +34,7 @@ library LibNetwork {
         returns (uint256 maxGasPrice)
     {
         uint256 minPrice = ArbGasInfo(address(108)).getMinimumGasPrice();
-        uint256 maxFee = minPrice + (minPrice / 4);
+        uint256 maxFee = minPrice + (minPrice / 4) + 1;
         maxGasPrice = tx.gasprice < maxFee ? tx.gasprice : maxFee;
         // maxFee can go up by 12.5% per confirmation, calculate the max fee for the number of confirmations
         if (_confirmations > 1) {
