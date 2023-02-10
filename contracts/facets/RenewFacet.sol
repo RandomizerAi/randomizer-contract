@@ -40,7 +40,6 @@ contract RenewFacet is Utils {
         uint256[9] calldata _uintData,
         bytes32 _seed
     ) external {
-        // 20k gas offset for balance updates after fee calculation
         uint256 gasAtStart = gasleft() + s.gasEstimates[Constants.GKEY_OFFSET_RENEW];
 
         SAccounts memory accounts = LibBeacon._resolveAddressCalldata(_addressData);
