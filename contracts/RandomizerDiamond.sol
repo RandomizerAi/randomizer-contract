@@ -31,7 +31,7 @@ Portions of the Randomizer protocol contracts implement the following MIT licens
 /// @author Dean van Dugteren (https://github.com/deanpress)
 /// @notice Diamond contract for the Randomizer protocol. Function calls are delegated to Randomizer's respective facet contracts.
 /// @dev EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
-/// SPDX-License-Identifier: MIT
+/// SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.18;
 
