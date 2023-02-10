@@ -21,13 +21,13 @@ library LibNetwork {
         view
         returns (uint256 maxGasPrice)
     {
-        uint256 maxFee = block.basefee + (block.basefee / 4);
+        uint256 maxFee = block.basefee + (block.basefee / 4) + 1;
         maxGasPrice = tx.gasprice < maxFee ? tx.gasprice : maxFee;
         // maxFee goes up by 12.5% per confirmation, calculate the max fee for the number of confirmations
         if (_confirmations > 1) {
             uint256 i = 0;
             do {
-                maxGasPrice += maxGasPrice / 8;
+                maxGasPrice += (maxGasPrice / 8) + 1;
                 unchecked {
                     ++i;
                 }
@@ -40,12 +40,12 @@ library LibNetwork {
         pure
         returns (uint256 maxGasPrice)
     {
-        maxGasPrice = _price + (_price / 4);
+        maxGasPrice = _price + (_price / 4) + 1;
         // maxFee goes up by 12.5% per confirmation, calculate the max fee for the number of confirmations
         if (_confirmations > 1) {
             uint256 i = 0;
             do {
-                maxGasPrice += maxGasPrice / 8;
+                maxGasPrice += (maxGasPrice / 8) + 1;
                 unchecked {
                     ++i;
                 }
@@ -54,7 +54,7 @@ library LibNetwork {
     }
 
     function _gasPrice() internal view returns (uint256) {
-        uint256 maxFee = block.basefee + (block.basefee / 4);
+        uint256 maxFee = block.basefee + (block.basefee / 4) + 1;
         uint256 gasPrice = tx.gasprice < maxFee ? tx.gasprice : maxFee;
         return gasPrice;
     }

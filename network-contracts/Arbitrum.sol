@@ -40,7 +40,7 @@ library LibNetwork {
         if (_confirmations > 1) {
             uint256 i = 0;
             do {
-                maxGasPrice += maxGasPrice / 8;
+                maxGasPrice += (maxGasPrice / 8) + 1;
                 unchecked {
                     ++i;
                 }
@@ -53,12 +53,12 @@ library LibNetwork {
         pure
         returns (uint256 maxGasPrice)
     {
-        maxGasPrice = _price + (_price / 4);
+        maxGasPrice = _price + (_price / 4) + 1;
         // maxFee goes up by 12.5% per confirmation, calculate the max fee for the number of confirmations
         if (_confirmations > 1) {
             uint256 i = 0;
             do {
-                maxGasPrice += maxGasPrice / 8;
+                maxGasPrice += (maxGasPrice / 8) + 1;
                 unchecked {
                     ++i;
                 }
@@ -68,7 +68,7 @@ library LibNetwork {
 
     function _gasPrice() internal view returns (uint256) {
         uint256 minPrice = ArbGasInfo(address(108)).getMinimumGasPrice();
-        uint256 maxFee = minPrice + (minPrice / 4);
+        uint256 maxFee = minPrice + (minPrice / 4) + 1;
         return tx.gasprice < maxFee ? tx.gasprice : maxFee;
     }
 

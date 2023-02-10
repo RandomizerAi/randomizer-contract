@@ -26,7 +26,7 @@ library LibNetwork {
         if (_confirmations > 1) {
             uint256 i = 0;
             do {
-                maxGasPrice += maxGasPrice / 8;
+                maxGasPrice += (maxGasPrice / 8) + 1;
                 unchecked {
                     ++i;
                 }
@@ -39,12 +39,12 @@ library LibNetwork {
         pure
         returns (uint256 maxGasPrice)
     {
-        maxGasPrice = _price + (_price / 4);
+        maxGasPrice = _price + (_price / 4) + 1;
         // maxFee goes up by 12.5% per confirmation, calculate the max fee for the number of confirmations
         if (_confirmations > 1) {
             uint256 i = 0;
             do {
-                maxGasPrice += maxGasPrice / 8;
+                maxGasPrice += (maxGasPrice / 8) + 1;
                 unchecked {
                     ++i;
                 }
