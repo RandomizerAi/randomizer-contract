@@ -3,6 +3,7 @@ require('hardhat-gas-reporter');
 require('hardhat-contract-sizer');
 require('solidity-coverage')
 require("@nomicfoundation/hardhat-chai-matchers")
+require("@nomiclabs/hardhat-etherscan");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -28,6 +29,14 @@ module.exports = {
         enabled: true,
         runs: 99999
       }
+    }
+  },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_API_KEY,
+      arbitrumOne: process.env.ARBISCAN_API_KEY
     }
   },
   networks: {

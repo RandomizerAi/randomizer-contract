@@ -4,6 +4,7 @@ require('hardhat-gas-reporter');
 require("@matterlabs/hardhat-zksync-deploy");
 require("@matterlabs/hardhat-zksync-solc");
 require("@nomicfoundation/hardhat-chai-matchers")
+require("@nomiclabs/hardhat-etherscan");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -31,6 +32,14 @@ module.exports = {
         runs: 99999
       }
     },
+  },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_API_KEY,
+      arbitrumOne: process.env.ARBISCAN_API_KEY
+    }
   },
   zkSyncDeploy: {
     zkSyncNetwork: "https://zksync2-testnet.zksync.dev",
