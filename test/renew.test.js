@@ -189,6 +189,49 @@ describe("Renew", function () {
     expect(feeStats[1].eq(feeStats[0])).to.be.true;
   });
 
+  it("renew a request after 3 requests were already renewed with the same offline beacon", async function () {
+    this.timeout(100000);
+    // Deposit
+    const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });
+    await deposit.wait();
+
+    // Request
+    const requestsWithSigner = [];
+    while (true) {
+      const request = await makeRequest(testCallback);
+
+      // Get beacons
+      const selectedBeacons = request.beacons;
+      // Check if one of the beacons is signers[3]
+      if (selectedBeacons.includes(signers[3].address)) {
+        requestsWithSigner.push(request);
+      }
+
+      // If requestsWithSigner.length is over 5
+      if (requestsWithSigner.length > 7) {
+        break;
+      }
+    }
+
+    await hre.network.provider.send("hardhat_mine", ["0x100", "0xe10"]);
+
+
+    for (const request of requestsWithSigner) {
+      // Get first request beacon signer that isn't signers[3]
+      const signer = signers.filter(signer => request.beacons.includes(signer.address) && signer.address != signers[3].address)[0];
+
+      // Submit signature
+      const data = await vrfHelper.getSubmitData(signer.address, request);
+      await randomizer.connect(signer)['submitRandom(uint256,address[4],uint256[19],bytes32)'](request.beacons.indexOf(signer.address), data.addresses, data.uints, request.seed);
+
+      // Skip blocks and renew request
+      const renewUintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.minConfirmations];
+
+      await expect(randomizer.renewRequest(data.addresses, renewUintData, request.seed)).to.not.be.reverted;
+      i++;
+    }
+  });
+
   it("renew final non-submitter", async function () {
     // const tx = await signers[4].sendTransaction({ to: subscriber.address, value: ethers.utils.parseEther("1") });
     const deposit = await randomizer.clientDeposit(testCallback.address, { value: ethers.utils.parseEther("5") });

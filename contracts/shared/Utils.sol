@@ -102,13 +102,13 @@ contract Utils {
         returns (address[] memory, uint256 count)
     {
         uint256 beaconsLen = s.beacons.length;
-        address[] memory selectedItems = new address[](beaconsLen - 2);
+        address[] memory selectedItems = new address[](beaconsLen);
 
         uint256 i = 1;
         do {
             bool found = false;
             uint256 j = 0;
-            while (j < _excluded.length) {
+            while (j < 2) {
                 if (s.beacons[i] == _excluded[j]) {
                     found = true;
                     break;
@@ -137,13 +137,13 @@ contract Utils {
         returns (address[] memory, uint256 count)
     {
         uint256 beaconsLen = s.beacons.length;
-        address[] memory selectedItems = new address[](beaconsLen - 3);
+        address[] memory selectedItems = new address[](beaconsLen);
 
         uint256 i = 1;
         do {
             bool found = false;
             uint256 j = 0;
-            while (j < _excluded.length) {
+            while (j < 3) {
                 if (s.beacons[i] == _excluded[j]) {
                     found = true;
                     break;
@@ -172,13 +172,13 @@ contract Utils {
         returns (address[] memory, uint256 count)
     {
         uint256 beaconsLen = s.beacons.length;
-        address[] memory selectedItems = new address[](beaconsLen - excludeLen);
+        address[] memory selectedItems = new address[](beaconsLen);
 
         uint256 i = 1;
         do {
             bool found = false;
             uint256 j = 0;
-            while (j < _excluded.length) {
+            while (j < excludeLen) {
                 if (s.beacons[i] == _excluded[j]) {
                     found = true;
                     break;
