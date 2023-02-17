@@ -55,8 +55,6 @@ describe("Admin", function () {
     await randomizer.setConfigUint(3, 30);
     await randomizer.setConfigUint(4, 30);
     await randomizer.setConfigUint(5, 30);
-    await randomizer.setConfigUint(6, 30);
-
     await randomizer.setGasEstimate(1, 99999);
     expect((await randomizer.gasEstimate(1)).toString()).to.equal("99999");
 
@@ -64,6 +62,16 @@ describe("Admin", function () {
 
     await randomizer.setConfigUint(0, ethers.utils.parseEther("0.00005"));
     expect((await randomizer.configUint(0)).eq(ethers.utils.parseEther("0.00005"))).to.be.true;
+
+    await randomizer.batchSetConfigUints([0, 1, 2], [10, 20, 30]);
+    expect((await randomizer.configUint(0)).eq(10)).to.be.true;
+    expect((await randomizer.configUint(1)).eq(20)).to.be.true;
+    expect((await randomizer.configUint(2)).eq(30)).to.be.true;
+
+    await randomizer.batchSetGasEstimates([0, 1, 2], [10, 20, 30]);
+    expect((await randomizer.gasEstimate(0)).toNumber()).to.equal(10);
+    expect((await randomizer.gasEstimate(1)).toNumber()).to.equal(20);
+    expect((await randomizer.gasEstimate(2)).toNumber()).to.equal(30);
 
   });
 

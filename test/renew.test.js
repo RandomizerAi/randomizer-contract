@@ -228,7 +228,6 @@ describe("Renew", function () {
       const renewUintData = [request.id, request.ethReserved, request.beaconFee, request.height, request.timestamp, request.expirationBlocks, request.expirationSeconds, request.callbackGasLimit, request.minConfirmations];
 
       await expect(randomizer.renewRequest(data.addresses, renewUintData, request.seed)).to.not.be.reverted;
-      i++;
     }
   });
 

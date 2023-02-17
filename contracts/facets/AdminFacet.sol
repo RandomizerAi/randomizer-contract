@@ -89,17 +89,35 @@ contract AdminFacet {
         s.treasury = _treasury;
     }
 
-    /// @notice Set the value of a contract configuration key
-    function setConfigUint(uint256 key, uint256 _value) external {
+    /// @notice Set the value of a contract configuration
+    function setConfigUint(uint256 _key, uint256 _value) external {
         LibDiamond.enforceIsContractOwner();
-        emit UpdateContractConfig(key, s.configUints[key], _value);
-        s.configUints[key] = _value;
+        emit UpdateContractConfig(_key, s.configUints[_key], _value);
+        s.configUints[_key] = _value;
     }
 
-    /// @notice Set the value of a gas estimate key
-    function setGasEstimate(uint256 key, uint256 _value) external {
+    /// @notice Batch set the values of contract configurations
+    function batchSetConfigUints(uint256[] calldata _keys, uint256[] calldata _values) external {
         LibDiamond.enforceIsContractOwner();
-        emit UpdateGasConfig(key, s.gasEstimates[key], _value);
-        s.gasEstimates[key] = _value;
+        for (uint256 i = 0; i < _keys.length; i++) {
+            s.configUints[_keys[i]] = _values[i];
+            emit UpdateContractConfig(_keys[i], s.configUints[_keys[i]], _values[i]);
+        }
+    }
+
+    /// @notice Set the value of a gas estimate
+    function setGasEstimate(uint256 _key, uint256 _value) external {
+        LibDiamond.enforceIsContractOwner();
+        emit UpdateGasConfig(_key, s.gasEstimates[_key], _value);
+        s.gasEstimates[_key] = _value;
+    }
+
+    /// @notice Batch set the values of gas estimates
+    function batchSetGasEstimates(uint256[] calldata _keys, uint256[] calldata _values) external {
+        LibDiamond.enforceIsContractOwner();
+        for (uint256 i = 0; i < _keys.length; i++) {
+            s.gasEstimates[_keys[i]] = _values[i];
+            emit UpdateGasConfig(_keys[i], s.gasEstimates[_keys[i]], _values[i]);
+        }
     }
 }
