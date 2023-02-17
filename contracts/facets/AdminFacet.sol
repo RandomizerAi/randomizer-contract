@@ -100,8 +100,8 @@ contract AdminFacet {
     function batchSetConfigUints(uint256[] calldata _keys, uint256[] calldata _values) external {
         LibDiamond.enforceIsContractOwner();
         for (uint256 i = 0; i < _keys.length; i++) {
-            s.configUints[_keys[i]] = _values[i];
             emit UpdateContractConfig(_keys[i], s.configUints[_keys[i]], _values[i]);
+            s.configUints[_keys[i]] = _values[i];
         }
     }
 
@@ -116,8 +116,8 @@ contract AdminFacet {
     function batchSetGasEstimates(uint256[] calldata _keys, uint256[] calldata _values) external {
         LibDiamond.enforceIsContractOwner();
         for (uint256 i = 0; i < _keys.length; i++) {
-            s.gasEstimates[_keys[i]] = _values[i];
             emit UpdateGasConfig(_keys[i], s.gasEstimates[_keys[i]], _values[i]);
+            s.gasEstimates[_keys[i]] = _values[i];
         }
     }
 }
