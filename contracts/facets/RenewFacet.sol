@@ -22,8 +22,6 @@ contract RenewFacet is Utils {
         uint256 expirationSeconds
     );
 
-    error CantRenewDuringDisputeWindow();
-
     /* Functions */
 
     /// @notice Returns the total amount paid and refunded for a request
