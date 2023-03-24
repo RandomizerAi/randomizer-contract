@@ -18,7 +18,7 @@ The real-time module npm package is [@randomizer.ai/realtime-client](https://www
 - **Low cost**: VRF fees are intended to always be low cost relative to the network's average fees.
 - **Decentralized**: Beacons are operated by independent projects and developers.
 - **Real-time**: Integrate the the real-time client in your front-end and get instant results after your contract's request, even before callback transactions are verified on-chain.
-- **Transparent**: Random value generation happens on-chain with all data publicly available, including the random value, the VRF proofs, and the fulfilling beacons.
+- **Transparent**: Random value generation is verified on-chain with all data publicly available, including the random value, the VRF proofs, and the fulfilling beacons.
 - **Proof of Stake**: Beacons stake ETH for their position. If a beacon misses a request, their ETH stake is slashed for the collective fees already paid for the request, plus a reward to the caller of the Renew function. If they miss 3 out of 99 requests, the beacon is automatically unregistered from the protocol.
 - **Unpredictable**: a request's final beacon is selected using a seed generated with the VRF data of two previous pseudo-randomly selected beacons, and future block data. This new seed is then used by the randomly selected final beacon to generate the final VRF data for the result.
 
