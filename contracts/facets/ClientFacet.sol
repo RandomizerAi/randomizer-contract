@@ -3,7 +3,7 @@
 /// @author Dean van Dugteren (https://github.com/deanpress)
 /// @notice Randomizer client contract management functions (deposits/withdrawals and fee estimates)
 
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 import "../AppStorage.sol";
 import "../libraries/Constants.sol";

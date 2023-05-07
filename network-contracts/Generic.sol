@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 library LibNetwork {
     function _seed(uint256 id) internal view returns (bytes32) {

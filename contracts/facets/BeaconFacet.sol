@@ -3,7 +3,7 @@
 /// @author Dean van Dugteren (https://github.com/deanpress)
 /// @notice Beacon management functions (registration, staking, submitting random values etc)
 
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 import "../libraries/LibVRF.sol";
