@@ -79,7 +79,13 @@ Below are some important Randomizer functions for your dapp:
 
 ### Development
 
-The quickest way to test your smart contract's `randomizerCallback()` function in Hardhat or another local testing environment, is to set the Randomizer address in your contract to a wallet address of your own, then calling `randomizerCallback(uint256 id, bytes32 value)` with that wallet using your desired id and value.
+The quickest way to test your smart contract's `randomizerCallback()` function in Hardhat or another local testing environment, is to utilize the RandomizerDummy contract.
+See the [CoinFlip monorepo](https://github.com/RandomizerAi/coinflip-example) for a full example with hardhat tests.
+
+1. Get the DummyRandomizer contract [here](https://github.com/RandomizerAi/coinflip-example/blob/main/contracts/DummyRandomizer.sol)
+2. In your test environment, deploy the dummy contract, then deploy your contract with the DummyRandomizer address as the Randomizer address.
+3. Call your requesting function (e.g. `mint()` or `play()`) to make a request for a random number.
+4. Call `dummyRandomizer.submitRandom(uint256 id, bytes32 value)` with the request id (starts at 1) and any value, and it will callback to your contract.
 
 ### Using this Hardhat project
 
