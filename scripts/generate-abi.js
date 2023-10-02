@@ -8,6 +8,7 @@ async function main() {
   // Iterate through ../artifacts/contracts and combine all "abi" values from every json file into one array
   let abi = [];
   // Iterate directories inside ./artifacts/contracts
+  console.log(path.join(__dirname, '../artifacts/contracts/facets'));
   const contractDirs = await fs.readdir(path.join(__dirname, '../artifacts/contracts/facets'));
   // Iterate json files inside contractDirs
   for (const contractDir of contractDirs) {

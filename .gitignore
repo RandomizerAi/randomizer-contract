@@ -9,3 +9,4 @@ artifacts-zk
 
 hardhat.config.js
 contracts/libraries/LibNetwork.sol
+.env*

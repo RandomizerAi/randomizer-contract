@@ -74,11 +74,7 @@ library EllipticCurve {
     /// @param _y coordinate y
     /// @param _z coordinate z
     /// @return (x', y') affine coordinates
-    function toAffine(
-        uint256 _x,
-        uint256 _y,
-        uint256 _z
-    ) internal pure returns (uint256, uint256) {
+    function toAffine(uint256 _x, uint256 _y, uint256 _z) internal pure returns (uint256, uint256) {
         uint256 zInv = invMod(_z);
         uint256 zInv2 = mulmod(zInv, zInv, PP);
         uint256 x2 = mulmod(_x, zInv2, PP);
@@ -190,11 +186,7 @@ library EllipticCurve {
     /// @param _x coordinate x of P1
     /// @param _y coordinate y of P1
     /// @return (qx, qy) = d*P in affine coordinates
-    function ecMul(
-        uint256 _k,
-        uint256 _x,
-        uint256 _y
-    ) internal pure returns (uint256, uint256) {
+    function ecMul(uint256 _k, uint256 _x, uint256 _y) internal pure returns (uint256, uint256) {
         // Jacobian multiplication
         (uint256 x1, uint256 y1, uint256 z1) = jacMul(_k, _x, _y, 1);
         // Get back to affine
@@ -216,15 +208,7 @@ library EllipticCurve {
         uint256 _x2,
         uint256 _y2,
         uint256 _z2
-    )
-        internal
-        pure
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    ) internal pure returns (uint256, uint256, uint256) {
         if (_x1 == 0 && _y1 == 0) return (_x2, _y2, _z2);
         if (_x2 == 0 && _y2 == 0) return (_x1, _y1, _z1);
 
@@ -267,19 +251,7 @@ library EllipticCurve {
     /// @param _y coordinate y of P1
     /// @param _z coordinate z of P1
     /// @return (qx, qy, qz) 2P in Jacobian
-    function jacDouble(
-        uint256 _x,
-        uint256 _y,
-        uint256 _z
-    )
-        internal
-        pure
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function jacDouble(uint256 _x, uint256 _y, uint256 _z) internal pure returns (uint256, uint256, uint256) {
         if (_z == 0) return (_x, _y, _z);
 
         // We follow the equations described in https://pdfs.semanticscholar.org/5c64/29952e08025a9649c2b0ba32518e9a7fb5c2.pdf Section 5
@@ -320,15 +292,7 @@ library EllipticCurve {
         uint256 _x,
         uint256 _y,
         uint256 _z
-    )
-        internal
-        pure
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    ) internal pure returns (uint256, uint256, uint256) {
         // Early return in case that `_d == 0`
         if (_d == 0) {
             return (_x, _y, _z);

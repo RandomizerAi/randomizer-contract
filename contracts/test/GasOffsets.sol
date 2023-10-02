@@ -111,12 +111,7 @@ contract GasOffsets {
         emit GasUsed(gasAtStart - gasleft());
     }
 
-    function _finalSoftChargeClient(
-        uint256 id,
-        address client,
-        uint256 fee,
-        uint256 beaconFee
-    ) internal {
+    function _finalSoftChargeClient(uint256 id, address client, uint256 fee, uint256 beaconFee) internal {
         uint256 daoFee;
         uint256 seqFee;
         uint256 deposit = s.ethDeposit[client];
@@ -172,11 +167,7 @@ contract GasOffsets {
         }
     }
 
-    function _chargeClient(
-        address _from,
-        address _to,
-        uint256 _value
-    ) private {
+    function _chargeClient(address _from, address _to, uint256 _value) private {
         s.ethDeposit[_from] -= _value;
         s.ethCollateral[_to] += _value;
         emit Events.ChargeEth(_from, _to, _value, 0);

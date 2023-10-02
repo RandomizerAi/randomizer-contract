@@ -42,6 +42,14 @@ contract Utils {
         s.beacons.pop();
     }
 
+    /**
+     * @dev Requests a beacon
+     * @param _id The ID of the request
+     * @param _beaconPos The position of the beacon in the array
+     * @param _seed The seed for the request
+     * @param _accounts The accounts associated with the request
+     * @param _data The data for the request
+     */
     function _requestBeacon(
         uint256 _id,
         uint256 _beaconPos,
@@ -59,6 +67,11 @@ contract Utils {
         emit Events.RequestBeacon(_id, randomBeacon, _seed, _data.timestamp);
     }
 
+    /**
+     * @dev Selects two beacons
+     * @param _random The random value for the selection
+     * @return The addresses of the two selected beacons
+     */
     function _selectTwoBeacons(bytes32 _random) internal returns (address, address) {
         // Create a new array that contains only the items that are not in the exclude array
         address[] memory selectedItems = s.beacons;
@@ -81,6 +94,12 @@ contract Utils {
         return (selectedItems[1], selectedItems[2]);
     }
 
+    /**
+     * @dev Selects one beacon
+     * @param _random The random value for the selection
+     * @param _exclude The addresses of the beacons to exclude from the selection
+     * @return The address of the selected beacon
+     */
     function _selectOneBeacon(bytes32 _random, address[2] memory _exclude) internal view returns (address) {
         // Create a new array that contains only the items that are not in the exclude array
         (address[] memory selectedItems, uint256 count) = _beaconsWithoutExcluded(_exclude);
@@ -96,11 +115,9 @@ contract Utils {
      * The only alternative is to have a dynamic array input, which would require a memory allocation, which is more expensive.
      */
 
-    function _beaconsWithoutExcluded(address[2] memory _excluded)
-        internal
-        view
-        returns (address[] memory, uint256 count)
-    {
+    function _beaconsWithoutExcluded(
+        address[2] memory _excluded
+    ) internal view returns (address[] memory, uint256 count) {
         uint256 beaconsLen = s.beacons.length;
         address[] memory selectedItems = new address[](beaconsLen);
 
@@ -131,11 +148,9 @@ contract Utils {
         return (selectedItems, count);
     }
 
-    function _beaconsWithoutExcluded(address[3] memory _excluded)
-        internal
-        view
-        returns (address[] memory, uint256 count)
-    {
+    function _beaconsWithoutExcluded(
+        address[3] memory _excluded
+    ) internal view returns (address[] memory, uint256 count) {
         uint256 beaconsLen = s.beacons.length;
         address[] memory selectedItems = new address[](beaconsLen);
 
@@ -166,11 +181,10 @@ contract Utils {
         return (selectedItems, count);
     }
 
-    function _beaconsWithoutExcluded(address[5] memory _excluded, uint256 excludeLen)
-        internal
-        view
-        returns (address[] memory, uint256 count)
-    {
+    function _beaconsWithoutExcluded(
+        address[5] memory _excluded,
+        uint256 excludeLen
+    ) internal view returns (address[] memory, uint256 count) {
         uint256 beaconsLen = s.beacons.length;
         address[] memory selectedItems = new address[](beaconsLen);
 
@@ -201,6 +215,14 @@ contract Utils {
         return (selectedItems, count);
     }
 
+    /**
+     * @dev Processes the result of a request and performs a callback.
+     * @param id The ID of the request.
+     * @param client The address of the client.
+     * @param hashes An array of hashes.
+     * @param callbackGasLimit The gas limit for the callback.
+     * @param _ethReserved The amount of ETH reserved on the client balance.
+     */
     function _processResult(
         uint256 id,
         address client,
@@ -218,39 +240,67 @@ contract Utils {
         emit Events.Result(id, result);
     }
 
-    function _finalSoftChargeClient(
-        uint256 id,
-        address client,
-        uint256 fee,
-        uint256 beaconFee
-    ) internal {
-        uint256 daoFee;
-        uint256 seqFee;
+    /**
+     * @dev Handles the final submission charges for a callback.
+     * @param id The ID of the request.
+     * @param client The address of the client.
+     * @param fee The fee to be charged.
+     * @param beaconFee The fee for the beacon.
+     */
+    function _finalSoftChargeClient(uint256 id, address client, uint256 fee, uint256 beaconFee) internal {
         uint256 deposit = s.ethDeposit[client];
         if (deposit > 0) {
+            uint256 totalFee = 0;
             if (deposit > fee) {
-                // If this is the final charge for the request,
-                // add fee for configured treasury and sequencer
-                daoFee = deposit >= fee + beaconFee ? beaconFee : deposit - fee;
-                _chargeClient(client, s.treasury, daoFee);
-                // Only add sequencer fee if the deposit has enough subtracting sender and treasury fee
-                if (deposit > fee + daoFee) {
-                    seqFee = deposit >= fee + daoFee + beaconFee ? beaconFee : deposit - daoFee - fee;
-                    _chargeClient(client, s.sequencer, seqFee);
+                uint256 availableForFees = deposit - fee;
+                uint256 daoFee = availableForFees >= beaconFee ? beaconFee : availableForFees;
+                totalFee += _chargeHelper(client, s.treasury, daoFee);
+                availableForFees -= daoFee;
+                if (availableForFees > 0) {
+                    uint256 seqFee = availableForFees >= beaconFee ? beaconFee : availableForFees;
+                    totalFee += _chargeHelper(client, s.sequencer, seqFee);
                 }
             } else {
                 fee = deposit;
             }
-            s.requestToFeePaid[id] += fee + seqFee + daoFee;
-            _chargeClient(client, msg.sender, fee);
+            totalFee += _chargeHelper(client, msg.sender, fee);
+            s.requestToFeePaid[id] += totalFee;
+            s.ethDeposit[client] -= totalFee;
         }
     }
 
-    function _softChargeClient(
-        uint256 id,
-        address client,
-        uint256 fee
-    ) internal {
+    /**
+     * @dev Helper function to charge a fee.
+     * @param _from The address to charge from.
+     * @param _to The address to charge to.
+     * @param _value The amount to charge.
+     * @return The amount charged.
+     */
+    function _chargeHelper(address _from, address _to, uint256 _value) private returns (uint256) {
+        s.ethCollateral[_to] += _value;
+        emit Events.ChargeEth(_from, _to, _value, Constants.CHARGE_TYPE_CLIENT_TO_BEACON);
+        return _value;
+    }
+
+    /**
+     * @dev Charges a client.
+     * @param _from The address to charge from.
+     * @param _to The address to charge to.
+     * @param _value The amount to charge.
+     */
+    function _chargeClient(address _from, address _to, uint256 _value) private {
+        s.ethDeposit[_from] -= _value;
+        s.ethCollateral[_to] += _value;
+        emit Events.ChargeEth(_from, _to, _value, Constants.CHARGE_TYPE_CLIENT_TO_BEACON);
+    }
+
+    /**
+     * @dev Soft charges a client.
+     * @param id The ID of the request.
+     * @param client The address of the client.
+     * @param fee The fee to be charged.
+     */
+    function _softChargeClient(uint256 id, address client, uint256 fee) internal {
         uint256 deposit = s.ethDeposit[client];
         if (deposit > 0) {
             if (deposit < fee) {
@@ -261,6 +311,11 @@ contract Utils {
         }
     }
 
+    /**
+     * @dev Transfers ETH to a specified address.
+     * @param _to The address to transfer to.
+     * @param _amount The amount to transfer.
+     */
     function _transferEth(address _to, uint256 _amount) internal {
         (bool sent, ) = _to.call{value: _amount}("");
         if (sent) {
@@ -270,16 +325,13 @@ contract Utils {
         }
     }
 
-    function _chargeClient(
-        address _from,
-        address _to,
-        uint256 _value
-    ) private {
-        s.ethDeposit[_from] -= _value;
-        s.ethCollateral[_to] += _value;
-        emit Events.ChargeEth(_from, _to, _value, Constants.CHARGE_TYPE_CLIENT_TO_BEACON);
-    }
-
+    /**
+     * @dev Validates the request data.
+     * @param id The ID of the request.
+     * @param seed The seed for the request.
+     * @param accounts The accounts for the request.
+     * @param data The data for the request.
+     */
     function _validateRequestData(
         uint256 id,
         bytes32 seed,
@@ -299,11 +351,13 @@ contract Utils {
         if (data.height == 0) revert RequestNotFound(id);
     }
 
-    function _generateRequest(
-        uint256 id,
-        address client,
-        SRandomUintData memory data
-    ) internal {
+    /**
+     * @dev Generates a request.
+     * @param id The ID of the request.
+     * @param client The address of the client.
+     * @param data The data for the request.
+     */
+    function _generateRequest(uint256 id, address client, SRandomUintData memory data) internal {
         if (s.beacons.length < 5) revert NotEnoughBeaconsAvailable(s.beacons.length, 5);
 
         bytes32 seed = LibNetwork._seed(id);

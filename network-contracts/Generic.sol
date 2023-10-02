@@ -2,6 +2,8 @@
 pragma solidity ^0.8.19;
 
 library LibNetwork {
+    error BlockhashUnavailable(uint256 blockNumber);
+
     function _seed(uint256 id) internal view returns (bytes32) {
         return
             keccak256(
@@ -16,11 +18,9 @@ library LibNetwork {
             );
     }
 
-    function _maxGasPriceAfterConfirmations(uint256 _confirmations)
-        internal
-        view
-        returns (uint256 maxGasPrice)
-    {
+    function _maxGasPriceAfterConfirmations(
+        uint256 _confirmations
+    ) internal view returns (uint256 maxGasPrice) {
         maxGasPrice = tx.gasprice;
         // maxFee goes up by 12.5% per confirmation, calculate the max fee for the number of confirmations
         if (_confirmations > 1) {
@@ -34,11 +34,10 @@ library LibNetwork {
         }
     }
 
-    function _maxGasPriceAfterConfirmations(uint256 _price, uint256 _confirmations)
-        internal
-        pure
-        returns (uint256 maxGasPrice)
-    {
+    function _maxGasPriceAfterConfirmations(
+        uint256 _price,
+        uint256 _confirmations
+    ) internal pure returns (uint256 maxGasPrice) {
         maxGasPrice = _price + (_price / 4) + 1;
         // maxFee goes up by 12.5% per confirmation, calculate the max fee for the number of confirmations
         if (_confirmations > 1) {
@@ -62,5 +61,16 @@ library LibNetwork {
 
     function _blockNumber() internal view returns (uint256) {
         return block.number;
+    }
+
+    function _generateNewSeed(
+        uint256 height,
+        bytes10 reqVal1,
+        bytes10 reqVal2
+    ) internal view returns (bytes32) {
+        bytes10 memBlockhash = bytes10(_blockHash(height));
+        if (memBlockhash == bytes10(0)) revert BlockhashUnavailable(height);
+        // Generate a new seed value using the values of the last two requests + the request's blockhash
+        return keccak256(abi.encodePacked(reqVal1, reqVal2, height));
     }
 }

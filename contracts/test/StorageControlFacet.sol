@@ -6,11 +6,7 @@ import "../AppStorage.sol";
 contract StorageControlFacet {
     AppStorage internal s;
 
-    function _debug_setSBeacon(
-        address beacon,
-        uint8 submissions,
-        uint8 strikes
-    ) external {
+    function _debug_setSBeacon(address beacon, uint8 submissions, uint8 strikes) external {
         s.beacon[beacon].consecutiveSubmissions = submissions;
         s.beacon[beacon].strikes = strikes;
     }

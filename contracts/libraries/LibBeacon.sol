@@ -67,11 +67,10 @@ library LibBeacon {
     /// @param _accounts address array containing client and beacon addresses
     /// @param _data uint256 array containing request data
     /// @return SAccounts struct and SPackedSubmitData struct
-    function _getAccountsAndPackedData(address[4] calldata _accounts, uint256[19] calldata _data)
-        internal
-        pure
-        returns (SAccounts memory, SPackedSubmitData memory)
-    {
+    function _getAccountsAndPackedData(
+        address[4] calldata _accounts,
+        uint256[19] calldata _data
+    ) internal pure returns (SAccounts memory, SPackedSubmitData memory) {
         return (_resolveAddressCalldata(_accounts), _resolveUintVrfData(_data));
     }
 
@@ -85,11 +84,9 @@ library LibBeacon {
     /// @notice Unpacks the packed request and VRF data from calldata
     /// @param _data uint256 array containing packed request data
     /// @return SPackedSubmitData struct
-    function _resolveUintVrfData(uint256[19] calldata _data)
-        internal
-        pure
-        returns (SPackedSubmitData memory)
-    {
+    function _resolveUintVrfData(
+        uint256[19] calldata _data
+    ) internal pure returns (SPackedSubmitData memory) {
         return
             SPackedSubmitData(
                 uint256(_data[0]),
@@ -136,12 +133,7 @@ library LibBeacon {
     /// @param _gasLimit gas limit for the callback transaction
     /// @param _id request id
     /// @param _result generated random value
-    function _callback(
-        address _to,
-        uint256 _gasLimit,
-        uint256 _id,
-        bytes32 _result
-    ) internal {
+    function _callback(address _to, uint256 _gasLimit, uint256 _id, bytes32 _result) internal {
         // Call the `randomizerCallback` function on the specified contract address with the given parameters
         (bool success, bytes memory callbackTxData) = _to.call{gas: _gasLimit}(
             abi.encodeWithSelector(IRandomReceiver.randomizerCallback.selector, _id, _result)

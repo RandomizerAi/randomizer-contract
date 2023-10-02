@@ -3,7 +3,8 @@ require('hardhat-gas-reporter');
 require('hardhat-contract-sizer');
 require('solidity-coverage')
 require("@nomicfoundation/hardhat-chai-matchers")
-require("@nomiclabs/hardhat-etherscan");
+// require("@nomiclabs/hardhat-etherscan");
+require("@nomicfoundation/hardhat-verify");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -36,13 +37,29 @@ module.exports = {
     // Obtain one at https://etherscan.io/
     apiKey: {
       mainnet: process.env.ETHERSCAN_API_KEY,
-      arbitrumOne: process.env.ARBISCAN_API_KEY
-    }
+      arbitrumOne: process.env.ARBISCAN_API_KEY,
+      arbitrumNova: process.env.ARBISCAN_NOVA_API_KEY,
+    },
+    customChains: [
+      {
+        network: "arbitrumNova",
+        chainId: 42170,
+        urls: {
+          apiURL: "https://api-nova.arbiscan.io/api",
+          browserURL: "https://nova.arbiscan.io",
+        }
+      }
+    ]
   },
   networks: {
     arbitrumMainnet: {
       url: process.env.PROVIDER_ARBITRUM || 'https://arb1.arbitrum.io/rpc',
       accounts: [process.env.PRIVATE_KEY]
+    },
+    arbitrumNova: {
+      url: process.env.PROVIDER_ARB_NOVA || 'https://nova.arbitrum.io/rpc',
+      accounts: [process.env.PRIVATE_KEY],
+      chainId: 42170
     },
     arbGoerli: {
       url: process.env.PROVIDER_ARB_GOERLI || 'https://goerli-rollup.arbitrum.io/rpc',
@@ -65,6 +82,24 @@ module.exports = {
       url: "https://rpc-mumbai.maticvigil.com",
       accounts: [process.env.PRIVATE_KEY],
       chainId: 80001
+    },
+    baseGoerli: {
+      url: process.env.BASE_GOERLI_RPC,
+      accounts: [process.env.PRIVATE_KEY, process.env.TESTCALLBACK_DEPLOYER],
+      chainId: 84531,
+      contracts: {
+        randomizer: process.env.BASE_GOERLI_RANDOMIZER,
+        testCallback: process.env.BASE_GOERLI_TESTCALLBACK
+      }
+    },
+    base: {
+      url: process.env.BASE_RPC,
+      accounts: [process.env.PRIVATE_KEY, process.env.TESTCALLBACK_DEPLOYER],
+      chainId: 8453,
+      contracts: {
+        randomizer: process.env.BASE_RANDOMIZER,
+        testCallback: process.env.BASE_TESTCALLBACK
+      }
     },
     hardhat: {
       chainId: 1337,

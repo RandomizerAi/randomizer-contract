@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 /// @title Randomizer Renew Facet (https://randomizer.ai)
-/// @author Dean van Dugteren (https://github.com/deanpress)
+/// @author Dean van D. (https://github.com/deanpress)
 /// @notice Handles renewals for Randomizer.
 
 pragma solidity ^0.8.19;
@@ -21,6 +21,9 @@ contract RenewFacet is Utils {
         uint256 timestamp,
         uint256 expirationSeconds
     );
+
+    /* Events */
+    event StrikeBeacon(address indexed beacon, uint256 indexed request, uint8 strikes);
 
     /* Functions */
 
@@ -91,7 +94,7 @@ contract RenewFacet is Utils {
         for (uint256 i; i < 2; i++) {
             if (hashes[i] == bytes10(0) && reqBeacons[i] != address(0)) {
                 address beaconAddress = reqBeacons[i];
-                _strikeBeacon(beaconAddress);
+                _strikeBeacon(beaconAddress, packed.id);
                 beaconsToStrike[i] = beaconAddress;
                 beaconsToStrikeLen++;
             }
@@ -102,7 +105,7 @@ contract RenewFacet is Utils {
         // This beacon never has a stored vrf value (since they're deleted on finalization) so we don't need to check it
         if (reqBeacons[2] != address(0)) {
             address beaconAddress = reqBeacons[2];
-            _strikeBeacon(beaconAddress);
+            _strikeBeacon(beaconAddress, packed.id);
             beaconsToStrike[2] = beaconAddress;
             beaconsToStrikeLen++;
         }
@@ -221,12 +224,13 @@ contract RenewFacet is Utils {
         emit Events.Retry(packed.id, eventData, firstStrikeBeacon, msg.sender, refundToClient, renewFee);
     }
 
-    function _strikeBeacon(address _beacon) internal {
+    function _strikeBeacon(address _beacon, uint256 _id) internal {
         Beacon memory tempBeacon = s.beacon[_beacon];
         if (tempBeacon.registered) tempBeacon.strikes++;
         tempBeacon.consecutiveSubmissions = 0;
         if (tempBeacon.pending > 0) tempBeacon.pending--;
         s.beacon[_beacon] = tempBeacon;
+        emit StrikeBeacon(_beacon, _id, tempBeacon.strikes);
     }
 
     /// @dev Replaces all non-submitting beacons from a request (called when a request is renewed)

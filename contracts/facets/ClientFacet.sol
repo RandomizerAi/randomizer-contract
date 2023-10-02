@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 /// @title Randomizer Client Service
-/// @author Dean van Dugteren (https://github.com/deanpress)
+/// @author Dean van D. (https://github.com/deanpress)
 /// @notice Randomizer client contract management functions (deposits/withdrawals and fee estimates)
 
 pragma solidity ^0.8.19;
@@ -88,11 +88,10 @@ contract ClientFacet is Utils {
     /// @param _callbackGasLimit The gas limit for the client's callback function
     /// @param _confirmations The number of blocks to wait for a result for finality
     /// @return esimateFee The estimated fee required for full request fulfillment
-    function estimateFee(uint256 _callbackGasLimit, uint256 _confirmations)
-        public
-        view
-        returns (uint256 esimateFee)
-    {
+    function estimateFee(
+        uint256 _callbackGasLimit,
+        uint256 _confirmations
+    ) public view returns (uint256 esimateFee) {
         return
             ((s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT] +
                 _callbackGasLimit +
@@ -136,11 +135,10 @@ contract ClientFacet is Utils {
     /// @param _gasPrice The gas price used for request fulfillment
     /// @return esimateFee The estimated fee required for full request fulfillment
     /// @dev If your users pay for random requests, use this in your contract to calculate how much ETH a user should attach.
-    function estimateFeeUsingGasPrice(uint256 _callbackGasLimit, uint256 _gasPrice)
-        external
-        view
-        returns (uint256)
-    {
+    function estimateFeeUsingGasPrice(
+        uint256 _callbackGasLimit,
+        uint256 _gasPrice
+    ) external view returns (uint256) {
         return
             ((s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT] +
                 _callbackGasLimit +

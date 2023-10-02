@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 /// @title Randomizer Admin Functions
-/// @author Dean van Dugteren (https://github.com/deanpress)
+/// @author Dean van D. (https://github.com/deanpress)
 /// @notice Administrative functions, variables, and constants used by Randomizer.
 
 pragma solidity ^0.8.19;
@@ -22,6 +22,8 @@ contract AdminFacet {
     event ProposeSequencerCanceled(address indexed proposedSequencer, address indexed currentSequencer);
     event UpdateGasConfig(uint256 indexed key, uint256 oldValue, uint256 newValue);
     event UpdateContractConfig(uint256 indexed key, uint256 oldValue, uint256 newValue);
+    event BatchUpdateGasConfigs(uint256[] keys, uint256[] values);
+    event BatchUpdateContractConfigs(uint256[] keys, uint256[] values);
 
     /* Functions */
     /// @notice Returns the current treasury address
@@ -100,9 +102,9 @@ contract AdminFacet {
     function batchSetConfigUints(uint256[] calldata _keys, uint256[] calldata _values) external {
         LibDiamond.enforceIsContractOwner();
         for (uint256 i = 0; i < _keys.length; i++) {
-            emit UpdateContractConfig(_keys[i], s.configUints[_keys[i]], _values[i]);
             s.configUints[_keys[i]] = _values[i];
         }
+        emit BatchUpdateContractConfigs(_keys, _values);
     }
 
     /// @notice Set the value of a gas estimate
@@ -116,8 +118,8 @@ contract AdminFacet {
     function batchSetGasEstimates(uint256[] calldata _keys, uint256[] calldata _values) external {
         LibDiamond.enforceIsContractOwner();
         for (uint256 i = 0; i < _keys.length; i++) {
-            emit UpdateGasConfig(_keys[i], s.gasEstimates[_keys[i]], _values[i]);
             s.gasEstimates[_keys[i]] = _values[i];
         }
+        emit BatchUpdateGasConfigs(_keys, _values);
     }
 }

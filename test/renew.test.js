@@ -412,7 +412,7 @@ describe("Renew", function () {
     const renewTx = await randomizer.connect(selectedSigners[0]).renewRequest(data.addresses, renewUintData, request.seed);
     const renew = await renewTx.wait();
     // Expect event "Retry" to be emitted by renew
-    expect(renew.events).to.have.lengthOf(3);
+    expect(renew.events).to.have.lengthOf(4);
     expect(renew.events[renew.events.length - 1].event).to.equal("Retry");
   });
 
@@ -449,7 +449,6 @@ describe("Renew", function () {
         const renew = await renewTx.wait();
         // Expect event "Retry" to be emitted by renew
         // Log all event names
-        expect(renew.events).to.have.lengthOf(3);
         expect(renew.events[renew.events.length - 1].event).to.equal("Retry");
         return true;
       }
@@ -617,7 +616,7 @@ describe("Renew", function () {
     // Get logs from receipt
     let retry;
 
-    expect(receipt.logs.length).to.equal(4);
+    expect(receipt.logs.length).to.equal(5);
     for (const log of receipt.logs) {
       const event = randomizer.interface.parseLog(log);
       if (event.name === "Retry") retry = event;
@@ -760,8 +759,10 @@ describe("Renew", function () {
     const addressData = [request.client].concat(request.beacons);
     const renewTx = await randomizer.connect(selectedSigners[1]).renewRequest(addressData, renewUintData, request.seed);
     const renew = await renewTx.wait();
-    expect(renew.events).to.have.lengthOf(3);
+    expect(renew.events).to.have.lengthOf(5);
     expect(renew.events[renew.events.length - 1].event).to.equal("Retry");
+    expect(renew.events[0].event).to.equal("StrikeBeacon");
+    expect(renew.events[1].event).to.equal("StrikeBeacon");
 
     // Make new requests until request2.beacons includes selectedSigners[0].address
     let request2 = await makeRequest(testCallback);
@@ -786,10 +787,10 @@ describe("Renew", function () {
     const renewTx2 = await randomizer.connect(selectedSigner2).renewRequest(addressData2, renewUintData2, request2.seed);
     const renew2 = await renewTx2.wait();
     // Expect event "RemoveBeacon" to be emitted by renew
-    expect(renew2.events).to.have.lengthOf(4);
-    expect(renew2.events[0].event).to.equal("UnregisterBeacon");
+    expect(renew2.events).to.have.lengthOf(6);
+    expect(renew2.events[2].event).to.equal("UnregisterBeacon");
     // Expect event "BeaconRemoved" to have correct data
-    expect(renew2.events[0].args.beacon).to.equal(selectedSigners[0].address);
+    expect(renew2.events[2].args.beacon).to.equal(selectedSigners[0].address);
     // Get beacons
     const newBeacons = await randomizer.beacons();
     // Expect beacons to have one less than before

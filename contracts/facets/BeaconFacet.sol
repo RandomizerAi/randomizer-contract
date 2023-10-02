@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSL 1.1
 /// @title Randomizer Beacon Service
-/// @author Dean van Dugteren (https://github.com/deanpress)
+/// @author Dean van D. (https://github.com/deanpress)
 /// @notice Beacon management functions (registration, staking, submitting random values etc)
 
 pragma solidity ^0.8.19;
@@ -54,7 +54,9 @@ contract BeaconFacet is Utils {
     }
 
     /// @notice Returns beacon details (VRF keys, registered, strikes, consecutive successful submissions, pending requests, stake, index in beacons list)
-    function beacon(address _beacon)
+    function beacon(
+        address _beacon
+    )
         external
         view
         returns (
@@ -79,7 +81,9 @@ contract BeaconFacet is Utils {
     }
 
     /// @notice Returns request data (result, data hash, fees paid and refunded, submitted vrf hashes)
-    function getRequest(uint256 _request)
+    function getRequest(
+        uint256 _request
+    )
         external
         view
         returns (
@@ -349,12 +353,16 @@ contract BeaconFacet is Utils {
         } else {
             // If the consecutive submissions count is less than the maximum allowed, increment it
             unchecked {
-                memBeacon.consecutiveSubmissions++;
+                ++memBeacon.consecutiveSubmissions;
             }
         }
 
         // Decrement the pending count for the beacon
-        if (memBeacon.pending > 0) memBeacon.pending--;
+        if (memBeacon.pending > 0) {
+            unchecked {
+                --memBeacon.pending;
+            }
+        }
 
         // Save the updated Beacon struct
         s.beacon[_beacon] = memBeacon;
@@ -369,12 +377,9 @@ contract BeaconFacet is Utils {
         uint256 gasAtStart, // The amount of gas at the start of the function call
         bytes10[2] memory reqValues // The first two VRF values submitted for this request
     ) private {
-        // Check if the second to last request is valid and non-zero
+        // Check if the second to last request VRF value is valid and non-zero
         if (reqValues[0] != bytes10(0) && reqValues[1] != bytes10(0)) {
-            bytes10 memBlockhash = bytes10(LibNetwork._blockHash(packed.data.height));
-            if (memBlockhash == bytes10(0)) revert BlockhashUnavailable(packed.data.height);
-            // Generate a new seed value using the values of the last two requests + the request's blockhash
-            bytes32 newSeed = keccak256(abi.encodePacked(reqValues[0], reqValues[1], memBlockhash));
+            bytes32 newSeed = LibNetwork._generateNewSeed(packed.data.height, reqValues[0], reqValues[1]);
             // Request the final beacon with the generated seed value
             _requestBeacon(packed.id, 2, newSeed, accounts, packed.data);
         }

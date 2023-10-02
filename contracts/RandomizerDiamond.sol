@@ -6,7 +6,7 @@
 ██   ██ ██   ██ ██   ████ ██████   ██████  ██      ██ ██ ███████ ███████ ██   ██ 
 
 Website: https://randomizer.ai
-Author: Dean van Dugteren (@deanpress)
+Author: Dean van D. (@deanpress)
 License: Business Source License 1.1 (BUSL-1.1)
 
 ===DISCLAIMER===
@@ -28,7 +28,7 @@ Portions of the Randomizer protocol contracts implement the following MIT licens
 /******************************************************************************/
 
 /// @title Randomizer Diamond
-/// @author Dean van Dugteren (https://github.com/deanpress)
+/// @author Dean van D. (https://github.com/deanpress)
 /// @notice Diamond contract for the Randomizer protocol. Function calls are delegated to Randomizer's respective facet contracts.
 /// @dev EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
 /// SPDX-License-Identifier: BUSL-1.1

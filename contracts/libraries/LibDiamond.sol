@@ -206,11 +206,7 @@ library LibDiamond {
         ds.selectorToFacetAndPosition[_selector].facetAddress = _facetAddress;
     }
 
-    function removeFunction(
-        DiamondStorage storage ds,
-        address _facetAddress,
-        bytes4 _selector
-    ) internal {
+    function removeFunction(DiamondStorage storage ds, address _facetAddress, bytes4 _selector) internal {
         require(_facetAddress != address(0), "LibDiamondCut: Can't remove function that doesn't exist");
         // an immutable function is a function defined directly in a diamond
         require(_facetAddress != address(this), "LibDiamondCut: Can't remove immutable function");

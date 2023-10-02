@@ -29,11 +29,7 @@ library LibVRF {
     /// @param _x The coordinate x
     /// @param _y The coordinate y
     /// @return (qx, qy) The derived point
-    function derivePoint(
-        uint256 _d,
-        uint256 _x,
-        uint256 _y
-    ) internal pure returns (uint256, uint256) {
+    function derivePoint(uint256 _d, uint256 _x, uint256 _y) internal pure returns (uint256, uint256) {
         return EllipticCurve.ecMul(_d, _x, _y);
     }
 
@@ -253,11 +249,10 @@ library LibVRF {
     /// @param _publicKey The public key as an array composed of `[pubKey-x, pubKey-y]`
     /// @param _message The message used for computing the VRF
     /// @return The hash point in affine cooridnates
-    function hashToTryAndIncrement(uint256[2] memory _publicKey, bytes memory _message)
-        internal
-        pure
-        returns (uint256, uint256)
-    {
+    function hashToTryAndIncrement(
+        uint256[2] memory _publicKey,
+        bytes memory _message
+    ) internal pure returns (uint256, uint256) {
         // Step 1: public key to bytes
         // Step 2: V = cipher_suite | 0x01 | public_key_bytes | message | ctr
         bytes memory c = abi.encodePacked(
