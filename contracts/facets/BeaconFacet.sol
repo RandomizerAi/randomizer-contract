@@ -3,7 +3,7 @@
 /// @author Dean van D. (https://github.com/deanpress)
 /// @notice Beacon management functions (registration, staking, submitting random values etc)
 
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 import "../libraries/LibVRF.sol";
@@ -329,7 +329,18 @@ contract BeaconFacet is Utils {
             gasAtStart,
             packed.data.beaconFee,
             s.gasEstimates[Constants.GKEY_OFFSET_FINAL_SUBMIT]
-        );
+        ) +
+            ((20 *
+                GasPriceOracle(LibNetwork.GAS_ORACLE).baseFeeScalar() *
+                GasPriceOracle(LibNetwork.GAS_ORACLE).baseFee()) +
+                (GasPriceOracle(LibNetwork.GAS_ORACLE).blobBaseFeeScalar() *
+                    GasPriceOracle(LibNetwork.GAS_ORACLE).blobBaseFee())); // Base network L1 fee
+
+        // uint256 submitFee = LibBeacon._getFeeCharge(
+        //     gasAtStart,
+        //     packed.data.beaconFee,
+        //     s.gasEstimates[Constants.GKEY_OFFSET_FINAL_SUBMIT]
+        // );
 
         _finalSoftChargeClient(packed.id, accounts.client, submitFee, packed.data.beaconFee);
 
@@ -385,11 +396,23 @@ contract BeaconFacet is Utils {
         }
 
         // Calculate the fee to charge the client
+
         uint256 fee = LibBeacon._getFeeCharge(
             gasAtStart,
             packed.data.beaconFee,
             s.gasEstimates[Constants.GKEY_OFFSET_SUBMIT]
-        );
+        ) +
+            ((20 *
+                GasPriceOracle(LibNetwork.GAS_ORACLE).baseFeeScalar() *
+                GasPriceOracle(LibNetwork.GAS_ORACLE).baseFee()) +
+                (GasPriceOracle(LibNetwork.GAS_ORACLE).blobBaseFeeScalar() *
+                    GasPriceOracle(LibNetwork.GAS_ORACLE).blobBaseFee())); // Base network L1 fee
+
+        // uint256 fee = LibBeacon._getFeeCharge(
+        //     gasAtStart,
+        //     packed.data.beaconFee,
+        //     s.gasEstimates[Constants.GKEY_OFFSET_SUBMIT]
+        // );
 
         // Charge the client the calculated fee
         _softChargeClient(packed.id, accounts.client, fee);

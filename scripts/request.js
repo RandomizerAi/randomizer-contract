@@ -1,37 +1,103 @@
-
 const hre = require("hardhat");
-const randomizerAbi = require('../abi/Randomizer.json').abi;
+const randomizerAbi = require("../abi/Randomizer.json").abi;
 
 async function main() {
-  const randomizer = await ethers.getContractAt(randomizerAbi, process.env.CONTRACT_ADDRESS);
+  const tester = (await hre.ethers.getSigners())[1];
+  const randomizer = await ethers.getContractAt(
+    randomizerAbi,
+    hre.network.config.contracts.randomizer
+  );
+
+  let gasPrice = (await randomizer.provider.getGasPrice()).mul(4);
 
   const TestCallback = await hre.ethers.getContractFactory("TestCallback");
-  const testCallback = TestCallback.attach(process.env.TESTCALLBACK_ADDRESS);
-  const flip = await testCallback.makeRequestWith15Confirmations({ gasLimit: 1000000 });
-  const beforeFlip = Date.now();
+  const testCallback = TestCallback.attach(
+    hre.network.config.contracts.testCallback
+  );
+
+  const requestTimes = {};
+  let callbacks = 0;
+  testCallback.on("Callback", (id, value) => {
+    console.log("callback", ++callbacks);
+    const requestTime = requestTimes[id];
+    console.log("Callback", id.toString(), Date.now() - requestTime);
+  });
+
+  randomizer.on("Retry", (data) => {
+    console.log("Retry");
+    console.log(data);
+  });
+
+  const flip = await testCallback.connect(tester).makeRequest({ gasPrice });
   const receipt = await flip.wait();
-  const flippedAt = Date.now();
-  console.log("Request made", flippedAt - beforeFlip);
 
   // Get all logs from receipt
   const logs = receipt.logs;
-  console.log(logs);
-
-  console.log(beforeFlip);
+  // Decode logs using randomizer abi
+  const decodedLogs = logs.map((log) => randomizer.interface.parseLog(log));
+  requestTimes[ethers.BigNumber.from(decodedLogs[0].args.id).toString()] =
+    Date.now();
 
   let i = 0;
-  // setInterval(async () => {
-  //   const flip = await testCallback.makeRequestWith15Confirmations({ gasLimit: 1000000 });
-  //   // Show flip event
-  //   const receipt = await flip.wait();
-  //   const logs = receipt.logs;
-  //   console.log(logs);
-  // }, 10000);
+  let nonce = await tester.getTransactionCount("pending");
+  // const interval = setInterval(async () => {
+  //   const lastNonce = nonce;
+  //   nonce++;
+  //   if (i > 1000) clearInterval(interval);
+  //   try {
+  //     // gasPrice = (await randomizer.provider.getGasPrice()).mul(4);
 
-  testCallback.on("Callback", (id, value) => {
-    console.log("Callback", (Date.now() - flippedAt));
-    console.log("Event", id, value);
-  });
+  //     const flip = await testCallback
+  //       .connect(tester)
+  //       .makeRequest({ gasPrice, nonce: lastNonce });
+  //     const receipt = await flip.wait();
+  //     const logs = receipt.logs;
+  //     const decodedLogs = logs.map((log) => randomizer.interface.parseLog(log));
+  //     requestTimes[ethers.BigNumber.from(decodedLogs[0].args.id).toString()] =
+  //       Date.now();
+  //     console.log(
+  //       "Requested ",
+  //       ethers.BigNumber.from(decodedLogs[0].args.id).toString()
+  //     );
+  //     console.log(decodedLogs[0].args.request.beacons);
+  //     i++;
+  //     console.log("request", i);
+  //   } catch (e) {
+  //     nonce = await tester.getTransactionCount("pending");
+  //     console.log(e);
+  //   }
+  //   // Show flip event
+  // }, 4000);
+
+  while (i <= 50) {
+    const lastNonce = nonce;
+    nonce++;
+    try {
+      gasPrice = (await randomizer.provider.getGasPrice()).mul(4);
+
+      const flip = await testCallback
+        .connect(tester)
+        .makeRequest({ gasPrice, nonce: lastNonce });
+      const receipt = await flip.wait();
+      const logs = receipt.logs;
+      const decodedLogs = logs.map((log) => randomizer.interface.parseLog(log));
+      requestTimes[ethers.BigNumber.from(decodedLogs[0].args.id).toString()] =
+        Date.now();
+      console.log(
+        "Requested ",
+        ethers.BigNumber.from(decodedLogs[0].args.id).toString()
+      );
+      console.log(decodedLogs[0].args.request.beacons);
+      i++;
+      console.log("request", i);
+    } catch (e) {
+      nonce = await tester.getTransactionCount("pending");
+      console.log(e);
+    }
+    // Show flip event
+    await new Promise(resolve => setTimeout(resolve, 20000));
+  }
+
 }
 
 main();

@@ -4,7 +4,7 @@
 /// @author Dean van D. (https://github.com/deanpress)
 /// @notice Handles renewals for Randomizer.
 
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 import "../libraries/LibBeacon.sol";

@@ -1,7 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
+
+interface GasPriceOracle {
+    function baseFee() external view returns (uint256);
+    function baseFeeScalar() external view returns (uint256);
+    function blobBaseFeeScalar() external view returns (uint256);
+    function blobBaseFee() external view returns (uint256);
+}
 
 library LibNetwork {
+    address constant GAS_ORACLE = 0x420000000000000000000000000000000000000F;
+    uint256 constant SUBMIT_GAS_TOTAL = 3000;
+    uint256 constant SUBMIT_GAS_SINGLE = 1000;
+
     function _seed(uint256 id) internal view returns (bytes32) {
         return
             keccak256(
@@ -71,5 +82,24 @@ library LibNetwork {
         bytes10 reqVal2
     ) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(reqVal1, reqVal2, height));
+    }
+
+    function _estimateFee(
+        uint256 _callbackGasLimit,
+        uint256 _confirmations,
+        uint256 _gasPrc,
+        uint256 _totalSubmit,
+        uint256 _gasPerBeaconSelect,
+        uint256 _beaconsLength,
+        uint256 _beaconFee
+    ) internal view returns (uint256) {
+        return
+            (((_totalSubmit + _callbackGasLimit + ((_gasPerBeaconSelect * (_beaconsLength - 1)) * 3)) *
+                _maxGasPriceAfterConfirmations(_gasPrc, _confirmations)) + (_beaconFee * 5)) +
+            ((20 *
+                GasPriceOracle(LibNetwork.GAS_ORACLE).baseFeeScalar() *
+                GasPriceOracle(LibNetwork.GAS_ORACLE).baseFee()) +
+                (GasPriceOracle(LibNetwork.GAS_ORACLE).blobBaseFeeScalar() *
+                    GasPriceOracle(LibNetwork.GAS_ORACLE).blobBaseFee()));
     }
 }

@@ -3,7 +3,7 @@
 /// @author Dean van D. (https://github.com/deanpress)
 /// @notice Administrative functions, variables, and constants used by Randomizer.
 
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 import "../shared/Structs.sol";
 import "../libraries/Constants.sol";

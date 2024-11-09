@@ -3,7 +3,7 @@
 /// @author Dean van D. (https://github.com/deanpress)
 /// @notice Randomizer client contract management functions (deposits/withdrawals and fee estimates)
 
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 import "../AppStorage.sol";
 import "../libraries/Constants.sol";
@@ -93,11 +93,15 @@ contract ClientFacet is Utils {
         uint256 _confirmations
     ) public view returns (uint256 esimateFee) {
         return
-            ((s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT] +
-                _callbackGasLimit +
-                ((s.gasEstimates[Constants.GKEY_GAS_PER_BEACON_SELECT] * (s.beacons.length - 1)) * 3)) *
-                LibNetwork._maxGasPriceAfterConfirmations(_confirmations)) +
-            (s.configUints[Constants.CKEY_BEACON_FEE] * 5);
+            LibNetwork._estimateFee(
+                _callbackGasLimit,
+                _confirmations,
+                LibNetwork._maxGasPriceAfterConfirmations(_confirmations),
+                s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT],
+                s.gasEstimates[Constants.GKEY_GAS_PER_BEACON_SELECT],
+                s.beacons.length,
+                s.configUints[Constants.CKEY_BEACON_FEE]
+            );
     }
 
     /// @notice Gets fee estimate for full request fulfillment
@@ -105,10 +109,15 @@ contract ClientFacet is Utils {
     /// @return esimateFee The estimated fee required for full request fulfillment
     function estimateFee(uint256 _callbackGasLimit) public view returns (uint256 esimateFee) {
         return
-            ((s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT] +
-                _callbackGasLimit +
-                ((s.gasEstimates[Constants.GKEY_GAS_PER_BEACON_SELECT] * (s.beacons.length - 1)) * 3)) *
-                LibNetwork._gasPrice()) + (s.configUints[Constants.CKEY_BEACON_FEE] * 5);
+            LibNetwork._estimateFee(
+                _callbackGasLimit,
+                s.configUints[Constants.CKEY_MIN_CONFIRMATIONS],
+                LibNetwork._gasPrice(),
+                s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT],
+                s.gasEstimates[Constants.GKEY_GAS_PER_BEACON_SELECT],
+                s.beacons.length,
+                s.configUints[Constants.CKEY_BEACON_FEE]
+            );
     }
 
     /// @notice Gets fee estimate for full request fulfillment using confirmations and a manual gas price
@@ -123,11 +132,15 @@ contract ClientFacet is Utils {
         uint256 _gasPrice
     ) external view returns (uint256) {
         return
-            ((s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT] +
-                _callbackGasLimit +
-                ((s.gasEstimates[Constants.GKEY_GAS_PER_BEACON_SELECT] * (s.beacons.length - 1)) * 3)) *
-                LibNetwork._maxGasPriceAfterConfirmations(_gasPrice, _confirmations)) +
-            (s.configUints[Constants.CKEY_BEACON_FEE] * 5);
+            LibNetwork._estimateFee(
+                _callbackGasLimit,
+                _confirmations,
+                _gasPrice,
+                s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT],
+                s.gasEstimates[Constants.GKEY_GAS_PER_BEACON_SELECT],
+                s.beacons.length,
+                s.configUints[Constants.CKEY_BEACON_FEE]
+            );
     }
 
     /// @notice Gets fee estimate for full request fulfillment using a manual gas price
@@ -140,10 +153,15 @@ contract ClientFacet is Utils {
         uint256 _gasPrice
     ) external view returns (uint256) {
         return
-            ((s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT] +
-                _callbackGasLimit +
-                ((s.gasEstimates[Constants.GKEY_GAS_PER_BEACON_SELECT] * (s.beacons.length - 1)) * 3)) *
-                _gasPrice) + (s.configUints[Constants.CKEY_BEACON_FEE] * 5);
+            LibNetwork._estimateFee(
+                _callbackGasLimit,
+                s.configUints[Constants.CKEY_MIN_CONFIRMATIONS],
+                _gasPrice,
+                s.gasEstimates[Constants.GKEY_TOTAL_SUBMIT],
+                s.gasEstimates[Constants.GKEY_GAS_PER_BEACON_SELECT],
+                s.beacons.length,
+                s.configUints[Constants.CKEY_BEACON_FEE]
+            );
     }
 
     /// @notice Requests a callback with a random value from the Randomizer protocol
