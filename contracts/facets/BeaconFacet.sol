@@ -3,7 +3,7 @@
 /// @author Dean van D. (https://github.com/deanpress)
 /// @notice Beacon management functions (registration, staking, submitting random values etc)
 
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 import "../libraries/LibVRF.sol";
@@ -15,7 +15,6 @@ import "../AppStorage.sol";
 
 contract BeaconFacet is Utils {
     /* Errors */
-
     error BeaconAlreadyRegistered();
     error BeaconNotSelected();
     error BeaconHasPending(uint256 pending);

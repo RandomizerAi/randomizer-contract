@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
 interface IRandomizer {
     function request(uint256 _callbackGasLimit) external returns (uint256);

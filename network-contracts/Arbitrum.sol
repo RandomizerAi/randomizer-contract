@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
 interface ArbSys {
     function arbBlockNumber() external view returns (uint256);
@@ -88,5 +88,19 @@ library LibNetwork {
         if (memBlockhash == bytes10(0)) revert BlockhashUnavailable(height);
         // Generate a new seed value using the values of the last two requests + the request's blockhash
         return keccak256(abi.encodePacked(reqVal1, reqVal2, memBlockhash));
+    }
+
+    function _estimateFee(
+        uint256 _callbackGasLimit,
+        uint256 _confirmations,
+        uint256 _gasPrc,
+        uint256 _totalSubmit,
+        uint256 _gasPerBeaconSelect,
+        uint256 _beaconsLength,
+        uint256 _beaconFee
+    ) internal pure returns (uint256) {
+        return
+            ((_totalSubmit + _callbackGasLimit + ((_gasPerBeaconSelect * (_beaconsLength - 1)) * 3)) *
+                _maxGasPriceAfterConfirmations(_gasPrc, _confirmations)) + (_beaconFee * 5);
     }
 }

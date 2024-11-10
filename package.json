@@ -36,5 +36,9 @@
     "standard": "^17.0.0",
     "vrf-ts-256": "^1.0.0",
     "zksync-web3": "^0.11.1"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2",
+    "rlp": "^3.0.0"
   }
 }

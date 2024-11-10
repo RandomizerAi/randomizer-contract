@@ -3,7 +3,7 @@ const hre = require("hardhat");
 
 async function main() {
   await network.provider.send("evm_setAutomine", [false]);
-  await network.provider.send("evm_setIntervalMining", [1000]);
+  await network.provider.send("evm_setIntervalMining", [2000]);
   console.log("automine enabled");
 }
 

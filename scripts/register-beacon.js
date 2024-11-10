@@ -3,7 +3,10 @@ const randomizerAbi = require('../abi/Randomizer.json').abi;
 const vrfHelper = require("../test/helpers.js");
 
 async function main() {
-  const randomizer = await ethers.getContractAt(randomizerAbi, process.env.CONTRACT_ADDRESS);
+  const randomizer = await ethers.getContractAt(
+    randomizerAbi,
+    hre.network.config.contracts.randomizer
+  );  
   let addresses = [];
   for (let i = 1; i <= 10; i++) {
     const envVar = `SIGNER_${i}`;

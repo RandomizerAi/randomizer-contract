@@ -3,7 +3,7 @@ const randomizerAbi = require('../abi/Randomizer.json').abi;
 
 async function main() {
 
-  const randomizerAddress = process.env.CONTRACT_ADDRESS;
+  const randomizerAddress = hre.network.config.contracts.randomizer;
 
 
   const TestCallback = await hre.ethers.getContractFactory("TestCallback");
