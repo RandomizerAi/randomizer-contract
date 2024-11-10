@@ -24,7 +24,7 @@ task("accounts", "Prints the list of accounts", async () => {
  */
 module.exports = {
   solidity: {
-    version: "0.8.25",
+    version: "0.8.28",
     settings: {
       optimizer: {
         enabled: true,
@@ -123,6 +123,24 @@ module.exports = {
         randomizer: process.env.BASE_RANDOMIZER,
         testCallback: process.env.BASE_TESTCALLBACK,
       },
+    },
+    sankoTestnet: {
+      url: process.env.SANKO_TESTNET_RPC,
+      accounts: [process.env.PRIVATE_KEY, process.env.TESTCALLBACK_DEPLOYER],
+      chainId: 1992,
+      contracts: {
+        randomizer: process.env.SANKO_TESTNET_RANDOMIZER,
+        testCallback: process.env.SANKO_TESTNET_TESTCALLBACK
+      }
+    },
+    sanko: {
+      url: process.env.SANKO_MAINNET_RPC,
+      accounts: [process.env.PRIVATE_KEY, process.env.TESTCALLBACK_DEPLOYER],
+      chainId: 1996,
+      contracts: {
+        randomizer: process.env.SANKO_MAINNET_RANDOMIZER,
+        testCallback: process.env.SANKO_MAINNET_TESTCALLBACK
+      }
     },
     hardhat: {
       chainId: 1337,
